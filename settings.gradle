@@ -1,0 +1,28 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven { url = 'https://maven.neoforged.net/releases' }
+    }
+}
+
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+
+rootProject.name = 'stad'
+
+// mod -> the NeoForge 1.21.1 mod (stad.jar)
+include 'mod'
+
+// They Will Talk isn't published to a Maven repository: build it from a checkout next to this one
+// (../they-will-talk, or -PtwtDir=<path>). Changes there are picked up by Stad's builds and dev runs straight away.
+def twtDir = file(providers.gradleProperty('twtDir').getOrElse('../they-will-talk'))
+if (!new File(twtDir, 'settings.gradle').exists()) {
+    throw new GradleException("They Will Talk not found at $twtDir. Clone https://github.com/Eiriksb/they-will-talk " +
+            "next to this repository or pass -PtwtDir=<path>.")
+}
+includeBuild(twtDir) {
+    dependencySubstitution {
+        substitute module('dev.eiriksb.theywilltalk:theywilltalk') using project(':mod')
+    }
+}

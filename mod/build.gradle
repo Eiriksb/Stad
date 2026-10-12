@@ -1,0 +1,127 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.147'
+}
+
+version = mod_version
+group = mod_group_id
+
+base { archivesName = mod_id }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+def withVoicechat = (findProperty('withVoicechat') ?: 'true').toBoolean()
+
+// Dev runs share They Will Talk's AI runtime (programs + models), so nothing is downloaded twice.
+def twtDir = rootProject.file(findProperty('twtDir') ?: '../they-will-talk')
+def runtimeDir = new File(twtDir, 'runtime').absolutePath
+
+repositories {
+    exclusiveContent {
+        forRepository { maven { url = 'https://api.modrinth.com/maven' } }
+        filter { includeGroup 'maven.modrinth' }
+    }
+    mavenCentral()
+}
+
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+
+    runs {
+        client {
+            client()
+            gameDirectory = rootProject.file('run/client')
+            systemProperty 'theywilltalk.runtimeDir', runtimeDir
+            jvmArguments.addAll '-Xmx6G'
+        }
+        // Two clients that join the dev server straight away (offline mode), for testing multiplayer.
+        // -PjoinServer=host:port for another server.
+        clientJoin {
+            client()
+            gameDirectory = rootProject.file('run/client')
+            programArguments.addAll '--quickPlayMultiplayer', (findProperty('joinServer') ?: '127.0.0.1:25565').toString(), '--username', 'Eirik'
+            jvmArguments.addAll '-Xmx4G'
+        }
+        clientJoin2 {
+            client()
+            gameDirectory = rootProject.file('run/client2')
+            programArguments.addAll '--quickPlayMultiplayer', (findProperty('joinServer') ?: '127.0.0.1:25565').toString(), '--username', 'Tester'
+            jvmArguments.addAll '-Xmx4G'
+        }
+        server {
+            server()
+            gameDirectory = rootProject.file('run/server')
+            programArgument '--nogui'
+            systemProperty 'theywilltalk.dashboardNoAuth', 'true'
+            systemProperty 'theywilltalk.devCommands', 'true'
+            systemProperty 'theywilltalk.webDir', new File(twtDir, 'mod/src/main/resources/assets/theywilltalk/web').absolutePath
+            systemProperty 'theywilltalk.runtimeDir', runtimeDir
+            jvmArguments.addAll '-Xmx6G'
+        }
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = rootProject.file('run/gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    // They Will Talk: talking, memory, voices, the AI runtime and the dashboard. Built from ../they-will-talk.
+    // Not transitive: TWT bundles its own libraries inside its jar (jar-in-jar), and a second copy clashes.
+    implementation("dev.eiriksb.theywilltalk:theywilltalk:${twt_version}") { transitive = false }
+
+    // Simple Voice Chat in the dev runs, so citizens can be heard.
+    if (withVoicechat) localRuntime "maven.modrinth:simple-voice-chat:${voicechat_mod_version}"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            twt_version_range      : twt_version_range,
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

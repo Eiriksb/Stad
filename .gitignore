@@ -1,0 +1,14 @@
+# build output
+build/
+out/
+.gradle/
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+bin/
+
+# dev game directories
+run/

@@ -1,0 +1,35 @@
+package dev.eiriksb.stad;
+
+import dev.eiriksb.theywilltalk.api.TheyWillTalkApi;
+import dev.eiriksb.theywilltalk.api.TwtReadyEvent;
+import dev.eiriksb.theywilltalk.villager.VillagerKind;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.common.NeoForge;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Stad - build a town with citizens who live, work and talk. Talking, memory, voices and the AI runtime come from
+ * They Will Talk; Stad adds the citizens, colonies, jobs and buildings.
+ */
+@Mod(Stad.MOD_ID)
+public final class Stad {
+    public static final String MOD_ID = "stad";
+    public static final Logger LOGGER = LoggerFactory.getLogger("Stad");
+
+    /** Stad's citizens, as They Will Talk sees them. Stored in TWT's database as kind "stad". */
+    public static final VillagerKind CITIZEN = TheyWillTalkApi.get().registerKind("stad", "Citizen",
+            () -> StadConfig.CITIZENS_TALK.get());
+
+    public Stad(IEventBus modBus, ModContainer container) {
+        container.registerConfig(ModConfig.Type.COMMON, StadConfig.SPEC);
+        NeoForge.EVENT_BUS.addListener(this::onTwtReady);
+    }
+
+    private void onTwtReady(TwtReadyEvent event) {
+        LOGGER.info("They Will Talk is ready (API v{}); citizens talk as kind '{}'", TheyWillTalkApi.VERSION, CITIZEN.id);
+    }
+}
