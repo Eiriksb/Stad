@@ -34,6 +34,8 @@ public final class Colony {
     private final Map<UUID, String> playerNames = new LinkedHashMap<>();
     private final Map<UUID, CitizenRecord> citizens = new LinkedHashMap<>();
     private final Deque<OrderRecord> orders = new ArrayDeque<>();
+    private final Map<Integer, Building> buildings = new LinkedHashMap<>();
+    private int nextBuildingId = 1;
     /** game time of the last newcomer, for {@link Arrivals} */
     long lastArrival;
     private Runnable onChange = () -> {};
@@ -54,7 +56,7 @@ public final class Colony {
         onChange = r;
     }
 
-    void changed() {
+    public void changed() {
         onChange.run();
     }
 
@@ -149,9 +151,49 @@ public final class Colony {
         return citizens.values().stream().filter(c -> pos.equals(c.home)).findFirst();
     }
 
+    // ---- buildings ----------------------------------------------------------------------------------------------
+
+    /** In the order they were planned (builders take them in that order). */
+    public List<Building> buildings() {
+        return List.copyOf(buildings.values());
+    }
+
+    public Optional<Building> building(int id) {
+        return Optional.ofNullable(buildings.get(id));
+    }
+
+    /** Plans a building; {@link dev.eiriksb.stad.building.Planning} checks where it may go first. */
+    public Building addBuilding(net.minecraft.resources.ResourceLocation key, String name, BlockPos origin,
+                                net.minecraft.world.level.block.Rotation rotation, long time) {
+        Building b = new Building(nextBuildingId++, key, name, origin.immutable(), rotation, time);
+        buildings.put(b.id, b);
+        changed();
+        return b;
+    }
+
+    public void removeBuilding(int id) {
+        if (buildings.remove(id) != null) {
+            changed();
+        }
+    }
+
+    /** The building {@code builder} works on: the one they've started, else the first nobody has taken. */
+    public Optional<Building> workFor(UUID builder) {
+        Optional<Building> mine = buildings.values().stream().filter(b -> !b.done() && builder.equals(b.builder)).findFirst();
+        if (mine.isPresent()) {
+            return mine;
+        }
+        Optional<Building> free = buildings.values().stream().filter(b -> !b.done() && b.builder == null).findFirst();
+        free.ifPresent(b -> {
+            b.builder = builder;
+            changed();
+        });
+        return free;
+    }
+
     // ---- orders -------------------------------------------------------------------------------------------------
 
-    void log(OrderRecord r) {
+    public void log(OrderRecord r) {
         orders.addFirst(r);
         while (orders.size() > ORDER_LOG) {
             orders.removeLast();
@@ -191,6 +233,10 @@ public final class Colony {
         ListTag os = new ListTag();
         orders.forEach(o -> os.add(o.save()));
         t.put("Orders", os);
+        t.putInt("NextBuildingId", nextBuildingId);
+        ListTag bs = new ListTag();
+        buildings.values().forEach(b -> bs.add(b.save()));
+        t.put("Buildings", bs);
         return t;
     }
 
@@ -213,6 +259,11 @@ public final class Colony {
         }
         for (Tag tag : t.getList("Orders", Tag.TAG_COMPOUND)) {
             c.orders.addLast(OrderRecord.load((CompoundTag) tag));
+        }
+        c.nextBuildingId = Math.max(1, t.getInt("NextBuildingId"));
+        for (Tag tag : t.getList("Buildings", Tag.TAG_COMPOUND)) {
+            Building b = Building.load((CompoundTag) tag);
+            c.buildings.put(b.id, b);
         }
         return c;
     }

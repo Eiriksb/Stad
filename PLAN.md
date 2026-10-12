@@ -206,6 +206,8 @@ adds talk and priorities on top, nothing else.
     l1.nbt, l2.nbt ...                    # vanilla structure templates
 ```
 
+- **Functional blocks** (M3) are found by block type: beds are homes, chests and barrels storage. *Markers* (below)
+  come with custom packs in M7.
 - **Functional markers** use vanilla structure blocks in *Data* mode (the same thing vanilla uses for loot chests):
   `stad:bed`, `stad:work`, `stad:storage`, `stad:door`, `stad:sit`. They tell citizens where to sleep, work and store
   things.

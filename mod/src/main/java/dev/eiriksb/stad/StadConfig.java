@@ -28,6 +28,15 @@ public final class StadConfig {
 
     static {
         B.pop();
+        B.push("work");
+    }
+
+    public static final ModConfigSpec.IntValue BUILDER_TICKS_PER_BLOCK = B
+            .comment("How many ticks a builder takes per block (20 ticks = 1 second).")
+            .defineInRange("builderTicksPerBlock", 10, 1, 200);
+
+    static {
+        B.pop();
         B.push("needs");
     }
 

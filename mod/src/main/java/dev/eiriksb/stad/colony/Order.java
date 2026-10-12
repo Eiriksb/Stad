@@ -6,7 +6,11 @@ import net.minecraft.server.level.ServerPlayer;
  * An order from a player to a citizen. Every order, from chat, the GUI or a command, goes through
  * {@link OrderService}: first the player's rank is checked, then (from M5) whether the citizen is willing.
  */
-public record Order(ServerPlayer player, OrderKind kind, dev.eiriksb.stad.citizen.CitizenEntity citizen) {
+public record Order(ServerPlayer player, OrderKind kind, dev.eiriksb.stad.citizen.CitizenEntity citizen, String arg) {
+    public Order(ServerPlayer player, OrderKind kind, dev.eiriksb.stad.citizen.CitizenEntity citizen) {
+        this(player, kind, citizen, null);
+    }
+
     public enum Outcome {
         /** done gladly */
         ACCEPTED,

@@ -1,5 +1,6 @@
 {
   "entity.stad.citizen": "Citizen",
   "item.stad.citizen_spawn_egg": "Citizen Spawn Egg",
-  "block.stad.town_hall": "Town Hall"
+  "block.stad.town_hall": "Town Hall",
+  "item.stad.building_plans": "Building Plans"
 }

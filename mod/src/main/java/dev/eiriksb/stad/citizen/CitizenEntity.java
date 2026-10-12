@@ -1,6 +1,7 @@
 package dev.eiriksb.stad.citizen;
 
 import dev.eiriksb.stad.StadConfig;
+import dev.eiriksb.stad.citizen.goal.BuildGoal;
 import dev.eiriksb.stad.citizen.goal.EatAtTownHallGoal;
 import dev.eiriksb.stad.citizen.goal.GatherAtTownHallGoal;
 import dev.eiriksb.stad.citizen.goal.SleepAtHomeGoal;
@@ -86,11 +87,12 @@ public class CitizenEntity extends PathfinderMob {
         goalSelector.addGoal(1, new OpenDoorGoal(this, true));
         goalSelector.addGoal(2, new SleepAtHomeGoal(this));
         goalSelector.addGoal(3, new EatAtTownHallGoal(this));
-        goalSelector.addGoal(4, new MoveTowardsRestrictionGoal(this, 0.6));
-        goalSelector.addGoal(5, new GatherAtTownHallGoal(this));
-        goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.6));
-        goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0f));
-        goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        goalSelector.addGoal(4, new BuildGoal(this));
+        goalSelector.addGoal(5, new MoveTowardsRestrictionGoal(this, 0.6));
+        goalSelector.addGoal(6, new GatherAtTownHallGoal(this));
+        goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.6));
+        goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6.0f));
+        goalSelector.addGoal(9, new RandomLookAroundGoal(this));
     }
 
     /** A new citizen gets their looks, name and story when they first appear (spawn egg, /summon, moving into town). */
@@ -136,6 +138,11 @@ public class CitizenEntity extends PathfinderMob {
     /** The head of their bed, if they have one. */
     public Optional<BlockPos> home() {
         return record().map(r -> r.home);
+    }
+
+    /** Their job ("builder"), if they have one. */
+    public Optional<String> job() {
+        return record().map(r -> r.job);
     }
 
     /** Called by {@link ColonyManager#join}. */

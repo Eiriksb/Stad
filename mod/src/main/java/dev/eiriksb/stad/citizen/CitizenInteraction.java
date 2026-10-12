@@ -23,11 +23,21 @@ final class CitizenInteraction {
         MutableComponent card = Component.literal(citizen.getName().getString()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
         if (home.isPresent()) {
             card.append(Component.literal("  of " + home.get().name()).withStyle(ChatFormatting.GRAY));
-            card.append(Component.literal(String.format("\nFood %d/20 · Rest %d/20 · Happiness %d%% · %s", Math.round(citizen.hunger()),
-                    Math.round(citizen.rest()), citizen.happiness(), citizen.home().isPresent() ? "has a bed" : "homeless"))
+            String job = citizen.job().orElse(null);
+            card.append(Component.literal(String.format("\n%s · Food %d/20 · Rest %d/20 · Happiness %d%% · %s", job == null ? "No job" : capitalize(job),
+                    Math.round(citizen.hunger()), Math.round(citizen.rest()), citizen.happiness(), citizen.home().isPresent() ? "has a bed" : "homeless"))
                     .withStyle(ChatFormatting.GRAY));
+            if (home.get().rank(player.getUUID()).atLeast(OrderKind.ASSIGN_JOB.minRank)) {
+                card.append("\n");
+                if (job == null) {
+                    card.append(button("Make builder", "/stad citizen job " + citizen.getUUID() + " builder", ChatFormatting.AQUA));
+                } else {
+                    card.append(button("Stop working", "/stad citizen job " + citizen.getUUID() + " none", ChatFormatting.YELLOW));
+                }
+                card.append(" ");
+            }
             if (home.get().rank(player.getUUID()).atLeast(OrderKind.DISMISS.minRank)) {
-                card.append("\n").append(button("Ask to leave town", "/stad citizen dismiss " + citizen.getUUID(), ChatFormatting.RED));
+                card.append(button("Ask to leave town", "/stad citizen dismiss " + citizen.getUUID(), ChatFormatting.RED));
             }
         } else {
             card.append(Component.literal("  newcomer, looking for a town").withStyle(ChatFormatting.GRAY));
@@ -46,6 +56,10 @@ final class CitizenInteraction {
         return Component.literal("[" + label + "]").withStyle(s -> s.withColor(color)
                 .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
                 .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(label))));
+    }
+
+    private static String capitalize(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     static boolean canManage(Rank r) {

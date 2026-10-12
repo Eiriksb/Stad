@@ -3,6 +3,7 @@ package dev.eiriksb.stad;
 import dev.eiriksb.stad.block.TownHallBlock;
 import dev.eiriksb.stad.block.TownHallBlockEntity;
 import dev.eiriksb.stad.citizen.CitizenEntity;
+import dev.eiriksb.stad.item.BuildingPlansItem;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -44,6 +45,9 @@ public final class StadRegistries {
 
     public static final DeferredItem<BlockItem> TOWN_HALL_ITEM = ITEMS.registerSimpleBlockItem(TOWN_HALL);
 
+    public static final DeferredItem<BuildingPlansItem> BUILDING_PLANS = ITEMS.registerItem("building_plans", BuildingPlansItem::new,
+            new Item.Properties().stacksTo(1));
+
     public static final DeferredItem<Item> CITIZEN_SPAWN_EGG = ITEMS.register("citizen_spawn_egg",
             () -> new DeferredSpawnEggItem(CITIZEN, 0x9c6b3e, 0x3f7a4c, new Item.Properties()));
 
@@ -67,6 +71,8 @@ public final class StadRegistries {
             event.accept(CITIZEN_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(TOWN_HALL_ITEM);
+        } else if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+            event.accept(BUILDING_PLANS);
         }
     }
 }

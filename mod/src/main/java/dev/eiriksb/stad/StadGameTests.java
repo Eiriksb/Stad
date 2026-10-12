@@ -2,7 +2,12 @@ package dev.eiriksb.stad;
 
 import dev.eiriksb.stad.block.TownHallBlockEntity;
 import dev.eiriksb.stad.citizen.CitizenEntity;
+import dev.eiriksb.stad.building.BuildingDef;
+import dev.eiriksb.stad.building.BuildingPacks;
+import dev.eiriksb.stad.building.Placement;
+import dev.eiriksb.stad.colony.Building;
 import dev.eiriksb.stad.colony.Colony;
+import dev.eiriksb.stad.colony.Jobs;
 import dev.eiriksb.stad.colony.ColonyManager;
 import dev.eiriksb.stad.colony.Homes;
 import dev.eiriksb.stad.colony.Order;
@@ -21,6 +26,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -103,7 +110,11 @@ public final class StadGameTests {
     private static final BlockPos HALL = new BlockPos(4, 0, 4);
 
     private static Colony foundHere(GameTestHelper helper, ServerPlayer owner) {
-        ColonyManager.Founding f = ColonyManager.get(helper.getLevel().getServer()).found(helper.getLevel(), helper.absolutePos(HALL),
+        return foundAt(helper, owner, HALL);
+    }
+
+    private static Colony foundAt(GameTestHelper helper, ServerPlayer owner, BlockPos hall) {
+        ColonyManager.Founding f = ColonyManager.get(helper.getLevel().getServer()).found(helper.getLevel(), helper.absolutePos(hall),
                 owner.getUUID(), owner.getGameProfile().getName(), TEST_RADIUS);
         helper.assertTrue(f.colony() != null, "couldn't found a colony: " + f.problem());
         return f.colony();
@@ -217,6 +228,105 @@ public final class StadGameTests {
         helper.assertTrue(colonyTag.getUUID("Owner").equals(owner.getUUID()), "owner saved");
         helper.getLevel().getServer().getPlayerList().remove(owner);
         helper.succeed();
+    }
+
+    // ---- buildings (M3) ---------------------------------------------------------------------------------------------
+
+    private static final ResourceLocation HUT = ResourceLocation.fromNamespaceAndPath("stad", "medieval/builder_hut");
+    private static final ResourceLocation COTTAGE = ResourceLocation.fromNamespaceAndPath("stad", "medieval/cottage");
+
+    @GameTest(template = "empty")
+    public static void theMedievalPackLoads(GameTestHelper helper) {
+        BuildingDef cottage = BuildingPacks.get(COTTAGE).orElse(null);
+        helper.assertTrue(cottage != null, "no cottage in " + BuildingPacks.all().stream().map(BuildingDef::key).toList());
+        helper.assertTrue(cottage.type().equals(BuildingDef.HOME), "cottage type " + cottage.type());
+        helper.assertTrue(cottage.blueprint().size().equals(new net.minecraft.core.Vec3i(7, 8, 9)), "size " + cottage.blueprint().size());
+        var materials = Placement.of(cottage.blueprint(), BlockPos.ZERO, Rotation.NONE).materials();
+        helper.assertTrue(materials.get(Items.RED_BED) == 1 && materials.get(Items.BLUE_BED) == 1, "a bed costs one bed item: " + materials);
+        helper.assertTrue(materials.get(Items.OAK_DOOR) == 1, "a door costs one door: " + materials.get(Items.OAK_DOOR));
+        helper.assertTrue(BuildingPacks.get(HUT).isPresent() && BuildingPacks.all().size() >= 3, "all three buildings");
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void rotatedBuildingsStayWhole(GameTestHelper helper) {
+        BuildingDef cottage = BuildingPacks.get(COTTAGE).orElseThrow();
+        for (Rotation r : Rotation.values()) {
+            Placement p = Placement.of(cottage.blueprint(), BlockPos.ZERO, r);
+            var box = p.bounds();
+            for (Placement.Step s : p.steps()) {
+                helper.assertTrue(box.isInside(s.pos()), r + ": " + s.pos() + " outside " + box);
+                if (s.state().getBlock() instanceof BedBlock && s.state().getValue(BedBlock.PART) == BedPart.FOOT) {
+                    BlockPos head = s.pos().relative(s.state().getValue(BedBlock.FACING));
+                    helper.assertTrue(p.steps().stream().anyMatch(o -> o.pos().equals(head) && o.state().getBlock() == s.state().getBlock()),
+                            r + ": bed at " + s.pos() + " lost its head");
+                }
+            }
+        }
+        helper.assertTrue(Placement.facingViewer(Direction.SOUTH) == Rotation.NONE && Placement.facingViewer(Direction.NORTH) == Rotation.CLOCKWISE_180,
+                "the door faces whoever plans it");
+        helper.succeed();
+    }
+
+    /** The yard (20 x 12, stone floor) has the town hall in a corner and room for a building. */
+    private static final BlockPos YARD_HALL = new BlockPos(2, 0, 2);
+    private static final BlockPos YARD_SITE = new BlockPos(9, 0, 1);
+
+    @GameTest(template = "yard", timeoutTicks = 6000)
+    public static void builderBuildsTheHutFromTownStorage(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        int pace = StadConfig.BUILDER_TICKS_PER_BLOCK.get();
+        StadConfig.BUILDER_TICKS_PER_BLOCK.set(1);
+        helper.setBlock(YARD_HALL, StadRegistries.TOWN_HALL.get());
+        Colony colony = foundAt(helper, owner, YARD_HALL);
+        TownHallBlockEntity hall = (TownHallBlockEntity) helper.getBlockEntity(YARD_HALL);
+        BuildingDef hut = BuildingPacks.get(HUT).orElseThrow();
+        BlockPos origin = helper.absolutePos(YARD_SITE);
+        Placement placement = Placement.of(hut.blueprint(), origin, Rotation.NONE);
+        placement.materials().forEach((item, n) -> {
+            ItemStack rest = new ItemStack(item, n);
+            while (!rest.isEmpty()) {
+                ItemStack part = rest.split(Math.min(rest.getCount(), item.getDefaultMaxStackSize()));
+                ItemStack left = hall.storage().addItem(part);
+                helper.assertTrue(left.isEmpty(), "the town hall is too small for the hut's materials");
+            }
+        });
+        Building building = colony.addBuilding(hut.key(), hut.name(), origin, Rotation.NONE, helper.getLevel().getGameTime());
+        CitizenEntity builder = helper.spawn(StadRegistries.CITIZEN.get(), 5, 0, 6);
+        ColonyManager.get(helper.getLevel().getServer()).join(colony, builder);
+        Order.Result hired = OrderService.issue(new Order(owner, OrderKind.ASSIGN_JOB, builder, Jobs.BUILDER));
+        helper.assertTrue(hired.done(), "hiring the builder: " + hired);
+        BlockPos doorAt = origin.offset(3, 1, 0);
+        BlockPos chestAt = origin.offset(2, 1, 5);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(building.done(), "building: " + building.status + " " + Math.round(building.fractionDone() * 100) + "% "
+                    + building.missing + " builder at " + builder.blockPosition());
+            helper.assertTrue(helper.getLevel().getBlockState(doorAt).is(Blocks.OAK_DOOR), "no door");
+            helper.assertTrue(helper.getLevel().getBlockState(chestAt).is(Blocks.CHEST), "no chest");
+            helper.assertTrue(hall.storage().countItem(Items.COBBLESTONE) == 0, "cobblestone left over");
+            StadConfig.BUILDER_TICKS_PER_BLOCK.set(pace);
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "yard", timeoutTicks = 1200)
+    public static void builderWaitsForMaterialsAndSaysWhat(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        helper.setBlock(YARD_HALL, StadRegistries.TOWN_HALL.get());
+        Colony colony = foundAt(helper, owner, YARD_HALL);
+        BuildingDef cottage = BuildingPacks.get(COTTAGE).orElseThrow();
+        Building building = colony.addBuilding(cottage.key(), cottage.name(), helper.absolutePos(YARD_SITE), Rotation.NONE,
+                helper.getLevel().getGameTime());
+        CitizenEntity builder = helper.spawn(StadRegistries.CITIZEN.get(), 5, 0, 6);
+        ColonyManager.get(helper.getLevel().getServer()).join(colony, builder);
+        colony.citizen(builder.getUUID()).orElseThrow().job = Jobs.BUILDER;
+        helper.succeedWhen(() -> {
+            helper.assertTrue(building.status == Building.Status.WAITING, "status " + building.status);
+            helper.assertTrue(building.missing.getOrDefault(Items.COBBLESTONE, 0) == 63, "missing " + building.missing);
+            cleanUp(helper, colony, owner);
+        });
     }
 
     private static CompoundTag looks(boolean female, int skin) {

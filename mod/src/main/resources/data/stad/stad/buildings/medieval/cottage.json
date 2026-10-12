@@ -1,0 +1,10 @@
+{
+  "type": "stad:home",
+  "name": "Cottage",
+  "description": "A cozy home with two beds.",
+  "structure": "stad:medieval/cottage",
+  "tags": [
+    "small",
+    "home"
+  ]
+}

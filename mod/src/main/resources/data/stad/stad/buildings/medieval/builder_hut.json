@@ -1,0 +1,10 @@
+{
+  "type": "stad:builder_hut",
+  "name": "Builder's Hut",
+  "description": "Where the town's builder lives and works.",
+  "structure": "stad:medieval/builder_hut",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

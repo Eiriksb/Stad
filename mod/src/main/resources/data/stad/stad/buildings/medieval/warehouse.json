@@ -1,0 +1,9 @@
+{
+  "type": "stad:warehouse",
+  "name": "Warehouse",
+  "description": "Chests and barrels for the town's goods.",
+  "structure": "stad:medieval/warehouse",
+  "tags": [
+    "storage"
+  ]
+}

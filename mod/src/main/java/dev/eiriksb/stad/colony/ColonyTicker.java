@@ -1,11 +1,14 @@
 package dev.eiriksb.stad.colony;
 
+import dev.eiriksb.stad.building.Outlines;
 import net.minecraft.server.MinecraftServer;
+
+import java.util.List;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
-/** Looks after every colony every few seconds: homes, newcomers. */
+/** Looks after every colony every few seconds (homes, newcomers) and draws building outlines. */
 public final class ColonyTicker {
     private static final int EVERY = 100;
     private static long ticks;
@@ -17,10 +20,16 @@ public final class ColonyTicker {
     }
 
     private static void tick(ServerTickEvent.Post event) {
-        if (++ticks % EVERY != 0) {
+        MinecraftServer server = event.getServer();
+        if (++ticks % 10 == 0) {
+            List<Colony> all = List.copyOf(ColonyManager.get(server).all());
+            for (ServerLevel level : server.getAllLevels()) {
+                Outlines.draw(level, all);
+            }
+        }
+        if (ticks % EVERY != 0) {
             return;
         }
-        MinecraftServer server = event.getServer();
         for (Colony colony : ColonyManager.get(server).all()) {
             ServerLevel level = server.getLevel(colony.dimension);
             if (level != null) {

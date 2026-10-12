@@ -3,7 +3,10 @@ package dev.eiriksb.stad.twt;
 import dev.eiriksb.stad.Stad;
 import dev.eiriksb.stad.citizen.CitizenEntity;
 import dev.eiriksb.stad.citizen.goal.EatAtTownHallGoal;
+import dev.eiriksb.stad.building.Construction;
+import dev.eiriksb.stad.colony.Building;
 import dev.eiriksb.stad.colony.Colony;
+import dev.eiriksb.stad.colony.Jobs;
 import dev.eiriksb.stad.colony.Rank;
 import dev.eiriksb.theywilltalk.villager.VillagerAdapter;
 import dev.eiriksb.theywilltalk.villager.VillagerFacts;
@@ -45,7 +48,7 @@ public final class StadAdapter implements VillagerAdapter {
         f.biomeType = c.level().getBiome(c.blockPosition()).unwrapKey().map(k -> k.location().getPath()).orElse("plains");
         f.sleeping = c.isSleeping();
         f.backstory = c.backstory().isEmpty() ? null : c.backstory();
-        f.job = "unemployed";
+        f.job = c.job().orElse("unemployed");
 
         Optional<Colony> town = c.colony();
         if (town.isEmpty()) {
@@ -55,7 +58,18 @@ public final class StadAdapter implements VillagerAdapter {
         Colony t = town.get();
         f.village = new VillagerFacts.Village("stad:" + t.id, "stad", t.name(), t.dimension.location().toString(),
                 t.center.getX(), t.center.getY(), t.center.getZ(), t.population());
-        f.role = "citizen of the young town of " + t.name() + ", founded by " + t.ownerName();
+        boolean builder = Jobs.BUILDER.equals(c.job().orElse(null));
+        f.role = (builder ? "the builder of the young town of " : "citizen of the young town of ") + t.name() + ", founded by " + t.ownerName();
+        List<String> buildings = new ArrayList<>();
+        for (Building b : t.buildings()) {
+            buildings.add(b.name + " (" + (b.done() ? "built" : b.status == Building.Status.PLANNED ? "planned" : "being built") + ")");
+        }
+        if (!buildings.isEmpty()) {
+            f.context.add("Buildings in town: " + String.join(", ", buildings) + ".");
+        }
+        if (builder) {
+            builderContext(c, t, f);
+        }
         f.context.add(t.name() + " has " + t.population() + (t.population() == 1 ? " citizen" : " citizens") + "; its leader is " + t.ownerName()
                 + officers(t) + ".");
         f.context.add(c.home().isPresent() ? "You have a bed of your own in town."
@@ -73,6 +87,25 @@ public final class StadAdapter implements VillagerAdapter {
             Rank r = t.rank(player.getUUID());
             f.context.add(player.getGameProfile().getName() + " is " + r.describe() + ".");
         }
+    }
+
+    /** What the builder is working on, and what they're missing: they can tell the player when asked. */
+    private static void builderContext(CitizenEntity c, Colony t, VillagerFacts f) {
+        Building current = t.buildings().stream().filter(b -> !b.done() && c.getUUID().equals(b.builder)).findFirst()
+                .or(() -> t.buildings().stream().filter(b -> !b.done() && b.builder == null).findFirst()).orElse(null);
+        if (current == null) {
+            f.context.add("Nothing is planned for you to build. You'd love it if the leader planned something (with the building plans).");
+            return;
+        }
+        int pct = (int) Math.round(current.fractionDone() * 100);
+        switch (current.status) {
+            case WAITING -> f.context.add("You're building the " + current.name + " (" + pct + "% done) but you're stuck: the town is missing "
+                    + Construction.describe(current.missing, 5) + ". Ask for them to be put in the town hall.");
+            case PLANNED -> f.context.add("Next you'll build the " + current.name + "; you haven't started yet.");
+            default -> f.context.add("You're building the " + current.name + " (" + pct + "% done).");
+        }
+        t.buildings().stream().filter(b -> !b.done() && b != current).findFirst()
+                .ifPresent(b -> f.context.add("After that, the " + b.name + " is planned."));
     }
 
     private static String officers(Colony t) {

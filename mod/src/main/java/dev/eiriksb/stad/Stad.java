@@ -1,5 +1,6 @@
 package dev.eiriksb.stad;
 
+import dev.eiriksb.stad.building.BuildingPacks;
 import dev.eiriksb.stad.colony.ColonyProtection;
 import dev.eiriksb.stad.colony.ColonyTicker;
 import dev.eiriksb.stad.command.StadCommands;
@@ -36,6 +37,7 @@ public final class Stad {
         StadNetwork.register(modBus);
         TheyWillTalkApi.get().registerAdapter(new StadAdapter());
         ColonyTicker.register();
+        BuildingPacks.register();
         ColonyProtection.register();
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> StadCommands.register(e.getDispatcher()));
         NeoForge.EVENT_BUS.addListener(this::onTwtReady);

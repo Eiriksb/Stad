@@ -2,11 +2,19 @@ package dev.eiriksb.stad.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dev.eiriksb.stad.StadRegistries;
 import dev.eiriksb.stad.block.TownHallBlock;
+import dev.eiriksb.stad.building.BuildingDef;
+import dev.eiriksb.stad.building.BuildingPacks;
+import dev.eiriksb.stad.building.Construction;
+import dev.eiriksb.stad.building.Placement;
+import dev.eiriksb.stad.building.Planning;
+import dev.eiriksb.stad.colony.Building;
+import dev.eiriksb.stad.colony.Jobs;
 import dev.eiriksb.stad.citizen.CitizenEntity;
 import dev.eiriksb.stad.colony.CitizenRecord;
 import dev.eiriksb.stad.colony.Colony;
@@ -21,6 +29,9 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -45,12 +56,22 @@ public final class StadCommands {
                                         .suggests((c, b) -> SharedSuggestionProvider.suggest(Arrays.stream(Rank.values()).map(Rank::id), b))
                                         .executes(StadCommands::rank))))
                         .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(StadCommands::list))
-                        .then(Commands.literal("dissolve").executes(StadCommands::dissolve)))
+                        .then(Commands.literal("dissolve").executes(StadCommands::dissolve))
+                        .then(Commands.literal("builds").executes(StadCommands::builds))
+                        .then(Commands.literal("plan").then(Commands.argument("building", ResourceLocationArgument.id())
+                                .suggests((c, b) -> SharedSuggestionProvider.suggestResource(BuildingPacks.all().stream().map(BuildingDef::key), b))
+                                .executes(StadCommands::plan)))
+                        .then(Commands.literal("cancel").then(Commands.argument("id", IntegerArgumentType.integer(1)).executes(StadCommands::cancel))))
                 .then(Commands.literal("citizen")
                         .then(Commands.literal("invite").then(Commands.argument("uuid", StringArgumentType.word())
                                 .executes(c -> order(c, OrderKind.INVITE))))
                         .then(Commands.literal("dismiss").then(Commands.argument("uuid", StringArgumentType.word())
                                 .executes(c -> order(c, OrderKind.DISMISS))))
+                        .then(Commands.literal("job").then(Commands.argument("uuid", StringArgumentType.word())
+                                .then(Commands.argument("job", StringArgumentType.word())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(Jobs.all().stream(),
+                                                java.util.stream.Stream.of("none")), b))
+                                        .executes(c -> order(c, OrderKind.ASSIGN_JOB)))))
                         .then(Commands.literal("status").requires(s -> s.hasPermission(2))
                                 .then(Commands.argument("citizens", EntityArgument.entities()).executes(StadCommands::status)))
                         .then(Commands.literal("needs").requires(s -> s.hasPermission(2))
@@ -163,6 +184,75 @@ public final class StadCommands {
         return 1;
     }
 
+    private static int builds(CommandContext<CommandSourceStack> ctx) {
+        Optional<Colony> found = here(ctx.getSource());
+        if (found.isEmpty()) {
+            return fail(ctx.getSource(), "You're not in a town.");
+        }
+        Colony c = found.get();
+        if (c.buildings().isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("Nothing is planned in " + c.name() + ". Use the building plans on the ground."), false);
+        }
+        for (Building b : c.buildings()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("#" + b.id + " " + b.name + " at " + b.origin.toShortString() + ": " + status(b)), false);
+        }
+        return c.buildings().size();
+    }
+
+    public static String status(Building b) {
+        return switch (b.status) {
+            case PLANNED -> "planned";
+            case BUILDING -> "being built, " + Math.round(b.fractionDone() * 100) + "%";
+            case WAITING -> "waiting for " + Construction.describe(b.missing, 3) + " (" + Math.round(b.fractionDone() * 100) + "%)";
+            case DONE -> "done";
+        };
+    }
+
+    /** Plans a building where you stand, facing the way you look (what the building plans do, as a command). */
+    private static int plan(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        ResourceLocation key = ResourceLocationArgument.getId(ctx, "building");
+        Optional<BuildingDef> def = BuildingPacks.get(key);
+        Optional<Colony> found = ColonyManager.get(player.server).at(player.level().dimension(), player.blockPosition());
+        if (def.isEmpty()) {
+            return fail(ctx.getSource(), "There's no building called " + key + ".");
+        }
+        if (found.isEmpty()) {
+            return fail(ctx.getSource(), "Stand on your town's land.");
+        }
+        Rotation rotation = Placement.facingViewer(player.getDirection());
+        BlockPos ground = player.blockPosition().below();
+        BlockPos origin = Placement.originFor(def.get().blueprint(), ground, rotation).relative(player.getDirection(),
+                Placement.rotatedSize(def.get().blueprint().size(), rotation).getZ() / 2 + 2);
+        Planning.Result r = Planning.plan(player, player.serverLevel(), found.get(), def.get(), origin, rotation);
+        if (r.building() == null) {
+            return fail(ctx.getSource(), r.problem());
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal("Planned the " + def.get().name() + " (#" + r.building().id + "). Its outline shows for a few seconds.")
+                .withStyle(ChatFormatting.GREEN), false);
+        return r.building().id;
+    }
+
+    private static int cancel(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Optional<Colony> found = here(ctx.getSource());
+        int id = IntegerArgumentType.getInteger(ctx, "id");
+        if (found.isEmpty()) {
+            return fail(ctx.getSource(), "You're not in a town.");
+        }
+        Colony c = found.get();
+        Optional<Building> b = c.building(id);
+        if (b.isEmpty() || b.get().done()) {
+            return fail(ctx.getSource(), "There's no unfinished building #" + id + ".");
+        }
+        if (!c.rank(player.getUUID()).atLeast(Rank.OFFICER)) {
+            return fail(ctx.getSource(), "Only officers can cancel buildings.");
+        }
+        c.removeBuilding(id);
+        ctx.getSource().sendSuccess(() -> Component.literal("Cancelled the " + b.get().name + "."), false);
+        return 1;
+    }
+
     private static int list(CommandContext<CommandSourceStack> ctx) {
         var all = ColonyManager.get(ctx.getSource().getServer()).all();
         for (Colony c : all) {
@@ -213,13 +303,20 @@ public final class StadCommands {
         if (!(player.serverLevel().getEntity(uuid) instanceof CitizenEntity citizen) || citizen.distanceTo(player) > 16) {
             return fail(ctx.getSource(), "That citizen isn't nearby.");
         }
-        Order.Result r = OrderService.issue(new Order(player, kind, citizen));
+        String arg = kind == OrderKind.ASSIGN_JOB ? StringArgumentType.getString(ctx, "job") : null;
+        if ("none".equals(arg)) {
+            arg = null;
+        }
+        String job = arg;
+        Order.Result r = OrderService.issue(new Order(player, kind, citizen, arg));
         String who = citizen.getName().getString();
         if (r.done()) {
             Colony c = ColonyManager.get(player.server).ofCitizen(uuid).orElse(null);
             ctx.getSource().sendSuccess(() -> Component.literal(switch (kind) {
                 case INVITE -> who + " moves into " + (c == null ? "town" : c.name()) + "!";
                 case DISMISS -> who + " packs up and leaves town.";
+                case ASSIGN_JOB -> job == null ? who + " stops working." : who + " is now the town's " + job + ".";
+                case PLAN_BUILDING -> "";
             }).withStyle(ChatFormatting.GREEN), false);
             return 1;
         }

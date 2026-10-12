@@ -102,6 +102,7 @@ public final class ColonyManager extends SavedData {
 
     /** {@code citizen} leaves their colony. */
     public void leave(Colony colony, CitizenEntity citizen) {
+        colony.buildings().stream().filter(b -> citizen.getUUID().equals(b.builder) && !b.done()).forEach(b -> b.builder = null);
         colony.removeCitizen(citizen.getUUID());
         citizen.leftColony();
     }

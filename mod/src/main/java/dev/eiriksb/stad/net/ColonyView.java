@@ -16,10 +16,10 @@ import java.util.List;
 
 /** What the town hall screen shows, as sent to one player. */
 public record ColonyView(int id, String name, String owner, BlockPos center, int radius, int beds, Rank viewerRank,
-                         List<Member> members, List<Citizen> citizens, List<String> recentOrders) {
+                         List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> recentOrders) {
     public record Member(String name, Rank rank) {}
 
-    public record Citizen(String name, boolean home, int hunger, int rest, int happiness) {}
+    public record Citizen(String name, String job, boolean home, int hunger, int rest, int happiness) {}
 
     public static ColonyView of(Colony c, ServerLevel level, ServerPlayer viewer) {
         List<Member> members = new ArrayList<>();
@@ -27,15 +27,19 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         members.sort((a, b) -> b.rank().compareTo(a.rank()));
         List<Citizen> citizens = new ArrayList<>();
         for (CitizenRecord r : c.citizens()) {
-            citizens.add(new Citizen(r.name, r.home != null, r.hunger, r.rest, r.happiness));
+            citizens.add(new Citizen(r.name, r.job == null ? "" : r.job, r.home != null, r.hunger, r.rest, r.happiness));
         }
         List<String> orders = new ArrayList<>();
         for (OrderRecord o : c.orders().subList(0, Math.min(5, c.orders().size()))) {
             orders.add(o.playerName() + ": " + o.kind().name().toLowerCase() + " " + o.citizenName() + " - " + o.outcome().name().toLowerCase()
                     + (o.reason() == null || o.reason().isEmpty() ? "" : " (" + o.reason() + ")"));
         }
+        List<String> buildings = new ArrayList<>();
+        for (dev.eiriksb.stad.colony.Building b : c.buildings()) {
+            buildings.add("#" + b.id + " " + b.name + ": " + dev.eiriksb.stad.command.StadCommands.status(b));
+        }
         return new ColonyView(c.id, c.name(), c.ownerName(), c.center, c.radius, Homes.beds(level, c).size(), c.rank(viewer.getUUID()),
-                members, citizens, orders);
+                members, citizens, buildings, orders);
     }
 
     public static void send(ServerPlayer player, Colony colony, ServerLevel level) {
@@ -56,11 +60,13 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         });
         buf.writeCollection(citizens, (b, c) -> {
             b.writeUtf(c.name());
+            b.writeUtf(c.job());
             b.writeBoolean(c.home());
             b.writeVarInt(c.hunger());
             b.writeVarInt(c.rest());
             b.writeVarInt(c.happiness());
         });
+        buf.writeCollection(buildings, FriendlyByteBuf::writeUtf);
         buf.writeCollection(recentOrders, FriendlyByteBuf::writeUtf);
     }
 
@@ -68,7 +74,8 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         return new ColonyView(buf.readVarInt(), buf.readUtf(), buf.readUtf(), buf.readBlockPos(), buf.readVarInt(), buf.readVarInt(),
                 buf.readEnum(Rank.class),
                 buf.readList(b -> new Member(b.readUtf(), b.readEnum(Rank.class))),
-                buf.readList(b -> new Citizen(b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt())),
+                buf.readList(b -> new Citizen(b.readUtf(), b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt())),
+                buf.readList(FriendlyByteBuf::readUtf),
                 buf.readList(FriendlyByteBuf::readUtf));
     }
 }

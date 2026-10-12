@@ -72,13 +72,22 @@ public class TownHallScreen extends Screen {
         for (int i = scroll; i < Math.min(view.citizens().size(), scroll + rows); i++) {
             ColonyView.Citizen c = view.citizens().get(i);
             int color = c.happiness() >= 60 ? 0x77DD77 : c.happiness() >= 35 ? 0xDDDD77 : 0xDD7777;
-            g.drawString(font, c.name(), x, y, 0xFFFFFF);
-            g.drawString(font, String.format("food %d · rest %d · %s", c.hunger(), c.rest(), c.home() ? "bed" : "homeless"), x + 120, y, 0xAAAAAA);
+            g.drawString(font, c.name() + (c.job().isEmpty() ? "" : " (" + c.job() + ")"), x, y, 0xFFFFFF);
+            g.drawString(font, String.format("food %d · rest %d · %s", c.hunger(), c.rest(), c.home() ? "bed" : "homeless"), x + 150, y, 0xAAAAAA);
             g.drawString(font, c.happiness() + "%", x + W - 28, y, color);
             y += LINE;
         }
         y = Math.max(y, listTop + Math.min(rows, Math.max(1, view.citizens().size())) * LINE) + 4;
 
+        if (!view.buildings().isEmpty()) {
+            g.drawString(font, Component.literal("Buildings").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF);
+            y += LINE;
+            for (String b : view.buildings()) {
+                g.drawString(font, font.plainSubstrByWidth(b, W), x, y, 0xCCCCCC);
+                y += LINE;
+            }
+            y += 4;
+        }
         g.drawString(font, Component.literal("Leaders").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF);
         y += LINE;
         StringBuilder leaders = new StringBuilder();

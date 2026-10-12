@@ -7,7 +7,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -41,11 +40,7 @@ public final class Arrivals {
         level.addFreshEntity(c);
         ColonyManager.get(level.getServer()).join(colony, c);
         Homes.update(level, colony);
-        Component msg = Component.literal(c.getName().getString() + " has moved to " + colony.name() + ".").withStyle(ChatFormatting.GREEN);
-        for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            if (colony.rank(p.getUUID()).atLeast(Rank.MEMBER)) {
-                p.sendSystemMessage(msg);
-            }
-        }
+        Announce.members(level.getServer(), colony,
+                Component.literal(c.getName().getString() + " has moved to " + colony.name() + ".").withStyle(ChatFormatting.GREEN));
     }
 }

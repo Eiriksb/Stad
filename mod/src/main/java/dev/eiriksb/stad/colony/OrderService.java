@@ -18,7 +18,8 @@ public final class OrderService {
         ColonyManager colonies = ColonyManager.get(player.server);
         Optional<Colony> found = switch (order.kind()) {
             case INVITE -> colonies.at(citizen.level().dimension(), citizen.blockPosition());
-            case DISMISS -> colonies.ofCitizen(citizen.getUUID());
+            case DISMISS, ASSIGN_JOB -> colonies.ofCitizen(citizen.getUUID());
+            case PLAN_BUILDING -> throw new IllegalArgumentException("plans go through Planning");
         };
         if (found.isEmpty()) {
             return new Order.Result(Order.Outcome.INVALID, order.kind() == OrderKind.INVITE
@@ -51,10 +52,15 @@ public final class OrderService {
                     return new Order.Result(Order.Outcome.INVALID, who + " lives in " + other.get().name() + ".");
                 }
             }
-            case DISMISS -> {
+            case DISMISS, ASSIGN_JOB -> {
                 if (!colony.hasCitizen(order.citizen().getUUID())) {
                     return new Order.Result(Order.Outcome.INVALID, who + " doesn't live in " + colony.name() + ".");
                 }
+                if (order.kind() == OrderKind.ASSIGN_JOB && order.arg() != null && !Jobs.exists(order.arg())) {
+                    return new Order.Result(Order.Outcome.INVALID, "There's no such job as " + order.arg() + ".");
+                }
+            }
+            case PLAN_BUILDING -> {
             }
         }
         // M5: the citizen's willingness (standing, affinity, happiness, persona, cost) decides here.
@@ -65,6 +71,13 @@ public final class OrderService {
         switch (order.kind()) {
             case INVITE -> colonies.join(colony, order.citizen());
             case DISMISS -> colonies.leave(colony, order.citizen());
+            case ASSIGN_JOB -> colony.citizen(order.citizen().getUUID()).ifPresent(r -> {
+                r.job = order.arg();
+                colony.buildings().stream().filter(b -> order.citizen().getUUID().equals(b.builder) && !b.done()).forEach(b -> b.builder = null);
+                colony.changed();
+            });
+            case PLAN_BUILDING -> {
+            }
         }
     }
 }

@@ -19,6 +19,8 @@ public final class CitizenRecord {
     public int hunger = 20;
     public int rest = 20;
     public int happiness = 50;
+    /** "builder", or null for no job */
+    public String job;
 
     public CitizenRecord(UUID uuid, String name, long joined) {
         this.uuid = uuid;
@@ -37,6 +39,9 @@ public final class CitizenRecord {
         t.putInt("Hunger", hunger);
         t.putInt("Rest", rest);
         t.putInt("Happiness", happiness);
+        if (job != null) {
+            t.putString("Job", job);
+        }
         return t;
     }
 
@@ -46,6 +51,7 @@ public final class CitizenRecord {
         r.hunger = t.getInt("Hunger");
         r.rest = t.getInt("Rest");
         r.happiness = t.getInt("Happiness");
+        r.job = t.contains("Job") ? t.getString("Job") : null;
         return r;
     }
 }
