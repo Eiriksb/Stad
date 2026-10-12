@@ -58,6 +58,7 @@ public final class StadCommands {
                         .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(StadCommands::list))
                         .then(Commands.literal("dissolve").executes(StadCommands::dissolve))
                         .then(Commands.literal("builds").executes(StadCommands::builds))
+                        .then(Commands.literal("requests").executes(StadCommands::requests))
                         .then(Commands.literal("plan").then(Commands.argument("building", ResourceLocationArgument.id())
                                 .suggests((c, b) -> SharedSuggestionProvider.suggestResource(BuildingPacks.all().stream().map(BuildingDef::key), b))
                                 .executes(StadCommands::plan)))
@@ -108,8 +109,10 @@ public final class StadCommands {
                 .append(Component.literal("  founded by " + c.ownerName() + ", at " + c.center.toShortString()).withStyle(ChatFormatting.GRAY)), false);
         s.sendSuccess(() -> Component.literal(c.population() + " citizens, " + beds + " beds").withStyle(ChatFormatting.GRAY), false);
         for (CitizenRecord r : c.citizens()) {
-            s.sendSuccess(() -> Component.literal(String.format(" %s: food %d, rest %d, happiness %d%%, %s", r.name, r.hunger, r.rest,
-                    r.happiness, r.home == null ? "homeless" : "bed at " + r.home.toShortString())), false);
+            s.sendSuccess(() -> Component.literal(String.format(" %s%s: food %d, rest %d, happiness %d%%, %s%s", r.name,
+                    r.job == null ? "" : " (" + r.job + ", " + r.workToday + " done today)", r.hunger, r.rest, r.happiness,
+                    r.home == null ? "homeless" : "bed at " + r.home.toShortString(),
+                    r.plan.isEmpty() ? "" : "; plans: " + String.join("; ", r.plan))), false);
         }
         c.ranks().forEach((uuid, rank) -> s.sendSuccess(() -> Component.literal(" " + c.playerName(uuid) + ": " + rank.id())
                 .withStyle(ChatFormatting.DARK_GRAY), false));
@@ -197,6 +200,22 @@ public final class StadCommands {
             ctx.getSource().sendSuccess(() -> Component.literal("#" + b.id + " " + b.name + " at " + b.origin.toShortString() + ": " + status(b)), false);
         }
         return c.buildings().size();
+    }
+
+    private static int requests(CommandContext<CommandSourceStack> ctx) {
+        Optional<Colony> found = here(ctx.getSource());
+        if (found.isEmpty()) {
+            return fail(ctx.getSource(), "You're not in a town.");
+        }
+        Colony c = found.get();
+        if (c.requests().isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal(c.name() + " doesn't need anything right now."), false);
+        }
+        for (dev.eiriksb.stad.colony.Request r : c.requests()) {
+            ctx.getSource().sendSuccess(() -> Component.literal(r.label() + " for " + r.destName + " (" + r.reason + ")"
+                    + (r.courier != null ? ", a courier is on it" : "")), false);
+        }
+        return c.requests().size();
     }
 
     public static String status(Building b) {

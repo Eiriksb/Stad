@@ -51,7 +51,7 @@ public class SleepAtHomeGoal extends Goal {
             citizen.startSleeping(bed);
         } else if (--repath <= 0) {
             repath = 40;
-            EatAtTownHallGoal.walkNextTo(citizen, bed, 0.7);
+            Movement.walkNextTo(citizen, bed, 0.7);
         }
     }
 

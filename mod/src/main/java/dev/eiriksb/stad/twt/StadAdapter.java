@@ -3,7 +3,10 @@ package dev.eiriksb.stad.twt;
 import dev.eiriksb.stad.Stad;
 import dev.eiriksb.stad.citizen.CitizenEntity;
 import dev.eiriksb.stad.citizen.goal.EatAtTownHallGoal;
+import dev.eiriksb.stad.building.ColonyStorage;
 import dev.eiriksb.stad.building.Construction;
+import dev.eiriksb.stad.colony.Request;
+import dev.eiriksb.stad.colony.WorkSites;
 import dev.eiriksb.stad.colony.Building;
 import dev.eiriksb.stad.colony.Colony;
 import dev.eiriksb.stad.colony.Jobs;
@@ -67,8 +70,22 @@ public final class StadAdapter implements VillagerAdapter {
         if (!buildings.isEmpty()) {
             f.context.add("Buildings in town: " + String.join(", ", buildings) + ".");
         }
+        String job = c.job().orElse(null);
         if (builder) {
             builderContext(c, t, f);
+        } else if (job != null) {
+            jobContext(c, t, f, job);
+        } else {
+            f.context.add("You have no job yet; you'd like the leader to give you one (builder, farmer, lumberjack or courier).");
+        }
+        c.record().ifPresent(r -> {
+            if (!r.plan.isEmpty()) {
+                f.context.add("Your plan for today: " + String.join("; ", r.plan) + ".");
+            }
+        });
+        if (!t.requests().isEmpty()) {
+            f.context.add("The town needs: " + t.requests().stream().limit(4).map(Request::label).collect(java.util.stream.Collectors.joining(", "))
+                    + (ColonyStorage.warehouses((net.minecraft.server.level.ServerLevel) c.level(), t).isEmpty() ? " (put it in the town hall)." : "."));
         }
         f.context.add(t.name() + " has " + t.population() + (t.population() == 1 ? " citizen" : " citizens") + "; its leader is " + t.ownerName()
                 + officers(t) + ".");
@@ -106,6 +123,25 @@ public final class StadAdapter implements VillagerAdapter {
         }
         t.buildings().stream().filter(b -> !b.done() && b != current).findFirst()
                 .ifPresent(b -> f.context.add("After that, the " + b.name + " is planned."));
+    }
+
+    private static void jobContext(CitizenEntity c, Colony t, VillagerFacts f, String job) {
+        int done = c.record().map(r -> r.workToday).orElse(0);
+        net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) c.level();
+        f.context.add("You're the town's " + job + ": " + Jobs.describe(job) + ".");
+        switch (job) {
+            case Jobs.FARMER -> f.context.add(WorkSites.farmland(level, t).isEmpty()
+                    ? "There's no farmland on the town's land yet; you'd like the leader to make some fields (hoe the dirt, near water)."
+                    : "Today you've harvested " + done + " crops.");
+            case Jobs.LUMBERJACK -> f.context.add(WorkSites.trees(level, t).isEmpty() && done == 0
+                    ? "There are no trees left on the town's land to fell."
+                    : "Today you've felled " + done + " logs.");
+            case Jobs.COURIER -> f.context.add(ColonyStorage.warehouses(level, t).isEmpty()
+                    ? "The town has no warehouse yet, so there's nothing for you to carry; you'd like the leader to have one built."
+                    : "Today you've carried " + done + " items.");
+            default -> {
+            }
+        }
     }
 
     private static String officers(Colony t) {

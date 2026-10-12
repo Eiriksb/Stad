@@ -88,6 +88,15 @@ public class TownHallScreen extends Screen {
             }
             y += 4;
         }
+        if (!view.needs().isEmpty()) {
+            g.drawString(font, Component.literal("The town needs").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF);
+            y += LINE;
+            for (String n : view.needs()) {
+                g.drawString(font, font.plainSubstrByWidth(n, W), x, y, 0xDDBB77);
+                y += LINE;
+            }
+            y += 4;
+        }
         g.drawString(font, Component.literal("Leaders").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF);
         y += LINE;
         StringBuilder leaders = new StringBuilder();

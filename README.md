@@ -8,13 +8,14 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M3). You can found a town with a **town hall** (sneak + right-click
-> opens its storage). Newcomers move in when there are free beds, and you can invite citizens you meet (right-click
-> them). Citizens sleep in their own beds, eat from the town hall and gather there in the evening. Make one of them
-> the **builder** (right-click), use the **Building Plans** on the ground to plan a building from the bundled
-> "Medieval" pack (builder's hut, cottage, warehouse), and they clear the site and build it block by block with
-> materials from the town hall, telling you what's missing. Ask them how it's going. Players have ranks, and every
-> order is checked and logged. The design and roadmap are in [PLAN.md](PLAN.md).
+> **Status:** early development (milestone M4). Found a town with a **town hall**; newcomers move in when there
+> are free beds. Citizens sleep in their own beds, eat from the town hall, and each morning plan their day (in
+> character, with the local AI): a visit to a friend in the evening, an afternoon off. Give them jobs from their card
+> (right-click): **builder** (plan buildings with the Building Plans; they build them from town storage), **farmer**
+> (harvests and replants the town's farmland), **lumberjack** (fells and replants natural trees, never your log
+> walls) and **courier** (carries what the town needs from the warehouse to the town hall and the builder). The town
+> posts what it needs; ask anyone how their day is going. Players have ranks, and every order is checked and logged.
+> The design and roadmap are in [PLAN.md](PLAN.md).
 
 ### Building packs
 
@@ -36,9 +37,10 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad colony rank <player> <owner\|officer\|member\|visitor>` | the founder |
 | `/stad colony dissolve` | the founder (or an admin) ends the town |
 | `/stad colony builds` | planned buildings and how they're going |
+| `/stad colony requests` | what the town needs, and where |
 | `/stad colony plan <building>` | officers: plan a building in front of you (what the Building Plans do) |
 | `/stad colony cancel <id>` | officers |
-| `/stad citizen job <uuid> <builder\|none>` | officers (the citizen card has buttons for it) |
+| `/stad citizen job <uuid> <builder\|farmer\|lumberjack\|courier\|none>` | officers (the citizen card has buttons for it) |
 | `/stad colony found` / `list` | admins |
 | `/stad citizen status <citizens>` | admins: what they're doing right now |
 | `/stad citizen needs <citizens> <hunger> <rest>` | admins, for testing |
@@ -46,7 +48,7 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 ## Development
 
 Requirements: JDK 21 (Gradle downloads it if needed), and a checkout of
-[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.3 or newer, for its public
+[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.4 or newer, for its public
 API). TWT in turn needs [Sipher](https://github.com/Eiriksb/Sipher) built next to it
 (see TWT's README).
 

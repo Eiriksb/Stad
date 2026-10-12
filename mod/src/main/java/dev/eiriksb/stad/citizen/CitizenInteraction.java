@@ -2,6 +2,7 @@ package dev.eiriksb.stad.citizen;
 
 import dev.eiriksb.stad.colony.Colony;
 import dev.eiriksb.stad.colony.ColonyManager;
+import dev.eiriksb.stad.colony.Jobs;
 import dev.eiriksb.stad.colony.OrderKind;
 import dev.eiriksb.stad.colony.Rank;
 import net.minecraft.ChatFormatting;
@@ -30,7 +31,9 @@ final class CitizenInteraction {
             if (home.get().rank(player.getUUID()).atLeast(OrderKind.ASSIGN_JOB.minRank)) {
                 card.append("\n");
                 if (job == null) {
-                    card.append(button("Make builder", "/stad citizen job " + citizen.getUUID() + " builder", ChatFormatting.AQUA));
+                    for (String j : Jobs.all()) {
+                        card.append(button(capitalize(j), "/stad citizen job " + citizen.getUUID() + " " + j, ChatFormatting.AQUA)).append(" ");
+                    }
                 } else {
                     card.append(button("Stop working", "/stad citizen job " + citizen.getUUID() + " none", ChatFormatting.YELLOW));
                 }
@@ -48,6 +51,8 @@ final class CitizenInteraction {
                 card.append(Component.literal("\nBring them onto your town's land to invite them.").withStyle(ChatFormatting.DARK_GRAY));
             }
         }
+        citizen.record().filter(r -> !r.plan.isEmpty()).ifPresent(r -> card.append(Component.literal("\nToday: " + String.join("; ", r.plan))
+                .withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)));
         card.append(Component.literal("\nTalk to them by looking at them and typing in chat.").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
         player.sendSystemMessage(card);
     }

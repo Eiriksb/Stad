@@ -9,9 +9,9 @@ import dev.eiriksb.stad.colony.Announce;
 import dev.eiriksb.stad.colony.Building;
 import dev.eiriksb.stad.colony.Colony;
 import dev.eiriksb.stad.colony.Jobs;
+import dev.eiriksb.stad.twt.StadConversations;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
@@ -37,8 +37,7 @@ public class BuildGoal extends Goal {
     private final CitizenEntity citizen;
     private Building building;
     private int cooldown;
-    private int stuck;
-    private BlockPos walkingTo;
+    private final Movement.Approach approach = new Movement.Approach();
 
     public BuildGoal(CitizenEntity citizen) {
         this.citizen = citizen;
@@ -46,7 +45,7 @@ public class BuildGoal extends Goal {
     }
 
     private boolean workTime() {
-        return !citizen.isSleeping() && !citizen.isNight() && citizen.hunger() >= 4;
+        return citizen.canWork();
     }
 
     private Optional<Colony> colony() {
@@ -80,8 +79,7 @@ public class BuildGoal extends Goal {
     @Override
     public void start() {
         cooldown = 0;
-        stuck = 0;
-        walkingTo = null;
+        approach.reset();
     }
 
     @Override
@@ -102,7 +100,7 @@ public class BuildGoal extends Goal {
             if (citizen.tickCount % 100 != 0) {
                 return;
             }
-            storage = ColonyStorage.of(level, colony);
+            storage = ColonyStorage.supply(level, colony);
             Placement.Step next = Construction.next(level, building, placement);
             if (next != null && next.count() > 0 && storage.count(next.item()) < next.count()) {
                 building.missing = Construction.missing(level, building, placement, storage);
@@ -118,25 +116,16 @@ public class BuildGoal extends Goal {
             return;
         }
         BlockPos pos = step.pos();
-        if (citizen.getEyePosition().distanceTo(pos.getCenter()) > REACH) {
-            if (!pos.equals(walkingTo) || citizen.getNavigation().isDone()) {
-                EatAtTownHallGoal.walkNextTo(citizen, pos, 0.6);
-                walkingTo = pos;
-            }
-            if (++stuck > 160) { // eight seconds without getting there: builders know a shortcut
-                teleportNear(level, pos, placement);
-                stuck = 0;
-            }
+        if (!approach.tick(citizen, pos, REACH, 0.6)) {
             return;
         }
-        citizen.getNavigation().stop();
         citizen.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         if (--cooldown > 0) {
             return;
         }
         cooldown = StadConfig.BUILDER_TICKS_PER_BLOCK.get();
         if (storage == null) {
-            storage = ColonyStorage.of(level, colony);
+            storage = ColonyStorage.supply(level, colony);
         }
         BlockState old = level.getBlockState(pos);
         if (old.getDestroySpeed(level, pos) < 0) {
@@ -155,15 +144,15 @@ public class BuildGoal extends Goal {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
         } else {
             if (citizen.getBoundingBox().intersects(new AABB(pos))) {
-                teleportNear(level, pos.above(), placement);
+                Movement.teleportNear(citizen, pos.above());
             }
             level.setBlock(pos, step.state(), 3);
             level.playSound(null, pos, step.state().getSoundType().getPlaceSound(), SoundSource.BLOCKS, 0.8f, 1.0f);
         }
         citizen.swing(InteractionHand.MAIN_HAND);
+        citizen.didWork(1);
         building.progress++;
         building.status = Building.Status.BUILDING;
-        stuck = 0;
         if (building.progress % 10 == 0) {
             colony.changed();
         }
@@ -190,6 +179,8 @@ public class BuildGoal extends Goal {
         colony.changed();
         Announce.members(level.getServer(), colony, Component.literal(citizen.getName().getString() + " finished the " + building.name
                 + " in " + colony.name() + "!").withStyle(ChatFormatting.GREEN));
+        StadConversations.speakUp(citizen, 32, "(You just finished building the " + building.name + " in " + colony.name()
+                + ". Tell {player} about it proudly, in a sentence or two.)");
     }
 
     /** Tells the town what's missing, every few minutes while waiting. */
@@ -199,38 +190,10 @@ public class BuildGoal extends Goal {
             return;
         }
         building.lastAsked = now;
+        StadConversations.speakUp(citizen, 24, "(You're building the " + building.name + " but you've run out of materials: you need "
+                + Construction.describe(building.missing, 3) + ". Ask {player} to put them in the town hall, in a sentence or two.)");
         Announce.members(level.getServer(), colony, Component.literal("[" + colony.name() + "] ").withStyle(ChatFormatting.GOLD)
                 .append(Component.literal(citizen.getName().getString() + " (builder): I need " + Construction.describe(building.missing, 4)
                         + " to keep building the " + building.name + ". Put them in the town hall, please.").withStyle(ChatFormatting.YELLOW)));
-    }
-
-    /** Somewhere to stand within reach of {@code pos}: solid below, room for a person, not where a block is about to go. */
-    private void teleportNear(ServerLevel level, BlockPos pos, Placement placement) {
-        for (int r = 1; r <= 4; r++) {
-            for (int dy = 1; dy >= -4; dy--) {
-                for (int dx = -r; dx <= r; dx++) {
-                    for (int dz = -r; dz <= r; dz++) {
-                        if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
-                            continue;
-                        }
-                        BlockPos at = pos.offset(dx, dy, dz);
-                        if (standable(level, at) && !at.equals(pos) && !at.above().equals(pos)) {
-                            citizen.getNavigation().stop();
-                            citizen.teleportTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-        int top = Math.max(placement.bounds().maxY() + 1, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING,
-                pos.getX(), pos.getZ()));
-        citizen.teleportTo(pos.getX() + 0.5, top, pos.getZ() + 0.5);
-    }
-
-    private static boolean standable(ServerLevel level, BlockPos at) {
-        return level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)
-                && level.getBlockState(at).getCollisionShape(level, at).isEmpty()
-                && level.getBlockState(at.above()).getCollisionShape(level, at.above()).isEmpty();
     }
 }

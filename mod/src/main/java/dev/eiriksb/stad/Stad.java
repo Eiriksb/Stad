@@ -6,6 +6,7 @@ import dev.eiriksb.stad.colony.ColonyTicker;
 import dev.eiriksb.stad.command.StadCommands;
 import dev.eiriksb.stad.net.StadNetwork;
 import dev.eiriksb.stad.twt.StadAdapter;
+import dev.eiriksb.stad.twt.StadConversations;
 import dev.eiriksb.theywilltalk.api.TheyWillTalkApi;
 import dev.eiriksb.theywilltalk.api.TwtReadyEvent;
 import dev.eiriksb.theywilltalk.villager.VillagerKind;
@@ -36,6 +37,7 @@ public final class Stad {
         StadRegistries.register(modBus);
         StadNetwork.register(modBus);
         TheyWillTalkApi.get().registerAdapter(new StadAdapter());
+        TheyWillTalkApi.get().addConversationHook(new StadConversations());
         ColonyTicker.register();
         BuildingPacks.register();
         ColonyProtection.register();

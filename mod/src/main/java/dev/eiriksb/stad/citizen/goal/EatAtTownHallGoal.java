@@ -73,24 +73,13 @@ public class EatAtTownHallGoal extends Goal {
             }
         } else if (--repath <= 0) {
             repath = 40;
-            walkNextTo(citizen, hall, 0.65);
+            Movement.walkNextTo(citizen, hall, 0.65);
         }
     }
 
     @Override
     public void stop() {
         citizen.getNavigation().stop();
-    }
-
-    /**
-     * Walks up beside a block. Not {@code moveTo(pos)}: for a solid target (a bed, the town hall) the ground navigation
-     * aims for the first open space above it, which under a roof or a tree is on top of the roof.
-     */
-    static void walkNextTo(CitizenEntity citizen, BlockPos target, double speed) {
-        net.minecraft.world.level.pathfinder.Path path = citizen.getNavigation().createPath(java.util.Set.of(target), 1);
-        if (path != null) {
-            citizen.getNavigation().moveTo(path, speed);
-        }
     }
 
     /** For prompts: whether the town has food at all. */

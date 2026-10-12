@@ -2,12 +2,15 @@ package dev.eiriksb.stad;
 
 import dev.eiriksb.stad.block.TownHallBlockEntity;
 import dev.eiriksb.stad.citizen.CitizenEntity;
+import dev.eiriksb.stad.agent.DayPlan;
 import dev.eiriksb.stad.building.BuildingDef;
 import dev.eiriksb.stad.building.BuildingPacks;
 import dev.eiriksb.stad.building.Placement;
 import dev.eiriksb.stad.colony.Building;
 import dev.eiriksb.stad.colony.Colony;
 import dev.eiriksb.stad.colony.Jobs;
+import dev.eiriksb.stad.colony.Request;
+import dev.eiriksb.stad.colony.Requests;
 import dev.eiriksb.stad.colony.ColonyManager;
 import dev.eiriksb.stad.colony.Homes;
 import dev.eiriksb.stad.colony.Order;
@@ -106,16 +109,24 @@ public final class StadGameTests {
     /** Test colonies claim only their own test room, so tests running side by side don't overlap. */
     private static final int TEST_RADIUS = 4;
 
-    /** The room's floor is at y = -1 relative to the test, so y = 0 is the ground floor. */
-    private static final BlockPos HALL = new BlockPos(4, 0, 4);
+    /**
+     * Test structures are placed one block above the test's origin, so a template's floor (its y = 0) is at y = 1 and
+     * things stand at y = 2.
+     */
+    private static final int G = 2;
+    private static final BlockPos HALL = new BlockPos(4, G, 4);
 
     private static Colony foundHere(GameTestHelper helper, ServerPlayer owner) {
         return foundAt(helper, owner, HALL);
     }
 
     private static Colony foundAt(GameTestHelper helper, ServerPlayer owner, BlockPos hall) {
+        return foundAt(helper, owner, hall, TEST_RADIUS);
+    }
+
+    private static Colony foundAt(GameTestHelper helper, ServerPlayer owner, BlockPos hall, int radius) {
         ColonyManager.Founding f = ColonyManager.get(helper.getLevel().getServer()).found(helper.getLevel(), helper.absolutePos(hall),
-                owner.getUUID(), owner.getGameProfile().getName(), TEST_RADIUS);
+                owner.getUUID(), owner.getGameProfile().getName(), radius);
         helper.assertTrue(f.colony() != null, "couldn't found a colony: " + f.problem());
         return f.colony();
     }
@@ -132,10 +143,10 @@ public final class StadGameTests {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();
         ServerPlayer rival = helper.makeMockServerPlayerInLevel();
         Colony colony = foundHere(helper, owner);
-        helper.assertTrue(colony.contains(helper.getLevel().dimension(), helper.absolutePos(new BlockPos(6, 0, 6))), "claims its land");
+        helper.assertTrue(colony.contains(helper.getLevel().dimension(), helper.absolutePos(new BlockPos(6, G, 6))), "claims its land");
         helper.assertTrue(colony.rank(owner.getUUID()) == Rank.OWNER && colony.rank(rival.getUUID()) == Rank.VISITOR, "ranks");
         ColonyManager.Founding second = ColonyManager.get(helper.getLevel().getServer()).found(helper.getLevel(),
-                helper.absolutePos(new BlockPos(6, 0, 6)), rival.getUUID(), "rival", TEST_RADIUS);
+                helper.absolutePos(new BlockPos(6, G, 6)), rival.getUUID(), "rival", TEST_RADIUS);
         helper.assertTrue(second.colony() == null, "a second town overlapping the first was founded");
         ColonyManager.Founding again = ColonyManager.get(helper.getLevel().getServer()).found(helper.getLevel(),
                 helper.absolutePos(HALL).offset(500, 0, 500), owner.getUUID(), "owner", TEST_RADIUS);
@@ -149,7 +160,7 @@ public final class StadGameTests {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();
         ServerPlayer visitor = helper.makeMockServerPlayerInLevel();
         Colony colony = foundHere(helper, owner);
-        CitizenEntity citizen = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, 0, 3);
+        CitizenEntity citizen = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, G, 3);
 
         Order.Result refused = OrderService.issue(new Order(visitor, OrderKind.INVITE, citizen));
         helper.assertTrue(refused.outcome() == Order.Outcome.NOT_ALLOWED, "a visitor invited someone: " + refused);
@@ -169,11 +180,11 @@ public final class StadGameTests {
     public static void homelessCitizensGetFreeBeds(GameTestHelper helper) {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();
         Colony colony = foundHere(helper, owner);
-        BlockPos foot = new BlockPos(2, 0, 6);
+        BlockPos foot = new BlockPos(2, G, 6);
         helper.setBlock(foot, Blocks.RED_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH).setValue(BedBlock.PART, BedPart.FOOT));
         helper.setBlock(foot.north(), Blocks.RED_BED.defaultBlockState().setValue(BedBlock.FACING, Direction.NORTH).setValue(BedBlock.PART, BedPart.HEAD));
-        CitizenEntity first = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, 0, 3);
-        CitizenEntity second = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 5, 0, 3);
+        CitizenEntity first = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, G, 3);
+        CitizenEntity second = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 5, G, 3);
         ColonyManager manager = ColonyManager.get(helper.getLevel().getServer());
         manager.join(colony, first);
         manager.join(colony, second);
@@ -199,9 +210,7 @@ public final class StadGameTests {
         Colony colony = foundHere(helper, owner);
         TownHallBlockEntity hall = (TownHallBlockEntity) helper.getBlockEntity(HALL);
         hall.storage().setItem(0, new ItemStack(Items.BREAD, 3));
-        // Right beside the hall: pathfinding is unreliable this far out in the game-test world (walking there is
-        // checked on the dev server), so this tests the eating.
-        CitizenEntity citizen = helper.spawn(StadRegistries.CITIZEN.get(), 3, 0, 4);
+        CitizenEntity citizen = helper.spawn(StadRegistries.CITIZEN.get(), 1, G, 1);
         ColonyManager.get(helper.getLevel().getServer()).join(colony, citizen);
         citizen.setHunger(3);
         helper.succeedWhen(() -> {
@@ -269,8 +278,8 @@ public final class StadGameTests {
     }
 
     /** The yard (20 x 12, stone floor) has the town hall in a corner and room for a building. */
-    private static final BlockPos YARD_HALL = new BlockPos(2, 0, 2);
-    private static final BlockPos YARD_SITE = new BlockPos(9, 0, 1);
+    private static final BlockPos YARD_HALL = new BlockPos(2, G, 2);
+    private static final BlockPos YARD_SITE = new BlockPos(9, G, 1);
 
     @GameTest(template = "yard", timeoutTicks = 6000)
     public static void builderBuildsTheHutFromTownStorage(GameTestHelper helper) {
@@ -293,7 +302,7 @@ public final class StadGameTests {
             }
         });
         Building building = colony.addBuilding(hut.key(), hut.name(), origin, Rotation.NONE, helper.getLevel().getGameTime());
-        CitizenEntity builder = helper.spawn(StadRegistries.CITIZEN.get(), 5, 0, 6);
+        CitizenEntity builder = helper.spawn(StadRegistries.CITIZEN.get(), 5, G, 6);
         ColonyManager.get(helper.getLevel().getServer()).join(colony, builder);
         Order.Result hired = OrderService.issue(new Order(owner, OrderKind.ASSIGN_JOB, builder, Jobs.BUILDER));
         helper.assertTrue(hired.done(), "hiring the builder: " + hired);
@@ -319,14 +328,132 @@ public final class StadGameTests {
         BuildingDef cottage = BuildingPacks.get(COTTAGE).orElseThrow();
         Building building = colony.addBuilding(cottage.key(), cottage.name(), helper.absolutePos(YARD_SITE), Rotation.NONE,
                 helper.getLevel().getGameTime());
-        CitizenEntity builder = helper.spawn(StadRegistries.CITIZEN.get(), 5, 0, 6);
+        CitizenEntity builder = helper.spawn(StadRegistries.CITIZEN.get(), 5, G, 6);
         ColonyManager.get(helper.getLevel().getServer()).join(colony, builder);
         colony.citizen(builder.getUUID()).orElseThrow().job = Jobs.BUILDER;
         helper.succeedWhen(() -> {
             helper.assertTrue(building.status == Building.Status.WAITING, "status " + building.status);
             helper.assertTrue(building.missing.getOrDefault(Items.COBBLESTONE, 0) == 63, "missing " + building.missing);
+            Requests.update(helper.getLevel(), colony);
+            var request = colony.request("minecraft:cobblestone", colony.center);
+            helper.assertTrue(request.isPresent() && request.get().count == 63, "the town asks for it: " + colony.requests().stream().map(Request::label).toList());
             cleanUp(helper, colony, owner);
         });
+    }
+
+    // ---- jobs, logistics and plans (M4) ---------------------------------------------------------------------------
+
+    /** For job tests: the town hall at the back of the yard, its land covering the yard. */
+    private static final BlockPos YARD_MID = new BlockPos(10, G, 9);
+    private static final int YARD_RADIUS = 8;
+
+    private static CitizenEntity hire(GameTestHelper helper, Colony colony, String job, int x, int z) {
+        CitizenEntity c = helper.spawn(StadRegistries.CITIZEN.get(), x, G, z);
+        ColonyManager.get(helper.getLevel().getServer()).join(colony, c);
+        colony.citizen(c.getUUID()).orElseThrow().job = job;
+        return c;
+    }
+
+    @GameTest(template = "yard", timeoutTicks = 3000, batch = "jobs")
+    public static void farmerHarvestsReplantsAndDelivers(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        helper.setBlock(YARD_MID, StadRegistries.TOWN_HALL.get());
+        Colony colony = foundAt(helper, owner, YARD_MID, YARD_RADIUS);
+        TownHallBlockEntity hall = (TownHallBlockEntity) helper.getBlockEntity(YARD_MID);
+        BlockPos[] field = {new BlockPos(6, G - 1, 4), new BlockPos(7, G - 1, 4), new BlockPos(8, G - 1, 4)};
+        for (BlockPos f : field) {
+            helper.setBlock(f, Blocks.FARMLAND);
+            helper.setBlock(f.above(), ((net.minecraft.world.level.block.CropBlock) Blocks.WHEAT).getStateForAge(7));
+        }
+        CitizenEntity farmer = hire(helper, colony, Jobs.FARMER, 7, 6);
+        helper.succeedWhen(() -> {
+            for (BlockPos f : field) {
+                var crop = helper.getBlockState(f.above());
+                helper.assertTrue(crop.is(Blocks.WHEAT) && !((net.minecraft.world.level.block.CropBlock) Blocks.WHEAT).isMaxAge(crop),
+                        "not harvested and replanted at " + f.above() + ": " + crop);
+            }
+            helper.assertTrue(hall.storage().countItem(Items.WHEAT) >= 3, "wheat delivered: " + hall.storage().countItem(Items.WHEAT));
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "yard", timeoutTicks = 3000, batch = "jobs")
+    public static void lumberjackFellsTreesButNotLogWalls(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        helper.setBlock(YARD_MID, StadRegistries.TOWN_HALL.get());
+        Colony colony = foundAt(helper, owner, YARD_MID, YARD_RADIUS);
+        TownHallBlockEntity hall = (TownHallBlockEntity) helper.getBlockEntity(YARD_MID);
+        BlockPos trunk = new BlockPos(15, G, 3);
+        helper.setBlock(trunk.below(), Blocks.DIRT);
+        for (int y = 0; y < 4; y++) {
+            helper.setBlock(trunk.above(y), Blocks.OAK_LOG);
+        }
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int dy = 3; dy <= 4; dy++) {
+                    BlockPos l = trunk.offset(dx, dy, dz);
+                    if (!(dx == 0 && dz == 0 && dy == 3)) {
+                        helper.setBlock(l, Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.DISTANCE, 1));
+                    }
+                }
+            }
+        }
+        BlockPos pillar = new BlockPos(17, G, 5);
+        helper.setBlock(pillar.below(), Blocks.DIRT);
+        for (int y = 0; y < 3; y++) {
+            helper.setBlock(pillar.above(y), Blocks.SPRUCE_LOG);
+        }
+        hire(helper, colony, Jobs.LUMBERJACK, 13, 6);
+        helper.succeedWhen(() -> {
+            for (int y = 0; y < 4; y++) {
+                helper.assertTrue(!helper.getBlockState(trunk.above(y)).is(Blocks.OAK_LOG), "the tree still stands at " + trunk.above(y));
+            }
+            helper.assertTrue(hall.storage().countItem(Items.OAK_LOG) >= 4, "logs delivered: " + hall.storage().countItem(Items.OAK_LOG));
+            for (int y = 0; y < 3; y++) {
+                helper.assertTrue(helper.getBlockState(pillar.above(y)).is(Blocks.SPRUCE_LOG), "the log pillar was chopped");
+            }
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "yard", timeoutTicks = 3000, batch = "jobs")
+    public static void courierBringsFoodFromTheWarehouse(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        helper.setBlock(YARD_MID, StadRegistries.TOWN_HALL.get());
+        Colony colony = foundAt(helper, owner, YARD_MID, YARD_RADIUS);
+        TownHallBlockEntity hall = (TownHallBlockEntity) helper.getBlockEntity(YARD_MID);
+        BuildingDef warehouse = BuildingPacks.get(ResourceLocation.fromNamespaceAndPath("stad", "medieval/warehouse")).orElseThrow();
+        Building w = colony.addBuilding(warehouse.key(), warehouse.name(), helper.absolutePos(new BlockPos(1, G, 1)), Rotation.NONE,
+                helper.getLevel().getGameTime());
+        w.status = Building.Status.DONE;
+        BlockPos chest = new BlockPos(3, G, 3);
+        helper.setBlock(chest, Blocks.CHEST);
+        ((net.minecraft.world.Container) helper.getBlockEntity(chest)).setItem(0, new ItemStack(Items.BREAD, 16));
+        hire(helper, colony, Jobs.COURIER, 6, 6);
+        Requests.update(helper.getLevel(), colony);
+        helper.assertTrue(colony.request(Request.FOOD, colony.center).isPresent(), "the town hall asks for food");
+        helper.succeedWhen(() -> {
+            helper.assertTrue(hall.storage().countItem(Items.BREAD) >= 8, "bread in the town hall: " + hall.storage().countItem(Items.BREAD));
+            helper.assertTrue(colony.request(Request.FOOD, colony.center).isEmpty(), "the request is still open");
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "empty")
+    public static void dayPlansAreReadCarefully(GameTestHelper helper) {
+        String json = """
+                {"intentions": [{"text": "Finish the cottage roof", "kind": "work", "with": ""},
+                                {"text": "Supper with Ingrid", "kind": "socialize", "with": "ingrid"},
+                                {"text": "Nap in the afternoon", "kind": "rest", "with": ""}], "mood": "content"}""";
+        DayPlan plan = DayPlan.parse(json, List.of("Ingrid Berg", "Leif Dal"));
+        helper.assertTrue(plan.intentions().size() == 3 && plan.rest(), "plan " + plan);
+        helper.assertTrue("Ingrid Berg".equals(plan.visit()), "visit " + plan.visit());
+        DayPlan stranger = DayPlan.parse(json.replace("\"ingrid\"", "\"Herobrine\""), List.of("Ingrid Berg"));
+        helper.assertTrue(stranger.visit() == null, "visits only townsfolk: " + stranger.visit());
+        helper.succeed();
     }
 
     private static CompoundTag looks(boolean female, int skin) {

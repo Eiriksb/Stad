@@ -42,5 +42,9 @@ public final class Arrivals {
         Homes.update(level, colony);
         Announce.members(level.getServer(), colony,
                 Component.literal(c.getName().getString() + " has moved to " + colony.name() + ".").withStyle(ChatFormatting.GREEN));
+        CitizenEntity newcomer = c;
+        level.getServer().tell(new net.minecraft.server.TickTask(level.getServer().getTickCount() + 60, () ->
+                dev.eiriksb.stad.twt.StadConversations.speakUp(newcomer, 40, "(You just moved to " + colony.name()
+                        + " and see {player}, who lives here. Introduce yourself in a sentence or two.)")));
     }
 }

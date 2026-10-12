@@ -4,49 +4,103 @@ import dev.eiriksb.stad.block.TownHallBlockEntity;
 import dev.eiriksb.stad.colony.Building;
 import dev.eiriksb.stad.colony.Colony;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
- * Where the town keeps its things: the town hall, plus the chests and barrels in finished builder's huts and
- * warehouses. Builders take their materials from here. Server thread.
+ * Some of the town's containers. The <b>supply</b> is what builders build from and citizens eat from: the town hall
+ * and finished builder's huts. <b>Warehouses</b> hold everything else; couriers carry what's needed from them to the
+ * supply. Workers deliver to a warehouse, or to the town hall when there's none. Server thread.
  */
 public final class ColonyStorage {
-    private final List<Container> containers;
+    /** A container and where it is. */
+    public record Box(BlockPos pos, Container container) {}
 
-    private ColonyStorage(List<Container> containers) {
-        this.containers = containers;
+    private final List<Box> boxes;
+
+    private ColonyStorage(List<Box> boxes) {
+        this.boxes = boxes;
     }
 
-    public static ColonyStorage of(ServerLevel level, Colony colony) {
-        List<Container> found = new ArrayList<>();
+    /** The town hall plus finished builder's huts. */
+    public static ColonyStorage supply(ServerLevel level, Colony colony) {
+        List<Box> found = new ArrayList<>();
         if (level.getBlockEntity(colony.center) instanceof TownHallBlockEntity hall) {
-            found.add(hall);
+            found.add(new Box(colony.center, hall));
         }
+        found.addAll(containersIn(level, colony, BuildingDef.BUILDER_HUT));
+        return new ColonyStorage(found);
+    }
+
+    /** The chests and barrels of finished warehouses. */
+    public static ColonyStorage warehouses(ServerLevel level, Colony colony) {
+        return new ColonyStorage(containersIn(level, colony, BuildingDef.WAREHOUSE));
+    }
+
+    /** Where workers bring what they make: the warehouses, or the town hall when there are none. */
+    public static ColonyStorage deliveries(ServerLevel level, Colony colony) {
+        ColonyStorage w = warehouses(level, colony);
+        if (!w.boxes.isEmpty()) {
+            return w;
+        }
+        List<Box> hall = new ArrayList<>();
+        if (level.getBlockEntity(colony.center) instanceof TownHallBlockEntity t) {
+            hall.add(new Box(colony.center, t));
+        }
+        return new ColonyStorage(hall);
+    }
+
+    private static List<Box> containersIn(ServerLevel level, Colony colony, ResourceLocation type) {
+        List<Box> found = new ArrayList<>();
         for (Building b : colony.buildings()) {
-            boolean stores = b.def().map(d -> d.type().equals(BuildingDef.BUILDER_HUT) || d.type().equals(BuildingDef.WAREHOUSE)).orElse(false);
-            if (b.done() && stores) {
+            if (b.done() && b.def().map(d -> d.type().equals(type)).orElse(false)) {
                 b.placement().ifPresent(p -> BlockPos.betweenClosedStream(p.bounds()).forEach(pos -> {
-                    if (level.getBlockEntity(pos) instanceof Container c && !(c instanceof TownHallBlockEntity)) {
-                        found.add(c);
+                    BlockEntity be = level.getBlockEntity(pos);
+                    if (be instanceof Container c && !(c instanceof TownHallBlockEntity)) {
+                        found.add(new Box(pos.immutable(), c));
                     }
                 }));
             }
         }
-        return new ColonyStorage(found);
+        return found;
+    }
+
+    public List<Box> boxes() {
+        return boxes;
+    }
+
+    public boolean isEmpty() {
+        return boxes.isEmpty();
     }
 
     public int count(Item item) {
+        return count(s -> s.is(item));
+    }
+
+    public int count(Predicate<ItemStack> matches) {
         int n = 0;
-        for (Container c : containers) {
-            n += c.countItem(item);
+        for (Box b : boxes) {
+            for (int i = 0; i < b.container.getContainerSize(); i++) {
+                ItemStack s = b.container.getItem(i);
+                if (!s.isEmpty() && matches.test(s)) {
+                    n += s.getCount();
+                }
+            }
         }
         return n;
+    }
+
+    public static boolean isFood(ItemStack s) {
+        return s.has(DataComponents.FOOD);
     }
 
     /** Takes {@code count} of {@code item} if there's that much in total; otherwise takes nothing. */
@@ -54,38 +108,69 @@ public final class ColonyStorage {
         if (count(item) < count) {
             return false;
         }
-        int left = count;
-        for (Container c : containers) {
-            for (int i = 0; i < c.getContainerSize() && left > 0; i++) {
-                ItemStack s = c.getItem(i);
-                if (s.is(item)) {
-                    int n = Math.min(left, s.getCount());
-                    s.shrink(n);
-                    left -= n;
-                    c.setChanged();
+        takeUpTo(s -> s.is(item), count);
+        return true;
+    }
+
+    /** Takes up to {@code max} matching items (possibly of different kinds); returns what was taken. */
+    public List<ItemStack> takeUpTo(Predicate<ItemStack> matches, int max) {
+        List<ItemStack> taken = new ArrayList<>();
+        int left = max;
+        for (Box b : boxes) {
+            for (int i = 0; i < b.container.getContainerSize() && left > 0; i++) {
+                ItemStack s = b.container.getItem(i);
+                if (!s.isEmpty() && matches.test(s)) {
+                    taken.add(s.split(Math.min(left, s.getCount())));
+                    left -= taken.getLast().getCount();
+                    b.container.setChanged();
                 }
             }
         }
-        return true;
+        return taken;
+    }
+
+    /** The first box holding something matching (where a courier should go to fetch it). */
+    public Box find(Predicate<ItemStack> matches) {
+        for (Box b : boxes) {
+            for (int i = 0; i < b.container.getContainerSize(); i++) {
+                ItemStack s = b.container.getItem(i);
+                if (!s.isEmpty() && matches.test(s)) {
+                    return b;
+                }
+            }
+        }
+        return null;
     }
 
     /** Puts something into storage; what doesn't fit is returned. */
     public ItemStack put(ItemStack stack) {
         ItemStack rest = stack.copy();
-        for (Container c : containers) {
+        for (Box b : boxes) {
+            rest = insert(b.container, rest);
+            if (rest.isEmpty()) {
+                break;
+            }
+        }
+        return rest;
+    }
+
+    /** Puts a stack into one container (merging first); returns what didn't fit. */
+    public static ItemStack insert(Container c, ItemStack stack) {
+        ItemStack rest = stack.copy();
+        for (int pass = 0; pass < 2 && !rest.isEmpty(); pass++) {
             for (int i = 0; i < c.getContainerSize() && !rest.isEmpty(); i++) {
                 ItemStack s = c.getItem(i);
-                if (s.isEmpty()) {
-                    c.setItem(i, rest.copy());
-                    rest = ItemStack.EMPTY;
-                } else if (ItemStack.isSameItemSameComponents(s, rest) && s.getCount() < s.getMaxStackSize()) {
+                if (pass == 0 && !s.isEmpty() && ItemStack.isSameItemSameComponents(s, rest) && s.getCount() < s.getMaxStackSize()) {
                     int n = Math.min(rest.getCount(), s.getMaxStackSize() - s.getCount());
                     s.grow(n);
                     rest.shrink(n);
+                } else if (pass == 1 && s.isEmpty() && c.canPlaceItem(i, rest)) {
+                    c.setItem(i, rest.copy());
+                    rest = ItemStack.EMPTY;
                 }
-                c.setChanged();
             }
         }
+        c.setChanged();
         return rest;
     }
 }

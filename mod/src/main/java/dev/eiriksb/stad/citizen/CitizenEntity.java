@@ -2,6 +2,9 @@ package dev.eiriksb.stad.citizen;
 
 import dev.eiriksb.stad.StadConfig;
 import dev.eiriksb.stad.citizen.goal.BuildGoal;
+import dev.eiriksb.stad.citizen.goal.CourierGoal;
+import dev.eiriksb.stad.citizen.goal.FarmGoal;
+import dev.eiriksb.stad.citizen.goal.LumberjackGoal;
 import dev.eiriksb.stad.citizen.goal.EatAtTownHallGoal;
 import dev.eiriksb.stad.citizen.goal.GatherAtTownHallGoal;
 import dev.eiriksb.stad.citizen.goal.SleepAtHomeGoal;
@@ -20,6 +23,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
@@ -57,6 +61,8 @@ public class CitizenEntity extends PathfinderMob {
     private int colonyId;
     private float hunger = MAX_NEED;
     private float rest = MAX_NEED;
+    /** what they carry for work: harvests, logs, deliveries */
+    private final SimpleContainer inventory = new SimpleContainer(9);
 
     public CitizenEntity(EntityType<? extends CitizenEntity> type, Level level) {
         super(type, level);
@@ -88,6 +94,9 @@ public class CitizenEntity extends PathfinderMob {
         goalSelector.addGoal(2, new SleepAtHomeGoal(this));
         goalSelector.addGoal(3, new EatAtTownHallGoal(this));
         goalSelector.addGoal(4, new BuildGoal(this));
+        goalSelector.addGoal(4, new FarmGoal(this));
+        goalSelector.addGoal(4, new LumberjackGoal(this));
+        goalSelector.addGoal(4, new CourierGoal(this));
         goalSelector.addGoal(5, new MoveTowardsRestrictionGoal(this, 0.6));
         goalSelector.addGoal(6, new GatherAtTownHallGoal(this));
         goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.6));
@@ -182,10 +191,36 @@ public class CitizenEntity extends PathfinderMob {
         setHunger(hunger + nutrition * 2);
     }
 
-    /** 0..100, from food, sleep and having a home (later also work, friends and how the town is led). */
+    /** 0..100, from food, sleep, a home, work and company (and from M5, how the town is led). */
     public int happiness() {
-        double h = 35 * hunger / MAX_NEED + 30 * rest / MAX_NEED + (home().isPresent() ? 25 : 0) + 10;
+        Optional<CitizenRecord> r = record();
+        boolean job = r.map(x -> x.job != null).orElse(false);
+        boolean company = r.map(x -> level().getGameTime() - x.lastSocial < 24000).orElse(false);
+        double h = 30 * hunger / MAX_NEED + 25 * rest / MAX_NEED + (home().isPresent() ? 20 : 0) + (job ? 15 : 5) + (company ? 10 : 0);
         return (int) Math.round(Math.max(0, Math.min(100, h)));
+    }
+
+    public SimpleContainer inventory() {
+        return inventory;
+    }
+
+    /** Working hours: daytime, awake, fed, and not taking the afternoon off when their plan says to rest. */
+    public boolean canWork() {
+        if (isSleeping() || isNight() || hunger < 4) {
+            return false;
+        }
+        long t = level().getDayTime() % 24000;
+        return !(t > 6000 && record().map(r -> r.planRest).orElse(false));
+    }
+
+    /** Counts work done today (for prompts and the town hall). */
+    public void didWork(int amount) {
+        record().ifPresent(r -> r.workToday += amount);
+    }
+
+    /** They spent time with someone. */
+    public void hadCompany() {
+        record().ifPresent(r -> r.lastSocial = level().getGameTime());
     }
 
     public boolean isNight() {
@@ -261,6 +296,7 @@ public class CitizenEntity extends PathfinderMob {
         tag.putInt("Colony", colonyId);
         tag.putFloat("Hunger", hunger);
         tag.putFloat("Rest", rest);
+        tag.put("Inventory", inventory.createTag(registryAccess()));
     }
 
     @Override
@@ -272,6 +308,7 @@ public class CitizenEntity extends PathfinderMob {
         colonyId = tag.getInt("Colony");
         hunger = tag.contains("Hunger") ? tag.getFloat("Hunger") : MAX_NEED;
         rest = tag.contains("Rest") ? tag.getFloat("Rest") : MAX_NEED;
+        inventory.fromTag(tag.getList("Inventory", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
     }
 
     @Override
@@ -279,6 +316,12 @@ public class CitizenEntity extends PathfinderMob {
         super.onAddedToLevel();
         // Back in the world: stay within the town's land (the restriction itself isn't saved).
         colony().ifPresentOrElse(c -> restrictTo(c.center, c.radius), () -> colonyId = 0);
+    }
+
+    @Override
+    protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
+        super.dropCustomDeathLoot(level, source, recentlyHit);
+        net.minecraft.world.Containers.dropContents(level, blockPosition(), inventory);
     }
 
     @Override

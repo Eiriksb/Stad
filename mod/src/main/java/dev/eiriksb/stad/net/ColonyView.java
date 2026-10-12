@@ -16,7 +16,7 @@ import java.util.List;
 
 /** What the town hall screen shows, as sent to one player. */
 public record ColonyView(int id, String name, String owner, BlockPos center, int radius, int beds, Rank viewerRank,
-                         List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> recentOrders) {
+                         List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> needs, List<String> recentOrders) {
     public record Member(String name, Rank rank) {}
 
     public record Citizen(String name, String job, boolean home, int hunger, int rest, int happiness) {}
@@ -38,8 +38,12 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         for (dev.eiriksb.stad.colony.Building b : c.buildings()) {
             buildings.add("#" + b.id + " " + b.name + ": " + dev.eiriksb.stad.command.StadCommands.status(b));
         }
+        List<String> needs = new ArrayList<>();
+        for (dev.eiriksb.stad.colony.Request r : c.requests()) {
+            needs.add(r.label() + " for " + r.destName + " (" + r.reason + ")");
+        }
         return new ColonyView(c.id, c.name(), c.ownerName(), c.center, c.radius, Homes.beds(level, c).size(), c.rank(viewer.getUUID()),
-                members, citizens, buildings, orders);
+                members, citizens, buildings, needs, orders);
     }
 
     public static void send(ServerPlayer player, Colony colony, ServerLevel level) {
@@ -67,6 +71,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
             b.writeVarInt(c.happiness());
         });
         buf.writeCollection(buildings, FriendlyByteBuf::writeUtf);
+        buf.writeCollection(needs, FriendlyByteBuf::writeUtf);
         buf.writeCollection(recentOrders, FriendlyByteBuf::writeUtf);
     }
 
@@ -75,6 +80,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
                 buf.readEnum(Rank.class),
                 buf.readList(b -> new Member(b.readUtf(), b.readEnum(Rank.class))),
                 buf.readList(b -> new Citizen(b.readUtf(), b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt())),
+                buf.readList(FriendlyByteBuf::readUtf),
                 buf.readList(FriendlyByteBuf::readUtf),
                 buf.readList(FriendlyByteBuf::readUtf));
     }

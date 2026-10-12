@@ -1,5 +1,6 @@
 package dev.eiriksb.stad.colony;
 
+import dev.eiriksb.stad.agent.DayPlanner;
 import dev.eiriksb.stad.building.Outlines;
 import net.minecraft.server.MinecraftServer;
 
@@ -35,6 +36,8 @@ public final class ColonyTicker {
             if (level != null) {
                 Homes.update(level, colony);
                 Arrivals.tick(level, colony);
+                Requests.update(level, colony);
+                DayPlanner.tick(level, colony);
             }
         }
     }

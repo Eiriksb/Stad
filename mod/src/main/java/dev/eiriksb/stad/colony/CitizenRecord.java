@@ -21,6 +21,18 @@ public final class CitizenRecord {
     public int happiness = 50;
     /** "builder", or null for no job */
     public String job;
+    /** what they've done at work today (blocks placed, crops harvested, logs chopped, items delivered) */
+    public int workToday;
+    /** their plan for today, written each morning (see {@link dev.eiriksb.stad.agent.DayPlanner}) */
+    public java.util.List<String> plan = java.util.List.of();
+    /** the day the plan is for */
+    public long planDay = -1;
+    /** who they mean to see this evening, from the plan */
+    public String planVisit;
+    /** whether they mean to take it easy today, from the plan */
+    public boolean planRest;
+    /** game time they last spent time with someone (a chat, an evening at the town hall) */
+    public long lastSocial;
 
     public CitizenRecord(UUID uuid, String name, long joined) {
         this.uuid = uuid;
@@ -42,6 +54,16 @@ public final class CitizenRecord {
         if (job != null) {
             t.putString("Job", job);
         }
+        t.putInt("WorkToday", workToday);
+        net.minecraft.nbt.ListTag planTag = new net.minecraft.nbt.ListTag();
+        plan.forEach(p -> planTag.add(net.minecraft.nbt.StringTag.valueOf(p)));
+        t.put("Plan", planTag);
+        t.putLong("PlanDay", planDay);
+        if (planVisit != null) {
+            t.putString("PlanVisit", planVisit);
+        }
+        t.putBoolean("PlanRest", planRest);
+        t.putLong("LastSocial", lastSocial);
         return t;
     }
 
@@ -52,6 +74,14 @@ public final class CitizenRecord {
         r.rest = t.getInt("Rest");
         r.happiness = t.getInt("Happiness");
         r.job = t.contains("Job") ? t.getString("Job") : null;
+        r.workToday = t.getInt("WorkToday");
+        java.util.List<String> plan = new java.util.ArrayList<>();
+        t.getList("Plan", net.minecraft.nbt.Tag.TAG_STRING).forEach(p -> plan.add(p.getAsString()));
+        r.plan = java.util.List.copyOf(plan);
+        r.planDay = t.contains("PlanDay") ? t.getLong("PlanDay") : -1;
+        r.planVisit = t.contains("PlanVisit") ? t.getString("PlanVisit") : null;
+        r.planRest = t.getBoolean("PlanRest");
+        r.lastSocial = t.getLong("LastSocial");
         return r;
     }
 }

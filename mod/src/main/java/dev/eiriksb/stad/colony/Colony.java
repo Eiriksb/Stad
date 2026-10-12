@@ -36,6 +36,8 @@ public final class Colony {
     private final Deque<OrderRecord> orders = new ArrayDeque<>();
     private final Map<Integer, Building> buildings = new LinkedHashMap<>();
     private int nextBuildingId = 1;
+    private final Map<Integer, Request> requests = new LinkedHashMap<>();
+    private int nextRequestId = 1;
     /** game time of the last newcomer, for {@link Arrivals} */
     long lastArrival;
     private Runnable onChange = () -> {};
@@ -191,6 +193,39 @@ public final class Colony {
         return free;
     }
 
+    // ---- requests -----------------------------------------------------------------------------------------------
+
+    /** Oldest first. */
+    public List<Request> requests() {
+        return List.copyOf(requests.values());
+    }
+
+    public Optional<Request> request(String what, BlockPos dest) {
+        return requests.values().stream().filter(r -> r.what.equals(what) && r.dest.equals(dest)).findFirst();
+    }
+
+    /** Asks for {@code count} of {@code what} at {@code dest} (or updates the count of the same request). */
+    public Request need(String what, int count, BlockPos dest, String destName, String reason, long time) {
+        Optional<Request> existing = request(what, dest);
+        if (existing.isPresent()) {
+            if (existing.get().count != count) {
+                existing.get().count = count;
+                changed();
+            }
+            return existing.get();
+        }
+        Request r = new Request(nextRequestId++, what, count, dest.immutable(), destName, reason, time);
+        requests.put(r.id, r);
+        changed();
+        return r;
+    }
+
+    public void removeRequest(int id) {
+        if (requests.remove(id) != null) {
+            changed();
+        }
+    }
+
     // ---- orders -------------------------------------------------------------------------------------------------
 
     public void log(OrderRecord r) {
@@ -237,6 +272,10 @@ public final class Colony {
         ListTag bs = new ListTag();
         buildings.values().forEach(b -> bs.add(b.save()));
         t.put("Buildings", bs);
+        t.putInt("NextRequestId", nextRequestId);
+        ListTag rs = new ListTag();
+        requests.values().forEach(r -> rs.add(r.save()));
+        t.put("Requests", rs);
         return t;
     }
 
@@ -264,6 +303,11 @@ public final class Colony {
         for (Tag tag : t.getList("Buildings", Tag.TAG_COMPOUND)) {
             Building b = Building.load((CompoundTag) tag);
             c.buildings.put(b.id, b);
+        }
+        c.nextRequestId = Math.max(1, t.getInt("NextRequestId"));
+        for (Tag tag : t.getList("Requests", Tag.TAG_COMPOUND)) {
+            Request r = Request.load((CompoundTag) tag);
+            c.requests.put(r.id, r);
         }
         return c;
     }
