@@ -179,6 +179,14 @@ public class BuildGoal extends Goal {
         building.status = Building.Status.DONE;
         building.builder = null;
         building.missing.clear();
+        if (building.isRepair()) { // the damage is mended; the order goes
+            colony.removeBuilding(building.id);
+            Announce.members(level.getServer(), colony, Component.literal(citizen.getName().getString() + " has finished the "
+                    + building.name.substring(0, 1).toLowerCase(java.util.Locale.ROOT) + building.name.substring(1) + ".").withStyle(ChatFormatting.GREEN));
+            StadConversations.speakUp(citizen, 32, "(You just finished the " + building.name.toLowerCase(java.util.Locale.ROOT)
+                    + " after the raid. Tell {player}, in a sentence.)");
+            return;
+        }
         colony.changed();
         Announce.members(level.getServer(), colony, Component.literal(citizen.getName().getString() + " finished the " + building.name
                 + " in " + colony.name() + "!").withStyle(ChatFormatting.GREEN));

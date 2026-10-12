@@ -47,6 +47,10 @@ final class CitizenInteraction {
             if (home.get().rank(player.getUUID()).atLeast(OrderKind.DISMISS.minRank)) {
                 card.append(button("Ask to leave town", "/stad citizen dismiss " + citizen.getUUID(), ChatFormatting.RED));
             }
+            Optional<Colony> mine = colonies.all().stream().filter(c -> c.rank(player.getUUID()).atLeast(OrderKind.INVITE.minRank)).findFirst();
+            if (!citizen.isBaby() && !home.get().rank(player.getUUID()).atLeast(Rank.MEMBER) && mine.isPresent() && home.get().politics.poaching) {
+                card.append("\n").append(button("Invite to " + mine.get().name(), "/stad citizen invite " + citizen.getUUID(), ChatFormatting.GOLD));
+            }
         } else {
             card.append(Component.literal("  newcomer, looking for a town").withStyle(ChatFormatting.GRAY));
             Optional<Colony> here = colonies.at(citizen.level().dimension(), citizen.blockPosition());

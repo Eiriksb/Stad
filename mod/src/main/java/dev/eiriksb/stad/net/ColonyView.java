@@ -16,7 +16,8 @@ import java.util.List;
 
 /** What the town hall screen shows, as sent to one player. */
 public record ColonyView(int id, String name, String owner, BlockPos center, int radius, int beds, Rank viewerRank, String standing,
-                         List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> needs, List<String> recentOrders) {
+                         List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> needs, List<String> recentOrders,
+                         boolean open, boolean poaching, String war) {
     public record Member(String name, Rank rank) {}
 
     public record Citizen(String name, String job, boolean home, int hunger, int rest, int happiness) {}
@@ -50,8 +51,14 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         if (!why.isEmpty()) {
             standing.append(": ").append(String.join(", ", why));
         }
+        List<String> wars = new ArrayList<>();
+        for (dev.eiriksb.stad.war.War w : dev.eiriksb.stad.war.Wars.of(level.getServer(), c.id)) {
+            String other = dev.eiriksb.stad.colony.ColonyManager.get(level.getServer()).byId(w.other(c.id)).map(Colony::name).orElse("?");
+            wars.add((w.state == dev.eiriksb.stad.war.War.State.RAID ? "Raid with " : "At war with ") + other);
+        }
+        dev.eiriksb.stad.war.Raids.of(c).ifPresent(r -> wars.add("Raiders from the " + r.from.getName() + "!"));
         return new ColonyView(c.id, c.name(), c.ownerName(), c.center, c.radius, Homes.beds(level, c).size(), c.rank(viewer.getUUID()),
-                standing.toString(), members, citizens, buildings, needs, orders);
+                standing.toString(), members, citizens, buildings, needs, orders, c.politics.open(), c.politics.poaching, String.join("; ", wars));
     }
 
     public static void send(ServerPlayer player, Colony colony, ServerLevel level) {
@@ -82,6 +89,9 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         buf.writeCollection(buildings, FriendlyByteBuf::writeUtf);
         buf.writeCollection(needs, FriendlyByteBuf::writeUtf);
         buf.writeCollection(recentOrders, FriendlyByteBuf::writeUtf);
+        buf.writeBoolean(open);
+        buf.writeBoolean(poaching);
+        buf.writeUtf(war);
     }
 
     static ColonyView read(FriendlyByteBuf buf) {
@@ -92,6 +102,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
                 buf.readList(b -> new Citizen(b.readUtf(), b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt())),
                 buf.readList(FriendlyByteBuf::readUtf),
                 buf.readList(FriendlyByteBuf::readUtf),
-                buf.readList(FriendlyByteBuf::readUtf));
+                buf.readList(FriendlyByteBuf::readUtf),
+                buf.readBoolean(), buf.readBoolean(), buf.readUtf());
     }
 }

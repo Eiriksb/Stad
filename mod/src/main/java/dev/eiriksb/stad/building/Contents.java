@@ -29,6 +29,8 @@ public final class Contents {
     public boolean roof = true;
     /** a door to the outside */
     public boolean entrance = true;
+    /** how tall it is, in blocks */
+    public int height;
 
     public int count(Thing t) {
         return counts.getOrDefault(t, 0);
@@ -76,6 +78,7 @@ public final class Contents {
     public static Contents of(Blueprint bp) {
         Contents c = new Contents();
         bp.entries().forEach(e -> c.add(e.state()));
+        c.height = bp.size().getY();
         return c;
     }
 

@@ -42,6 +42,14 @@ public final class Requirements {
         type(BuildingDef.WAREHOUSE,
                 new Need("at least four chests or barrels", c -> c.count(Contents.Thing.STORAGE) >= 4, true),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.BARRACKS,
+                new Need("two beds", c -> c.count(Contents.Thing.BED) >= 2, true),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), true),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        TYPES.put(BuildingDef.WATCHTOWER, List.of( // open at the top is fine
+                new Need("a door", c -> c.entrance && c.has(Contents.Thing.DOOR), true),
+                new Need("some height (at least 8 blocks)", c -> c.height >= 8, true),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false)));
         type(WORKSHOP,
                 new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true),
                 new Need("a workstation (a smithing table, stonecutter, loom, anvil...)", c -> c.has(Contents.Thing.WORKSTATION), true),
@@ -92,6 +100,12 @@ public final class Requirements {
             return null;
         }
         String w = word.toLowerCase(Locale.ROOT);
+        if (w.contains("barracks")) {
+            return BuildingDef.BARRACKS;
+        }
+        if (w.contains("tower") || w.contains("lookout")) {
+            return BuildingDef.WATCHTOWER;
+        }
         if (w.contains("builder") || w.contains("hut")) {
             return BuildingDef.BUILDER_HUT;
         }

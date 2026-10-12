@@ -125,6 +125,19 @@ public final class StadNetwork {
                 }
             }
             case OPEN_STORAGE -> TownHallBlock.openStorage(player, level, colony.center);
+            case STANCE -> {
+                if (dev.eiriksb.stad.command.StadCommands.setStance(player, colony, colony.politics.stance == dev.eiriksb.stad.war.Politics.Stance.OPEN
+                        ? dev.eiriksb.stad.war.Politics.Stance.PEACEFUL : dev.eiriksb.stad.war.Politics.Stance.OPEN)) {
+                    ColonyView.send(player, colony, level);
+                }
+            }
+            case POACHING -> {
+                if (colony.owner().equals(player.getUUID())) {
+                    colony.politics.poaching = !colony.politics.poaching;
+                    colony.changed();
+                    ColonyView.send(player, colony, level);
+                }
+            }
         }
     }
 }

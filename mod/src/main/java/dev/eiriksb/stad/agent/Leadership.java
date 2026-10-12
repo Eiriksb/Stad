@@ -80,6 +80,9 @@ public final class Leadership {
         if (kind == OrderKind.ASSIGN_JOB && arg != null) {
             factors.add(new Factor(-8, "they'd rather not take on new work", null));
         }
+        if (kind == OrderKind.MARCH) {
+            factors.add(new Factor(-6, "they don't want to fight " + arg + "'s people", null));
+        }
         if (kind == OrderKind.ASSIGN_HOME) {
             factors.add(new Factor(c.home().isEmpty() ? 25 : 10, "", null)); // a home is a gift, not a chore
         }
@@ -136,6 +139,9 @@ public final class Leadership {
             case PLAN_BUILDING -> "build something";
             case ADOPT_BUILDING -> "take over a building for the town";
             case ASSIGN_HOME -> "move into " + homeName(arg, colony);
+            case DECLARE_WAR -> "go to war";
+            case MARCH -> "march on " + arg;
+            case ENVOY -> "go to " + arg + " as an envoy to talk peace";
         };
     }
 

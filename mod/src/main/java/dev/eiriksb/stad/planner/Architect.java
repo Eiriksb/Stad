@@ -41,7 +41,7 @@ public final class Architect {
 
     /** Lines that might be about a building; anything else skips the model entirely (unless a draft is open). */
     private static final Pattern BUILDING_TALK = Pattern.compile("\\b(build\\w*|design\\w*|draw\\w*|plan\\w*|sketch\\w*|construct\\w*|"
-            + "house|home|hut|cottage|cabin|tower|barn|shed|hall|warehouse|storehouse|workshop|bakery|smithy|forge|tavern|inn|chapel|"
+            + "house|home|hut|cottage|cabin|tower|watchtower|barracks|barn|shed|hall|warehouse|storehouse|workshop|bakery|smithy|forge|tavern|inn|chapel|"
             + "farmhouse|mansion|castle|roof|storey|story|stories|floors?|bedrooms?|rooms?|chimney|porch|windows?|walls?|bigger|smaller|"
             + "taller|wider|longer|shorter)\\b", Pattern.CASE_INSENSITIVE);
     private static final long BUDGET_MS = 7_000;
@@ -249,7 +249,7 @@ public final class Architect {
         sb.append("""
                 name: what to call it, in plain words ("Stone Cottage", "Lakeside Workshop").
                 Sizes are in blocks, walls included: small 7x7, medium 9x9 or 9x11, large 13x11; at most 17. Each floor is 4 blocks high.
-                type: home (people live there), warehouse (storage), builder_hut, workshop, other.
+                type: home (people live there), warehouse (storage), builder_hut, workshop, barracks (where guards live), watchtower (tall and narrow: 5x5 or 7x7, 3 floors), other.
                 rooms: one entry per room (two bedrooms = ["bedroom", "bedroom"]). beds: how many people sleep there.
                 frame: logs at the corners and between floors (a wood), or none.
                 features: chimney, porch, big_windows, only when asked for or fitting.

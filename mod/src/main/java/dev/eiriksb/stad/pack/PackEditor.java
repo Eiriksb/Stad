@@ -46,7 +46,7 @@ public final class PackEditor {
 
     /** the kinds of building a pack building can be */
     public static final List<ResourceLocation> TYPES = List.of(BuildingDef.HOME, BuildingDef.BUILDER_HUT, BuildingDef.WAREHOUSE,
-            Requirements.WORKSHOP, ResourceLocation.fromNamespaceAndPath("stad", "building"));
+            Requirements.WORKSHOP, BuildingDef.BARRACKS, BuildingDef.WATCHTOWER, ResourceLocation.fromNamespaceAndPath("stad", "building"));
 
     /**
      * A building open in the editor.

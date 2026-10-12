@@ -43,6 +43,8 @@ public final class Colony {
     public long lastReviewDay = -1;
     /** the day the workers are on strike, if they are */
     public long strikeDay = -1;
+    /** its stance towards other towns, and its raid settings */
+    public final dev.eiriksb.stad.war.Politics politics = new dev.eiriksb.stad.war.Politics();
     /** game time of the last newcomer, for {@link Arrivals} */
     long lastArrival;
     private Runnable onChange = () -> {};
@@ -189,13 +191,14 @@ public final class Colony {
         }
     }
 
-    /** The building {@code builder} works on: the one they've started, else the first nobody has taken. */
+    /** The building {@code builder} works on: the one they've started, else repairs, else the first nobody has taken. */
     public Optional<Building> workFor(UUID builder) {
         Optional<Building> mine = buildings.values().stream().filter(b -> !b.done() && builder.equals(b.builder)).findFirst();
         if (mine.isPresent()) {
             return mine;
         }
-        Optional<Building> free = buildings.values().stream().filter(b -> !b.done() && b.builder == null).findFirst();
+        Optional<Building> free = buildings.values().stream().filter(b -> !b.done() && b.builder == null && b.isRepair()).findFirst()
+                .or(() -> buildings.values().stream().filter(b -> !b.done() && b.builder == null).findFirst());
         free.ifPresent(b -> {
             b.builder = builder;
             changed();
@@ -330,6 +333,7 @@ public final class Colony {
         t.put("Standing", st);
         t.putLong("LastReviewDay", lastReviewDay);
         t.putLong("StrikeDay", strikeDay);
+        t.put("Politics", politics.save());
         return t;
     }
 
@@ -369,6 +373,7 @@ public final class Colony {
         }
         c.lastReviewDay = t.contains("LastReviewDay") ? t.getLong("LastReviewDay") : -1;
         c.strikeDay = t.contains("StrikeDay") ? t.getLong("StrikeDay") : -1;
+        c.politics.load(t.getCompound("Politics"));
         return c;
     }
 }

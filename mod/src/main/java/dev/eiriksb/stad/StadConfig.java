@@ -58,6 +58,68 @@ public final class StadConfig {
 
     static {
         B.pop();
+        B.push("raids");
+    }
+
+    public enum MobRaids { OFF, EASY, NORMAL, HARD }
+
+    public static final ModConfigSpec.EnumValue<MobRaids> MOB_RAIDS = B
+            .comment("Raiders attacking towns at night. OFF: never. The harder, the more of them and the more often.")
+            .defineEnum("mobRaids", MobRaids.NORMAL);
+
+    public static final ModConfigSpec.IntValue MOB_RAID_DAYS = B
+            .comment("At least this many Minecraft days between mob raids on a town (fewer on HARD, more on EASY).")
+            .defineInRange("mobRaidDays", 5, 1, 1000);
+
+    public static final ModConfigSpec.IntValue MOB_RAID_MIN_PEOPLE = B
+            .comment("Towns smaller than this are left alone by raiders.")
+            .defineInRange("mobRaidMinPeople", 4, 1, 1000);
+
+    public enum PvpRaids { OFF, OPT_IN, FORCED }
+
+    public static final ModConfigSpec.EnumValue<PvpRaids> PVP_RAIDS = B
+            .comment("Wars between players' towns. OFF: never. OPT_IN: only between towns that are both open to war (every town",
+                    "starts peaceful). FORCED: every town can be attacked, whatever its stance (hardcore servers).")
+            .defineEnum("pvpRaids", PvpRaids.OPT_IN);
+
+    public static final ModConfigSpec.IntValue WAR_WARNING_MINUTES = B
+            .comment("Real minutes between declaring war and the first raid, so both towns can get ready.")
+            .defineInRange("warWarningMinutes", 24 * 60, 0, 60 * 24 * 30);
+
+    public static final ModConfigSpec.IntValue STANCE_COOLDOWN_MINUTES = B
+            .comment("Real minutes a town must stay open to war before it can go back to peaceful (no going open for one raid).")
+            .defineInRange("stanceCooldownMinutes", 3 * 24 * 60, 0, 60 * 24 * 365);
+
+    public static final ModConfigSpec.IntValue TRUCE_MINUTES = B
+            .comment("Real minutes after a war ends before the same two towns can go to war again.")
+            .defineInRange("truceMinutes", 3 * 24 * 60, 0, 60 * 24 * 365);
+
+    public static final ModConfigSpec.IntValue RAID_MINUTES = B
+            .comment("How long a raid on a player's town can last (real minutes) before the defenders have won.")
+            .defineInRange("raidMinutes", 20, 1, 240);
+
+    public static final ModConfigSpec.IntValue CAPTURE_SECONDS = B
+            .comment("How long raiders must hold the ground by the town hall, with no defenders near, to take its banner.")
+            .defineInRange("captureSeconds", 60, 5, 1200);
+
+    public static final ModConfigSpec.IntValue LOOT_PERCENT = B
+            .comment("The share of the losing town's warehouse stock the winners carry off (and at most lootMaxItems items).")
+            .defineInRange("lootPercent", 20, 0, 100);
+
+    public static final ModConfigSpec.IntValue LOOT_MAX_ITEMS = B
+            .comment("The most items a raid can carry off.")
+            .defineInRange("lootMaxItems", 512, 0, 100000);
+
+    public static final ModConfigSpec.BooleanValue OFFLINE_RAIDS = B
+            .comment("Whether a town can be raided while none of its officers are online.")
+            .define("offlineRaids", false);
+
+    public static final ModConfigSpec.BooleanValue POACHING_DEFAULT = B
+            .comment("Whether new towns let rivals lure their unhappy citizens away (each town can change it).")
+            .define("poachingDefault", true);
+
+    static {
+        B.pop();
         B.push("needs");
     }
 

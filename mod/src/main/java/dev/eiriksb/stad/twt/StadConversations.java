@@ -17,6 +17,10 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 public final class StadConversations implements ConversationHook {
     @Override
     public dev.eiriksb.theywilltalk.api.BeforeReply beforeReply(TurnInfo turn) {
+        dev.eiriksb.theywilltalk.api.BeforeReply envoy = EnvoyTalk.beforeReply(turn);
+        if (envoy != null) {
+            return envoy;
+        }
         dev.eiriksb.theywilltalk.api.BeforeReply given = AdoptionTalk.beforeReply(turn);
         return given != null ? given : dev.eiriksb.stad.planner.Architect.beforeReply(turn);
     }

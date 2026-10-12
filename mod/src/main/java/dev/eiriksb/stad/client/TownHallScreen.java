@@ -46,6 +46,22 @@ public class TownHallScreen extends Screen {
         storage.active = view.viewerRank().atLeast(Rank.MEMBER);
         addRenderableWidget(storage);
         addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(x + W - 96, height - 28, 96, 20).build());
+        boolean owner = view.viewerRank() == Rank.OWNER;
+        Button stance = Button.builder(Component.literal(view.open() ? "Open to war" : "Peaceful").withStyle(view.open() ? ChatFormatting.RED
+                : ChatFormatting.GREEN), b -> PacketDistributor.sendToServer(new ColonyActionPayload(view.id(), ColonyActionPayload.Action.STANCE, "")))
+                .bounds(x + 100, height - 28, 96, 20).tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                        "Peaceful towns can't be raided by players. Open towns can declare war on, and be raided by, other open towns."
+                                + " Going back to peaceful takes a while.")))
+                .build();
+        stance.active = owner;
+        addRenderableWidget(stance);
+        Button poach = Button.builder(Component.literal(view.poaching() ? "Poaching: on" : "Poaching: off"),
+                        b -> PacketDistributor.sendToServer(new ColonyActionPayload(view.id(), ColonyActionPayload.Action.POACHING, "")))
+                .bounds(x + 100, height - 50, 96, 20).tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                        "Whether rival towns may lure your unhappy citizens away.")))
+                .build();
+        poach.active = owner;
+        addRenderableWidget(poach);
     }
 
     @Override
@@ -60,7 +76,12 @@ public class TownHallScreen extends Screen {
                 + view.radius() + " blocks around the hall", x, y, 0xAAAAAA);
         y += LINE;
         g.drawString(font, font.plainSubstrByWidth(view.standing(), W), x, y, 0xDDDD99);
-        y += LINE + 4;
+        y += LINE;
+        if (!view.war().isEmpty()) {
+            g.drawString(font, font.plainSubstrByWidth(view.war(), W), x, y, 0xFF6666);
+            y += LINE;
+        }
+        y += 4;
 
         g.drawString(font, Component.literal("Citizens").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF);
         y += LINE;

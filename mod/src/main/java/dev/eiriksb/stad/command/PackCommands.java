@@ -51,7 +51,7 @@ import java.util.UUID;
 final class PackCommands {
     private PackCommands() {}
 
-    private static final List<String> KINDS = List.of("home", "builder_hut", "warehouse", "workshop");
+    private static final List<String> KINDS = List.of("home", "builder_hut", "warehouse", "workshop", "barracks", "watchtower");
 
     static List<LiteralArgumentBuilder<CommandSourceStack>> nodes() {
         return List.of(

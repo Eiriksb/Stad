@@ -32,9 +32,9 @@ public final class AdoptionTalk {
     private AdoptionTalk() {}
 
     private static final Pattern GIVE = Pattern.compile("\\b(?:(?:this|here|it)(?:'s| is| will be| can be|s)? (?:now )?(?:your|yours|you're)"
-            + "(?: (?:new|own))? (home|house|place|room|cottage|cabin|hut|workshop|warehouse|storehouse)|(?:this|it) is yours"
+            + "(?: (?:new|own))? (home|house|place|room|cottage|cabin|hut|workshop|warehouse|storehouse|barracks|watchtower|tower)|(?:this|it) is yours"
             + "|you (?:can|could|may|should) (?:live|stay|sleep|move in|settle) (?:in )?here|move in(?:to)? (?:here|this)"
-            + "|make (?:this|it) your (home|house|workshop|hut|warehouse))", Pattern.CASE_INSENSITIVE);
+            + "|make (?:this|it) your (home|house|workshop|hut|warehouse|barracks|watchtower|tower))", Pattern.CASE_INSENSITIVE);
 
     /** The context for the reply, or null when this isn't about giving someone a building. Background thread. */
     public static BeforeReply beforeReply(TurnInfo turn) {

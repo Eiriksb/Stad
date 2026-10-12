@@ -80,7 +80,8 @@ public class CitizenEntity extends PathfinderMob {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.5)
-                .add(Attributes.FOLLOW_RANGE, 64.0);
+                .add(Attributes.FOLLOW_RANGE, 64.0)
+                .add(Attributes.ATTACK_DAMAGE, 1.5);
     }
 
     @Override
@@ -95,6 +96,9 @@ public class CitizenEntity extends PathfinderMob {
     protected void registerGoals() {
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new OpenDoorGoal(this, true));
+        goalSelector.addGoal(1, new dev.eiriksb.stad.citizen.goal.EnvoyGoal(this));
+        goalSelector.addGoal(1, new dev.eiriksb.stad.citizen.goal.GuardGoal(this));
+        goalSelector.addGoal(1, new dev.eiriksb.stad.citizen.goal.ShelterGoal(this));
         goalSelector.addGoal(2, new SleepAtHomeGoal(this));
         goalSelector.addGoal(3, new EatAtTownHallGoal(this));
         goalSelector.addGoal(4, new BuildGoal(this));
@@ -297,6 +301,9 @@ public class CitizenEntity extends PathfinderMob {
             }
             if (tickCount % 20 == 0) {
                 tickNeeds();
+            }
+            if (tickCount % 100 == 0 && hunger >= 6 && getHealth() < getMaxHealth()) {
+                heal(isSleeping() ? 2 : 1); // well fed, they mend
             }
             if (tickCount % 100 == 0) {
                 record().ifPresent(r -> {

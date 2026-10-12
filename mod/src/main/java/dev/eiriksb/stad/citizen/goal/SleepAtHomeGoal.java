@@ -21,7 +21,7 @@ public class SleepAtHomeGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (!citizen.isNight() || citizen.isSleeping() || citizen.hunger() < 2) {
+        if (!citizen.isNight() || citizen.isSleeping() || citizen.hunger() < 2 || dev.eiriksb.stad.war.Combat.onWatch(citizen)) {
             return false;
         }
         bed = citizen.home().orElse(null);

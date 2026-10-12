@@ -116,6 +116,7 @@ public final class StadAdapter implements VillagerAdapter {
             }
         }
         family(c, t, f);
+        warContext(c, t, f);
         if (player != null && builder) {
             dev.eiriksb.stad.planner.Drafts.get(player.getUUID()).filter(d -> d.colony == t.id).ifPresent(d -> f.context.add(
                     "You and " + player.getGameProfile().getName() + " are drawing up a building: " + d.design.describe()
@@ -166,9 +167,35 @@ public final class StadAdapter implements VillagerAdapter {
             case Jobs.COURIER -> f.context.add(ColonyStorage.warehouses(level, t).isEmpty()
                     ? "The town has no warehouse yet, so there's nothing for you to carry; you'd like the leader to have one built."
                     : "Today you've carried " + done + " items.");
+            case Jobs.GUARD -> f.context.add(dev.eiriksb.stad.war.Combat.unarmed(c)
+                    ? "You have no sword yet; you'd like one put in the town hall (an iron one, ideally)."
+                    : "You carry a " + c.getMainHandItem().getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + ".");
             default -> {
             }
         }
+    }
+
+    /** Raids, wars and envoys: what's going on between this town and the world. */
+    private static void warContext(CitizenEntity c, Colony t, VillagerFacts f) {
+        net.minecraft.server.MinecraftServer server = c.level().getServer();
+        dev.eiriksb.stad.war.Raids.of(t).ifPresent(r -> f.context.add(r.phase == dev.eiriksb.stad.war.Raids.Phase.WARNING
+                ? "Raiders have been seen coming from the " + r.from.getName() + "! " + (dev.eiriksb.stad.war.Combat.fighter(c)
+                ? "You're getting ready to fight them." : "You're hurrying to shelter.")
+                : "Raiders are attacking the town right now, from the " + r.from.getName() + "! " + (dev.eiriksb.stad.war.Combat.fighter(c)
+                ? "You're fighting them." : "You're sheltering, frightened.")));
+        for (dev.eiriksb.stad.war.War w : dev.eiriksb.stad.war.Wars.of(server, t.id)) {
+            String other = dev.eiriksb.stad.colony.ColonyManager.get(server).byId(w.other(t.id)).map(Colony::name).orElse("another town");
+            f.context.add(t.name() + " is at war with " + other + (w.attacker == t.id ? " (declared by " + w.declaredByName + ", one of our leaders)"
+                    : " (" + w.declaredByName + " of " + other + " declared it on us)") + (w.state == dev.eiriksb.stad.war.War.State.RAID
+                    ? ". A raid is going on right now!" : "."));
+        }
+        if (t.politics.open() && dev.eiriksb.stad.war.Wars.of(server, t.id).isEmpty()) {
+            f.context.add(t.name() + " is open to war with other towns (its founder chose that).");
+        }
+        dev.eiriksb.stad.war.Envoys.of(c.getUUID()).ifPresent(e -> {
+            String to = dev.eiriksb.stad.colony.ColonyManager.get(server).byId(e.to()).map(Colony::name).orElse("the other town");
+            f.context.add("You're an envoy: " + e.sentBy() + " sent you to " + to + "'s town hall to make peace for " + t.name() + ".");
+        });
     }
 
     /** Spouse, parents and children, so They Will Talk knows the family. */

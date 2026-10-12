@@ -45,6 +45,8 @@ public final class Stad {
         dev.eiriksb.stad.item.ScanWandItem.register();
         ColonyProtection.register();
         dev.eiriksb.stad.agent.Leadership.register();
+        dev.eiriksb.stad.war.Raids.register();
+        dev.eiriksb.stad.war.Wars.register();
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> StadCommands.register(e.getDispatcher()));
         NeoForge.EVENT_BUS.addListener(this::onTwtReady);
     }

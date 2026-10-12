@@ -173,6 +173,7 @@ public final class Generator {
                 case "warehouse" -> List.of("storage");
                 case "builder_hut" -> List.of("workshop", "bedroom");
                 case "workshop" -> List.of("workshop");
+                case "barracks" -> List.of("bedroom", "storage");
                 default -> List.of("living");
             });
         }
@@ -181,8 +182,11 @@ public final class Generator {
             beds = 2;
         } else if (beds == 0 && spec.type().equals("builder_hut")) {
             beds = 1;
+        } else if (beds < 2 && spec.type().equals("barracks")) {
+            beds = 4;
         }
-        if (beds > 0 && !wanted.contains("bedroom") && (spec.type().equals("home") || spec.type().equals("builder_hut"))) {
+        if (beds > 0 && !wanted.contains("bedroom") && (spec.type().equals("home") || spec.type().equals("builder_hut")
+                || spec.type().equals("barracks"))) {
             wanted.add("bedroom");
         }
         // which floor each room goes on: bedrooms upstairs when there is an upstairs

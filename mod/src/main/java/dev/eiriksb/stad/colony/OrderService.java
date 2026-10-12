@@ -18,9 +18,12 @@ public final class OrderService {
         CitizenEntity citizen = order.citizen();
         ColonyManager colonies = ColonyManager.get(player.server);
         Optional<Colony> found = switch (order.kind()) {
-            case INVITE -> colonies.at(citizen.level().dimension(), citizen.blockPosition());
-            case DISMISS, ASSIGN_JOB, ASSIGN_HOME -> colonies.ofCitizen(citizen.getUUID());
-            case PLAN_BUILDING, ADOPT_BUILDING -> throw new IllegalArgumentException("buildings go through Planning and Adoption");
+            // the town whose land they're on, if the player runs it; else the player's own town (luring them away)
+            case INVITE -> colonies.at(citizen.level().dimension(), citizen.blockPosition()).filter(c -> c.rank(player.getUUID()).atLeast(Rank.OFFICER))
+                    .or(() -> colonies.all().stream().filter(c -> c.rank(player.getUUID()).atLeast(Rank.OFFICER)).findFirst())
+                    .or(() -> colonies.at(citizen.level().dimension(), citizen.blockPosition())); // (to be told they can't)
+            case DISMISS, ASSIGN_JOB, ASSIGN_HOME, MARCH, ENVOY -> colonies.ofCitizen(citizen.getUUID());
+            case PLAN_BUILDING, ADOPT_BUILDING, DECLARE_WAR -> throw new IllegalArgumentException("buildings go through Planning and Adoption");
         };
         if (found.isEmpty()) {
             return new Order.Result(Order.Outcome.INVALID, order.kind() == OrderKind.INVITE
@@ -51,7 +54,7 @@ public final class OrderService {
                 }
                 Optional<Colony> other = ColonyManager.get(order.player().server).ofCitizen(order.citizen().getUUID());
                 if (other.isPresent()) {
-                    return new Order.Result(Order.Outcome.INVALID, who + " lives in " + other.get().name() + ".");
+                    return poach(order, colony, other.get());
                 }
             }
             case DISMISS, ASSIGN_JOB -> {
@@ -74,7 +77,7 @@ public final class OrderService {
                     return new Order.Result(Order.Outcome.INVALID, "There's no free bed in the " + home.name + ".");
                 }
             }
-            case PLAN_BUILDING, ADOPT_BUILDING -> {
+            case PLAN_BUILDING, ADOPT_BUILDING, DECLARE_WAR, MARCH, ENVOY -> {
             }
         }
         if (order.kind() == OrderKind.ASSIGN_JOB && order.arg() != null && order.citizen().isBaby()) {
@@ -105,6 +108,25 @@ public final class OrderService {
         return new Order.Result(Order.Outcome.ACCEPTED, null);
     }
 
+    /**
+     * Luring a rival town's citizen away (PLAN.md §6.7): only if their town allows it, and only if they're unhappy
+     * there, more so than they'd expect to be in yours.
+     */
+    private static Order.Result poach(Order order, Colony colony, Colony theirs) {
+        String who = order.citizen().getName().getString();
+        if (!theirs.politics.poaching) {
+            return new Order.Result(Order.Outcome.INVALID, who + " lives in " + theirs.name() + ", which doesn't let its people be lured away.");
+        }
+        int happy = order.citizen().happiness();
+        if (happy >= 60) {
+            return new Order.Result(Order.Outcome.REFUSED, who + " won't: they're happy in " + theirs.name() + ".");
+        }
+        Leadership.Willingness w = Leadership.willingness(order.citizen(), order.player(), colony, OrderKind.INVITE, null);
+        int score = w.score() + (50 - happy) + (Leadership.townHappiness(colony) - happy) / 2;
+        return score >= 15 ? new Order.Result(Order.Outcome.ACCEPTED, null)
+                : new Order.Result(Order.Outcome.REFUSED, who + " won't: they'd rather stay in " + theirs.name() + " for now.");
+    }
+
     /** The citizen says what they think of it, in their own words (when the language model is running). */
     private static void react(Order order, Colony colony, Order.Result result) {
         String what = Leadership.describe(order.kind(), order.arg(), colony);
@@ -129,7 +151,17 @@ public final class OrderService {
 
     private static void carryOut(Order order, Colony colony, ColonyManager colonies) {
         switch (order.kind()) {
-            case INVITE -> colonies.join(colony, order.citizen());
+            case INVITE -> {
+                Optional<Colony> old = colonies.ofCitizen(order.citizen().getUUID());
+                colonies.join(colony, order.citizen());
+                old.ifPresent(o -> {
+                    String name = order.citizen().getName().getString();
+                    o.changeLeadersStanding(-5, name + " was lured away to " + colony.name(), order.citizen().level().getGameTime());
+                    Announce.members(order.player().server, o, net.minecraft.network.chat.Component.literal(name + " has left " + o.name()
+                            + " for " + colony.name() + ", lured away by " + order.player().getGameProfile().getName() + ".")
+                            .withStyle(net.minecraft.ChatFormatting.RED));
+                });
+            }
             case DISMISS -> colonies.leave(colony, order.citizen());
             case ASSIGN_JOB -> colony.citizen(order.citizen().getUUID()).ifPresent(r -> {
                 r.job = order.arg();
@@ -141,7 +173,7 @@ public final class OrderService {
                 r.home = Homes.freeBed((net.minecraft.server.level.ServerLevel) order.citizen().level(), colony, home, r.uuid);
                 colony.changed();
             });
-            case PLAN_BUILDING, ADOPT_BUILDING -> {
+            case PLAN_BUILDING, ADOPT_BUILDING, DECLARE_WAR, MARCH, ENVOY -> {
             }
         }
     }

@@ -20,7 +20,7 @@ import java.util.Locale;
  */
 public record BuildSpec(String name, String type, String base, int width, int depth, int floors, String roof, String walls,
                         String frame, String roofMaterial, String floor, int beds, List<String> rooms, List<String> features) {
-    public static final List<String> TYPES = List.of("home", "warehouse", "builder_hut", "workshop", "other");
+    public static final List<String> TYPES = List.of("home", "warehouse", "builder_hut", "workshop", "barracks", "watchtower", "other");
     public static final List<String> ROOFS = List.of("gable", "hip", "flat");
     public static final List<String> ROOMS = List.of("bedroom", "kitchen", "living", "storage", "workshop", "library");
     public static final List<String> FEATURES = List.of("chimney", "porch", "big_windows");
@@ -45,6 +45,8 @@ public record BuildSpec(String name, String type, String base, int width, int de
             case "warehouse" -> BuildingDef.WAREHOUSE;
             case "builder_hut" -> BuildingDef.BUILDER_HUT;
             case "workshop" -> ResourceLocation.fromNamespaceAndPath("stad", "workshop");
+            case "barracks" -> BuildingDef.BARRACKS;
+            case "watchtower" -> BuildingDef.WATCHTOWER;
             default -> ResourceLocation.fromNamespaceAndPath("stad", "building");
         };
     }
@@ -94,6 +96,8 @@ public record BuildSpec(String name, String type, String base, int width, int de
                 case "warehouse" -> "Warehouse";
                 case "builder_hut" -> "Builder's Hut";
                 case "workshop" -> "Workshop";
+                case "barracks" -> "Barracks";
+                case "watchtower" -> "Watchtower";
                 case "home" -> "House";
                 default -> "Building";
             };

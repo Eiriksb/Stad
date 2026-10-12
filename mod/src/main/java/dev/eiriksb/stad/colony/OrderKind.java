@@ -13,7 +13,13 @@ public enum OrderKind {
     /** a building someone made becomes one of the town's (no citizen in particular) */
     ADOPT_BUILDING(Rank.OFFICER),
     /** a citizen is given a home: a bed in one of the town's houses (arg: the building's id) */
-    ASSIGN_HOME(Rank.OFFICER);
+    ASSIGN_HOME(Rank.OFFICER),
+    /** a town declares war on another, or raids it (no citizen in particular) */
+    DECLARE_WAR(Rank.OFFICER),
+    /** a guard is ordered to march with a raid (arg: the town raided) */
+    MARCH(Rank.OFFICER),
+    /** a citizen is sent to another town as an envoy (arg: the town) */
+    ENVOY(Rank.OFFICER);
 
     public final Rank minRank;
 

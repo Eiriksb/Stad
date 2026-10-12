@@ -48,6 +48,7 @@ public final class StadCommands {
     public static void register(CommandDispatcher<CommandSourceStack> d) {
         var stad = Commands.literal("stad").then(DraftCommands.node());
         PackCommands.nodes().forEach(stad::then);
+        WarCommands.nodes().forEach(stad::then);
         d.register(stad
                 .then(Commands.literal("colony")
                         .then(Commands.literal("info").executes(StadCommands::info))
@@ -88,6 +89,22 @@ public final class StadCommands {
                                 .then(Commands.argument("citizens", EntityArgument.entities())
                                         .then(Commands.argument("hunger", FloatArgumentType.floatArg(0, 20))
                                                 .then(Commands.argument("rest", FloatArgumentType.floatArg(0, 20)).executes(StadCommands::needs)))))));
+    }
+
+    /** Why {@code p} can't set the stance, or null (for the town hall screen and commands). */
+    public static String stanceProblem(ServerPlayer p, Colony c, dev.eiriksb.stad.war.Politics.Stance to) {
+        return WarCommands.stanceProblem(p, c, to);
+    }
+
+    /** Sets a town's stance if {@code p} may; tells them why not otherwise. Returns whether it changed. */
+    public static boolean setStance(ServerPlayer p, Colony c, dev.eiriksb.stad.war.Politics.Stance to) {
+        String problem = WarCommands.stanceProblem(p, c, to);
+        if (problem != null) {
+            p.displayClientMessage(Component.literal(problem).withStyle(ChatFormatting.RED), true);
+            return false;
+        }
+        WarCommands.applyStance(p, c, to);
+        return true;
     }
 
     /** The colony the command is about: the one you're standing in, else the one you lead. */
@@ -386,7 +403,9 @@ public final class StadCommands {
                 case DISMISS -> who + " packs up and leaves town.";
                 case ASSIGN_JOB -> job == null ? who + " stops working." : who + " is now the town's " + job + ".";
                 case ASSIGN_HOME -> who + " moves in.";
-                case PLAN_BUILDING, ADOPT_BUILDING -> "";
+                case MARCH -> who + " marches.";
+                case ENVOY -> who + " sets off.";
+                case PLAN_BUILDING, ADOPT_BUILDING, DECLARE_WAR -> "";
             }).withStyle(ChatFormatting.GREEN), false);
             return 1;
         }

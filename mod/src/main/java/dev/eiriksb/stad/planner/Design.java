@@ -71,7 +71,7 @@ public record Design(String name, ResourceLocation type, BuildSpec spec, Bluepri
         int beds = dev.eiriksb.stad.building.Contents.of(bp).count(dev.eiriksb.stad.building.Contents.Thing.BED);
         int floors = Math.max(1, Math.min(BuildSpec.MAX_FLOORS, (int) Math.round((a.height() - 1) / (double) Generator.STOREY)));
         String t = switch (type.getPath()) {
-            case "home", "warehouse", "builder_hut", "workshop" -> type.getPath();
+            case "home", "warehouse", "builder_hut", "workshop", "barracks", "watchtower" -> type.getPath();
             default -> "other";
         };
         String frame = m.getOrDefault(dev.eiriksb.stad.pack.Roles.Role.FRAME, "none");

@@ -20,7 +20,12 @@ public final class ColonyTicker {
 
     public static void register() {
         NeoForge.EVENT_BUS.addListener(ColonyTicker::tick);
-        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> dev.eiriksb.stad.planner.Drafts.clearAll());
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> {
+            dev.eiriksb.stad.planner.Drafts.clearAll();
+            dev.eiriksb.stad.war.Raids.clearAll();
+            dev.eiriksb.stad.war.Wars.clearAll();
+            dev.eiriksb.stad.war.Envoys.clearAll();
+        });
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
             dev.eiriksb.stad.pack.Scans.forget(e.getEntity().getUUID());
             dev.eiriksb.stad.pack.PackEditor.forget(e.getEntity().getUUID());
@@ -37,11 +42,13 @@ public final class ColonyTicker {
         }
         if (ticks % 20 == 0) {
             dev.eiriksb.stad.pack.Scans.tick(server);
+            dev.eiriksb.stad.war.Wars.tick(server, System.currentTimeMillis());
         }
         if (ticks % EVERY != 0) {
             return;
         }
         dev.eiriksb.stad.planner.Drafts.tick(server);
+        dev.eiriksb.stad.war.Envoys.tick(server);
         for (Colony colony : ColonyManager.get(server).all()) {
             ServerLevel level = server.getLevel(colony.dimension);
             if (level != null) {
@@ -49,6 +56,7 @@ public final class ColonyTicker {
                 Arrivals.tick(level, colony);
                 Requests.update(level, colony);
                 Leadership.checkConditions(level, colony);
+                dev.eiriksb.stad.war.Raids.tick(level, colony);
                 if (level.getDayTime() % 24000 <= 4000 && colony.lastReviewDay != level.getDayTime() / 24000) {
                     Leadership.review(level, colony);
                     Social.morning(level, colony);

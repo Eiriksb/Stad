@@ -44,7 +44,7 @@ public final class Restyle {
         /** A spec that describes this building as it is: what a revision starts from. */
         public BuildSpec spec() {
             String type = switch (def.type().getPath()) {
-                case "home", "warehouse", "builder_hut", "workshop" -> def.type().getPath();
+                case "home", "warehouse", "builder_hut", "workshop", "barracks", "watchtower" -> def.type().getPath();
                 default -> "other";
             };
             return new BuildSpec(def.name(), type, def.key().getPath(), width, depth, floors, roof.equals("unknown") ? "gable" : roof,

@@ -154,6 +154,7 @@ public final class Survey {
         }
         BoundingBox box = new BoundingBox(minX - 1, minY - 1, minZ - 1, maxX + 1, top, maxZ + 1);
         contents.walls = first.gaps == 0;
+        contents.height = box.getYSpan();
         contents.roof = holes == 0;
         contents.entrance = !outsideDoors.isEmpty();
         List<BlockPos> doors = new ArrayList<>(outsideDoors);

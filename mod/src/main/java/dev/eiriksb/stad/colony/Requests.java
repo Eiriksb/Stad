@@ -38,6 +38,17 @@ public final class Requests {
                 }
             }
         }
+        // a sword for each guard without one
+        int unarmed = 0;
+        for (CitizenRecord c : colony.citizens()) {
+            if (level.getEntity(c.uuid) instanceof dev.eiriksb.stad.citizen.CitizenEntity e && dev.eiriksb.stad.war.Combat.unarmed(e)) {
+                unarmed++;
+            }
+        }
+        if (unarmed > 0) {
+            wanted.add(colony.need(Request.id(net.minecraft.world.item.Items.IRON_SWORD), unarmed, colony.center, "the town hall",
+                    unarmed == 1 ? "for the guard" : "for the guards", now).id);
+        }
         for (Request r : colony.requests()) {
             if (!Request.FOOD.equals(r.what) && !wanted.contains(r.id)) {
                 colony.removeRequest(r.id);

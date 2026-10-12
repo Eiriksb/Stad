@@ -89,6 +89,11 @@ public final class Building {
         placement = null;
     }
 
+    /** A repair order after a raid (it's dropped once done). */
+    public boolean isRepair() {
+        return key.getPath().startsWith("repair/");
+    }
+
     public boolean done() {
         return status == Status.DONE;
     }

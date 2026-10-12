@@ -26,6 +26,8 @@ public final class ColonyManager extends SavedData {
 
     private final Map<Integer, Colony> colonies = new LinkedHashMap<>();
     private int nextId = 1;
+    private final List<dev.eiriksb.stad.war.War> wars = new java.util.ArrayList<>();
+    private int nextWarId = 1;
 
     public static ColonyManager get(MinecraftServer server) {
         return server.overworld().getDataStorage().computeIfAbsent(FACTORY, "stad_colonies");
@@ -63,6 +65,7 @@ public final class ColonyManager extends SavedData {
     /** Ends a colony. Its citizens stay in the world as newcomers without a town. */
     public void dissolve(MinecraftServer server, Colony colony) {
         colonies.remove(colony.id);
+        wars.removeIf(w -> w.involves(colony.id));
         for (CitizenRecord r : colony.citizens()) {
             for (ServerLevel level : server.getAllLevels()) {
                 if (level.getEntity(r.uuid) instanceof CitizenEntity c) {
@@ -89,6 +92,18 @@ public final class ColonyManager extends SavedData {
         return colonies.values().stream().filter(c -> c.owner().equals(player)).toList();
     }
 
+    /** Every war, over or not, oldest first. */
+    public List<dev.eiriksb.stad.war.War> wars() {
+        return List.copyOf(wars);
+    }
+
+    public dev.eiriksb.stad.war.War addWar(int attacker, int defender, long now, UUID by, String byName) {
+        dev.eiriksb.stad.war.War w = new dev.eiriksb.stad.war.War(nextWarId++, attacker, defender, now, by, byName);
+        wars.add(w);
+        setDirty();
+        return w;
+    }
+
     public Collection<Colony> all() {
         return List.copyOf(colonies.values());
     }
@@ -113,6 +128,10 @@ public final class ColonyManager extends SavedData {
         ListTag list = new ListTag();
         colonies.values().forEach(c -> list.add(c.save()));
         tag.put("Colonies", list);
+        tag.putInt("NextWarId", nextWarId);
+        ListTag ws = new ListTag();
+        wars.forEach(w -> ws.add(w.save()));
+        tag.put("Wars", ws);
         return tag;
     }
 
@@ -123,6 +142,10 @@ public final class ColonyManager extends SavedData {
             Colony c = Colony.load((CompoundTag) t);
             c.onChange(m::setDirty);
             m.colonies.put(c.id, c);
+        }
+        m.nextWarId = Math.max(1, tag.getInt("NextWarId"));
+        for (Tag t : tag.getList("Wars", Tag.TAG_COMPOUND)) {
+            m.wars.add(dev.eiriksb.stad.war.War.load((CompoundTag) t));
         }
         return m;
     }

@@ -8,10 +8,10 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M7). Found a town with a **town hall**; newcomers move in when there
+> **Status:** early development (milestone M8). Found a town with a **town hall**; newcomers move in when there
 > are free beds. Citizens sleep in their own beds, eat from the town hall, plan their day each morning (in character,
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
-> Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack** and **courier**.
+> Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier** and **guard**.
 > **Plan buildings by talking to your builder**: "a small stone cottage with two bedrooms, a spruce roof and a
 > chimney". They draw it up (restyling one of the pack's buildings when it fits, or designing a new one: framing,
 > rooms, stairs, furniture, gable, hip or flat roofs, porches, chimneys), a see-through ghost of it appears on free
@@ -21,6 +21,10 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 > and move in, or tell you what's missing ("I'd need a bed in here"). Scan your buildings into My pack with the
 > **scan wand**, fix what the game guessed about their blocks, and build any pack building in another **style**
 > (Nordic, Desert, Stone, Brick...). When the builder runs out of spruce they ask before using birch instead.
+> **Defend it**: raiders come for bigger towns at dusk; someone spots them and shouts a warning, guards fight, the rest
+> shelter, and the builders repair the damage afterwards. Towns that choose to be **open to war** can raid each other
+> (with warnings, raid windows and a banner to take at the town hall), lure away each other's unhappy citizens, and
+> make peace through envoys who argue for it in character.
 > **Lead them well**: your standing with the town rises and falls with how they're fed, housed and treated (and with
 > what they make of your conversations). A respected leader is obeyed; a doubted one gets grudging, slower work; a
 > resented one hears "no", with a reason, or "only once I've eaten". Miserable citizens leave, and an unhappy town
@@ -78,6 +82,42 @@ yes or no to them, or click the buttons in chat.
 **Sharing packs.** `/stad pack export [name]` zips My pack into `stad/exports/`. It's a data pack: drop it in a
 world's `datapacks` folder, or in `stadpacks/` in the game folder to have it in every world.
 
+### Raids and rivalry
+
+**Guards** patrol between the town hall, watchtowers and barracks, and fight monsters on the town's land and raiders.
+They take the best sword and armour from the town's stores (and the town asks for a sword when there's none). Brave
+sorts (boastful or dramatic citizens) pick up a weapon when their town is attacked.
+
+**Mob raids.** Now and then at dusk raiders come for a town that's big enough (four citizens, by default). A citizen
+spots them and shouts which way they're coming from, a horn sounds, and a minute later they arrive: more for bigger,
+richer towns. Guards fight; everyone else shelters indoors. Afterwards the whole town remembers it ("Hild killed four
+of them"), your standing rises if you saw them through it (and drops if you weren't there), and anything broken
+becomes a repair order the builders do first. `mobRaids` in the config: off, easy, normal or hard.
+
+**Your land is protected.** Only a town's people can build, dig, or open chests and beds on its land.
+
+**War is opt-in.** Every town starts **peaceful** and can't be attacked by players. Its founder can make it **open to
+war** at the town hall (going back takes three real days, and never during a war). Two open towns can go to war:
+- An officer declares it; both towns hear (and the citizens have opinions: bold sorts like it, peaceful ones and those
+  with family over there don't, and that shows in your standing). After a warning period (24 real hours), one raid can
+  start, inside the defenders' raid window (18:00 to 22:00 server time by default; `/stad war window`) and only while
+  one of their officers is online.
+- An officer leads the raid from the defenders' land; their guards are ordered to march (and may refuse a leader they
+  resent). To win, hold the ground by the defenders' town hall for 60 seconds with no defender near: the banner is
+  taken, a fifth of their stock (at most 512 items) is carried off, and unhappy citizens may go over to the winners.
+  Defenders win by holding out for 20 minutes. During a raid attackers can break doors, fences, walls and gates and
+  nothing else; beds, chests and the town hall stay locked. Killing someone who wasn't fighting is remembered on both
+  sides and costs a lot of standing.
+- It ends in a truce (three real days). Either side can offer peace (`/stad war peace`), or send a citizen as an
+  **envoy**: they wait at the other town hall, make the case for peace in character, and an officer there can say
+  "we accept" or send them home.
+
+**Poaching.** An officer of one town can invite another town's citizen: if they're unhappy where they are, they may
+come. Each town can switch this off (the town hall has a button for it and for the war stance).
+
+`pvpRaids` in the config: off, opt_in (the default) or forced (every town can be attacked). The warning, cooldown,
+truce, raid length, capture time, loot share and offline raids are all settings too.
+
 ### Building packs
 
 A pack is part of a data pack: a manifest per building in `data/<namespace>/stad/buildings/<pack>/<building>.json`
@@ -106,7 +146,7 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad colony setstanding <player> <value>` | admins, for testing |
 | `/stad colony plan <building> [style]` | officers: plan a building in front of you (what the Building Plans do) |
 | `/stad colony cancel <id>` | officers |
-| `/stad citizen job <uuid> <builder\|farmer\|lumberjack\|courier\|none>` | officers (the citizen card has buttons for it) |
+| `/stad citizen job <uuid> <builder\|farmer\|lumberjack\|courier\|guard\|none>` | officers (the citizen card has buttons for it) |
 | `/stad draft show` | your draft building: what it is and where (and its buttons again) |
 | `/stad draft approve` / `here` / `turn` / `save` / `cancel` | what the buttons under a draft do |
 | `/stad draft describe <text>` | draw up a building from a description without talking (asks the local model) |
@@ -121,6 +161,12 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad pack role <building> <block> <guessed> <role>` | fix a guessed block role |
 | `/stad pack export [name]` | zip My pack to share |
 | `/stad build swap <id>` / `keep <id>` | answer the builder about a swapped material |
+| `/stad war status` | your town's stance, wars and raids |
+| `/stad war stance <peaceful\|open>` / `poaching <on\|off>` | the founder (the town hall has buttons too) |
+| `/stad war window <from> <to>` | officers: the hours a player raid can start (server time; equal hours: any time) |
+| `/stad war declare <town>` / `raid` / `retreat` | officers: go to war, lead the raid from their land, call it off |
+| `/stad war peace <town>` / `envoy <uuid>` | officers: offer peace, or send a citizen to argue for it |
+| `/stad raid start [seconds]` / `stop` | admins: raiders attack the town you're in (after a warning) |
 | `/stad colony found` / `list` | admins |
 | `/stad citizen status <citizens>` | admins: what they're doing right now |
 | `/stad citizen needs <citizens> <hunger> <rest>` | admins, for testing |
