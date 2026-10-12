@@ -8,15 +8,35 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M5). Found a town with a **town hall**; newcomers move in when there
+> **Status:** early development (milestone M6). Found a town with a **town hall**; newcomers move in when there
 > are free beds. Citizens sleep in their own beds, eat from the town hall, plan their day each morning (in character,
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
-> Give them jobs from their card (right-click): **builder** (plans from the Building Plans, built from town storage),
-> **farmer**, **lumberjack** and **courier**. **Lead them well**: your standing with the town rises and falls with
-> how they're fed, housed and treated (and with what they make of your conversations). A respected leader is obeyed;
-> a doubted one gets grudging, slower work; a resented one hears "no", with a reason, or "only once I've eaten".
-> Miserable citizens leave, and an unhappy town goes on strike. Players have ranks, and every order is checked and
-> logged. The design and roadmap are in [PLAN.md](PLAN.md).
+> Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack** and **courier**.
+> **Plan buildings by talking to your builder**: "a small stone cottage with two bedrooms, a spruce roof and a
+> chimney". They draw it up (restyling one of the pack's buildings when it fits, or designing a new one: framing,
+> rooms, stairs, furniture, gable, hip or flat roofs, porches, chimneys), a see-through ghost of it appears on free
+> land nearby with what it takes, and you change it as you talk ("make it two floors", "use dark oak for the roof",
+> "put it next to the builder's hut") until you say "build it". Keep designs you like in **My pack**.
+> **Lead them well**: your standing with the town rises and falls with how they're fed, housed and treated (and with
+> what they make of your conversations). A respected leader is obeyed; a doubted one gets grudging, slower work; a
+> resented one hears "no", with a reason, or "only once I've eaten". Miserable citizens leave, and an unhappy town
+> goes on strike. Players have ranks, and every order is checked and logged. The design and roadmap are in
+> [PLAN.md](PLAN.md).
+
+### Talking a building through
+
+Talk to the town's builder (typing or by voice) about what you'd like built. Behind the scenes two quick calls to the
+local model sort out what you mean (a new design, a change, "build it", "move it", "keep it") and fill in a building
+spec; the game turns the spec into blocks, so every design is buildable. Under the draft in chat there are buttons
+for the same things: **Build it**, **Move here** (where you're looking), **Turn**, **Save** and **Drop**. Building it
+is an order like any other: it needs an officer, and a builder who doesn't trust you may refuse.
+
+![Houses the generator drew from six specs](docs/generated-houses.png)
+
+(`tools/iso.py` draws structure files like this; the game tests write their sample houses to `run/gametest/stad-designs/`.)
+
+**My pack** is an ordinary data pack in your world (`datapacks/stad_my_pack`): saved designs show up in the Building
+Plans and can be copied to other worlds like any data pack.
 
 ### Building packs
 
@@ -44,6 +64,10 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad colony plan <building>` | officers: plan a building in front of you (what the Building Plans do) |
 | `/stad colony cancel <id>` | officers |
 | `/stad citizen job <uuid> <builder\|farmer\|lumberjack\|courier\|none>` | officers (the citizen card has buttons for it) |
+| `/stad draft show` | your draft building: what it is and where (and its buttons again) |
+| `/stad draft approve` / `here` / `turn` / `save` / `cancel` | what the buttons under a draft do |
+| `/stad draft describe <text>` | draw up a building from a description without talking (asks the local model) |
+| `/stad draft spec <json>` | draw up a building from a spec (see `planner/BuildSpec.java`) |
 | `/stad colony found` / `list` | admins |
 | `/stad citizen status <citizens>` | admins: what they're doing right now |
 | `/stad citizen needs <citizens> <hunger> <rest>` | admins, for testing |

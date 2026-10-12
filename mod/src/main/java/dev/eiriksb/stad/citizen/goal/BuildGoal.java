@@ -173,6 +173,9 @@ public class BuildGoal extends Goal {
     }
 
     private void finish(ServerLevel level, Colony colony) {
+        if (building.done()) {
+            return; // the goal can tick once more before it notices
+        }
         building.status = Building.Status.DONE;
         building.builder = null;
         building.missing.clear();

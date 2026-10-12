@@ -47,6 +47,7 @@ public final class StadCommands {
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
         d.register(Commands.literal("stad")
+                .then(DraftCommands.node())
                 .then(Commands.literal("colony")
                         .then(Commands.literal("info").executes(StadCommands::info))
                         .then(Commands.literal("found").requires(s -> s.hasPermission(2)).executes(StadCommands::found))

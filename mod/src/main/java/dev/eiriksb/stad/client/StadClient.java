@@ -16,4 +16,9 @@ public final class StadClient {
     static void renderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(StadRegistries.CITIZEN.get(), CitizenRenderer::new);
     }
+
+    @SubscribeEvent
+    static void guiLayers(net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) {
+        event.registerAboveAll(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "draft"), GhostPreview::hud);
+    }
 }

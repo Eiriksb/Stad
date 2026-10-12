@@ -10,8 +10,16 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-/** Stad's side of conversations: talking with a player is company, and citizens speak up when something happens. */
+/**
+ * Stad's side of conversations: builders draw up buildings when players talk about them ({@link
+ * dev.eiriksb.stad.planner.Architect}), talking with a player is company, and citizens speak up when something happens.
+ */
 public final class StadConversations implements ConversationHook {
+    @Override
+    public dev.eiriksb.theywilltalk.api.BeforeReply beforeReply(TurnInfo turn) {
+        return dev.eiriksb.stad.planner.Architect.beforeReply(turn);
+    }
+
     @Override
     public void afterReply(TurnInfo turn, String reply, String emotion) {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();

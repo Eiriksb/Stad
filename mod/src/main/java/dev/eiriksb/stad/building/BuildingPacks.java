@@ -30,6 +30,8 @@ import java.util.Optional;
  */
 public final class BuildingPacks extends SimpleJsonResourceReloadListener {
     private static volatile Map<ResourceLocation, BuildingDef> buildings = Map.of();
+    /** designs saved since the last reload (their data pack files are read on the next one) */
+    private static final Map<ResourceLocation, BuildingDef> saved = new java.util.concurrent.ConcurrentHashMap<>();
 
     private BuildingPacks() {
         super(new Gson(), "stad/buildings");
@@ -40,11 +42,22 @@ public final class BuildingPacks extends SimpleJsonResourceReloadListener {
     }
 
     public static Collection<BuildingDef> all() {
-        return buildings.values();
+        if (saved.isEmpty()) {
+            return buildings.values();
+        }
+        Map<ResourceLocation, BuildingDef> all = new LinkedHashMap<>(buildings);
+        saved.forEach(all::putIfAbsent);
+        return all.values();
     }
 
     public static Optional<BuildingDef> get(ResourceLocation key) {
-        return Optional.ofNullable(buildings.get(key));
+        BuildingDef d = buildings.get(key);
+        return Optional.ofNullable(d != null ? d : saved.get(key));
+    }
+
+    /** A building just saved into a data pack: usable now, before the pack is (re)loaded. */
+    public static void addSaved(BuildingDef def) {
+        saved.put(def.key(), def);
     }
 
     @Override
@@ -61,12 +74,14 @@ public final class BuildingPacks extends SimpleJsonResourceReloadListener {
                 List<String> tags = new ArrayList<>();
                 GsonHelper.getAsJsonArray(o, "tags", new com.google.gson.JsonArray()).forEach(t -> tags.add(t.getAsString()));
                 loaded.put(key, new BuildingDef(key, pack, ResourceLocation.parse(GsonHelper.getAsString(o, "type")),
-                        GsonHelper.getAsString(o, "name", path), GsonHelper.getAsString(o, "description", ""), List.copyOf(tags), blueprint));
+                        GsonHelper.getAsString(o, "name", path), GsonHelper.getAsString(o, "description", ""), List.copyOf(tags), blueprint,
+                        o.has("spec") ? o.get("spec").toString() : null));
             } catch (Exception e) {
                 Stad.LOGGER.warn("Building {} could not be loaded: {}", key, e.toString());
             }
         }
         buildings = Map.copyOf(loaded);
+        saved.keySet().removeAll(loaded.keySet());
         Stad.LOGGER.info("Loaded {} buildings from {} packs", loaded.size(), loaded.values().stream().map(BuildingDef::pack).distinct().count());
     }
 

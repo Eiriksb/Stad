@@ -46,6 +46,11 @@ public final class StadNetwork {
             }
         });
         r.playToServer(PlanActionPayload.TYPE, PlanActionPayload.CODEC, StadNetwork::planAction);
+        r.playToClient(DraftPreviewPayload.TYPE, DraftPreviewPayload.CODEC, (p, ctx) -> {
+            if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.draftPreview(p);
+            }
+        });
     }
 
     private static void planAction(PlanActionPayload p, IPayloadContext ctx) {

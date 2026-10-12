@@ -62,7 +62,7 @@ public final class ColonyStorage {
     private static List<Box> containersIn(ServerLevel level, Colony colony, ResourceLocation type) {
         List<Box> found = new ArrayList<>();
         for (Building b : colony.buildings()) {
-            if (b.done() && b.def().map(d -> d.type().equals(type)).orElse(false)) {
+            if (b.done() && b.is(type)) {
                 b.placement().ifPresent(p -> BlockPos.betweenClosedStream(p.bounds()).forEach(pos -> {
                     BlockEntity be = level.getBlockEntity(pos);
                     if (be instanceof Container c && !(c instanceof TownHallBlockEntity)) {

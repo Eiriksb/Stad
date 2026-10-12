@@ -66,6 +66,6 @@ public final class Requests {
     }
 
     public static boolean isBuilderHut(Building b) {
-        return b.def().map(d -> d.type().equals(BuildingDef.BUILDER_HUT)).orElse(false);
+        return b.is(BuildingDef.BUILDER_HUT);
     }
 }

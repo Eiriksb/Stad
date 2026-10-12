@@ -15,4 +15,8 @@ public final class StadClientHooks {
     public static void openPlans(PlansPayload plans) {
         Minecraft.getInstance().setScreen(new PlansScreen(plans));
     }
+
+    public static void draftPreview(dev.eiriksb.stad.net.DraftPreviewPayload preview) {
+        GhostPreview.set(preview);
+    }
 }

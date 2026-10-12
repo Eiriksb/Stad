@@ -25,6 +25,8 @@ public final class Building {
     public final BlockPos origin;
     public final Rotation rotation;
     public final long planned;
+    /** drawn up with a builder (blocks and all), instead of a pack building; null for pack buildings */
+    public final dev.eiriksb.stad.planner.Design design;
     public Status status = Status.PLANNED;
     /** index of the next step in {@link Placement#steps()} */
     public int progress;
@@ -39,8 +41,10 @@ public final class Building {
     public long outlineUntil;
     private Placement placement;
 
-    Building(int id, ResourceLocation key, String name, BlockPos origin, Rotation rotation, long planned) {
+    Building(int id, ResourceLocation key, String name, BlockPos origin, Rotation rotation, long planned,
+             dev.eiriksb.stad.planner.Design design) {
         this.id = id;
+        this.design = design;
         this.key = key;
         this.name = name;
         this.origin = origin;
@@ -52,10 +56,20 @@ public final class Building {
         return BuildingPacks.get(key);
     }
 
+    /** What it's for ("stad:home", "stad:warehouse"...); null when its pack isn't loaded any more. */
+    public ResourceLocation type() {
+        return design != null ? design.type() : def().map(BuildingDef::type).orElse(null);
+    }
+
+    public boolean is(ResourceLocation type) {
+        return type.equals(type());
+    }
+
     /** Where every block goes; empty when its pack isn't loaded any more. */
     public Optional<Placement> placement() {
         if (placement == null) {
-            placement = def().map(d -> Placement.of(d.blueprint(), origin, rotation)).orElse(null);
+            placement = design != null ? Placement.of(design.blueprint(), origin, rotation)
+                    : def().map(d -> Placement.of(d.blueprint(), origin, rotation)).orElse(null);
         }
         return Optional.ofNullable(placement);
     }
@@ -85,12 +99,16 @@ public final class Building {
         if (builder != null) {
             t.putUUID("Builder", builder);
         }
+        if (design != null) {
+            t.put("Design", design.save());
+        }
         return t;
     }
 
     static Building load(CompoundTag t) {
         Building b = new Building(t.getInt("Id"), ResourceLocation.parse(t.getString("Key")), t.getString("Name"),
-                NbtUtils.readBlockPos(t, "Origin").orElse(BlockPos.ZERO), Rotation.valueOf(t.getString("Rotation")), t.getLong("Planned"));
+                NbtUtils.readBlockPos(t, "Origin").orElse(BlockPos.ZERO), Rotation.valueOf(t.getString("Rotation")), t.getLong("Planned"),
+                t.contains("Design") ? dev.eiriksb.stad.planner.Design.load(t.getCompound("Design")) : null);
         b.status = Status.valueOf(t.getString("Status"));
         b.progress = t.getInt("Progress");
         b.builder = t.hasUUID("Builder") ? t.getUUID("Builder") : null;

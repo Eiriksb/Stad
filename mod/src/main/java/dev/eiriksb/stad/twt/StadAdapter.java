@@ -116,6 +116,12 @@ public final class StadAdapter implements VillagerAdapter {
             }
         }
         family(c, t, f);
+        if (player != null && builder) {
+            dev.eiriksb.stad.planner.Drafts.get(player.getUUID()).filter(d -> d.colony == t.id).ifPresent(d -> f.context.add(
+                    "You and " + player.getGameProfile().getName() + " are drawing up a building: " + d.design.describe()
+                            + ". Its ghost stands " + dev.eiriksb.stad.planner.Drafts.where(d, player)
+                            + ". They can ask for changes, or tell you to build it."));
+        }
     }
 
     /** What the builder is working on, and what they're missing: they can tell the player when asked. */
@@ -123,7 +129,8 @@ public final class StadAdapter implements VillagerAdapter {
         Building current = t.buildings().stream().filter(b -> !b.done() && c.getUUID().equals(b.builder)).findFirst()
                 .or(() -> t.buildings().stream().filter(b -> !b.done() && b.builder == null).findFirst()).orElse(null);
         if (current == null) {
-            f.context.add("Nothing is planned for you to build. You'd love it if the leader planned something (with the building plans).");
+            f.context.add("Nothing is planned for you to build. You'd love it if the leader planned something: they can describe a building"
+                    + " to you and you'll draw it up, or pick one from the building plans.");
             return;
         }
         int pct = (int) Math.round(current.fractionDone() * 100);

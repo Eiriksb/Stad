@@ -9,9 +9,11 @@ import java.util.List;
  *
  * @param key  "stad:medieval/cottage": namespace, pack and building
  * @param type what it's for: "stad:home", "stad:builder_hut", "stad:warehouse", ...
+ * @param spec the {@link dev.eiriksb.stad.planner.BuildSpec} (JSON) it was generated from, for designs saved with a
+ *             builder; null for buildings made by hand
  */
 public record BuildingDef(ResourceLocation key, String pack, ResourceLocation type, String name, String description,
-                          List<String> tags, Blueprint blueprint) {
+                          List<String> tags, Blueprint blueprint, String spec) {
     public static final ResourceLocation HOME = ResourceLocation.fromNamespaceAndPath("stad", "home");
     public static final ResourceLocation BUILDER_HUT = ResourceLocation.fromNamespaceAndPath("stad", "builder_hut");
     public static final ResourceLocation WAREHOUSE = ResourceLocation.fromNamespaceAndPath("stad", "warehouse");

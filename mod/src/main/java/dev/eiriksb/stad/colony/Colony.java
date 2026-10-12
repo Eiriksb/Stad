@@ -172,7 +172,12 @@ public final class Colony {
     /** Plans a building; {@link dev.eiriksb.stad.building.Planning} checks where it may go first. */
     public Building addBuilding(net.minecraft.resources.ResourceLocation key, String name, BlockPos origin,
                                 net.minecraft.world.level.block.Rotation rotation, long time) {
-        Building b = new Building(nextBuildingId++, key, name, origin.immutable(), rotation, time);
+        return addBuilding(key, name, origin, rotation, time, null);
+    }
+
+    public Building addBuilding(net.minecraft.resources.ResourceLocation key, String name, BlockPos origin,
+                                net.minecraft.world.level.block.Rotation rotation, long time, dev.eiriksb.stad.planner.Design design) {
+        Building b = new Building(nextBuildingId++, key, name, origin.immutable(), rotation, time, design);
         buildings.put(b.id, b);
         changed();
         return b;
