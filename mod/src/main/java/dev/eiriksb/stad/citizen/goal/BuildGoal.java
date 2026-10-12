@@ -189,6 +189,14 @@ public class BuildGoal extends Goal {
     /** Tells the town what's missing, every few minutes while waiting. */
     private void ask(ServerLevel level, Colony colony) {
         long now = level.getGameTime();
+        if (building.offer == null && !building.missing.isEmpty()) {
+            building.offer = dev.eiriksb.stad.building.Substitutions.offer(level, colony, building);
+            if (building.offer != null) { // something else would do: ask about that instead
+                building.lastAsked = now;
+                dev.eiriksb.stad.building.Substitutions.ask(level, colony, building, citizen);
+                return;
+            }
+        }
         if (now - building.lastAsked < ASK_EVERY || building.missing.isEmpty()) {
             return;
         }

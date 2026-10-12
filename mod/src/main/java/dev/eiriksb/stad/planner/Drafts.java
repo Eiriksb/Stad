@@ -63,6 +63,8 @@ public final class Drafts {
         /** the ground block it's centred on */
         public BlockPos site;
         public Rotation rotation = Rotation.NONE;
+        /** the place it was put by ("the water"), if it was */
+        public String landmark;
         long touched;
 
         Draft(UUID player, int colony) {
@@ -123,6 +125,9 @@ public final class Drafts {
 
     private static void place(ServerPlayer player, Colony colony, Draft d, Where where, String near) {
         ServerLevel level = player.serverLevel();
+        if (where != Where.TURN) {
+            d.landmark = null;
+        }
         Blueprint bp = d.design.blueprint();
         switch (where) {
             case TURN -> d.rotation = d.rotation.getRotated(Rotation.CLOCKWISE_90);
@@ -147,7 +152,16 @@ public final class Drafts {
             }
             case NEAR -> {
                 BlockPos anchor = anchor(colony, near);
-                if (anchor == null || !site(level, colony, d, anchor, player.position(), true)) {
+                Vec3 face = player.position();
+                if (anchor == null) { // a place rather than a building: by the lake, facing it
+                    Optional<Landmarks.Landmark> place = Landmarks.find(level, colony, near, player.blockPosition());
+                    if (place.isPresent()) {
+                        anchor = place.get().pos();
+                        face = Vec3.atCenterOf(anchor);
+                        d.landmark = place.get().name();
+                    }
+                }
+                if (anchor == null || !site(level, colony, d, anchor, face, true)) {
                     if (d.site == null) {
                         site(level, colony, d, player.blockPosition(), player.position(), false);
                     }
@@ -164,7 +178,7 @@ public final class Drafts {
     }
 
     /** The building (or the town hall) a player means by {@code name}. */
-    private static BlockPos anchor(Colony colony, String name) {
+    static BlockPos anchor(Colony colony, String name) {
         if (name == null || name.isBlank()) {
             return null;
         }
@@ -260,8 +274,12 @@ public final class Drafts {
         return true;
     }
 
-    /** Where the draft is, for the builder to say: "about 12 blocks north-east of you". */
+    /** Where the draft is, for the builder to say: "about 12 blocks north-east of you" (", by the water, facing it"). */
     public static String where(Draft d, ServerPlayer player) {
+        return whereFrom(d, player) + (d.landmark == null ? "" : ", by " + d.landmark + " with its door facing it");
+    }
+
+    private static String whereFrom(Draft d, ServerPlayer player) {
         BlockPos c = d.placement().bounds().getCenter();
         double dx = c.getX() - player.getX(), dz = c.getZ() - player.getZ();
         int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));

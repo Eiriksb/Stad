@@ -1,0 +1,9 @@
+{
+  "name": "Stone",
+  "description": "Solid stone brick with a grey roof; it'll stand for ages.",
+  "walls": "stone_bricks",
+  "frame": "spruce",
+  "roof": "cobbled_deepslate",
+  "floor": "oak",
+  "trim": "cobblestone"
+}

@@ -11,13 +11,14 @@ import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
- * Stad's side of conversations: builders draw up buildings when players talk about them ({@link
+ * Stad's side of conversations: "this is your home now" ({@link AdoptionTalk}), builders draw up buildings when players talk about them ({@link
  * dev.eiriksb.stad.planner.Architect}), talking with a player is company, and citizens speak up when something happens.
  */
 public final class StadConversations implements ConversationHook {
     @Override
     public dev.eiriksb.theywilltalk.api.BeforeReply beforeReply(TurnInfo turn) {
-        return dev.eiriksb.stad.planner.Architect.beforeReply(turn);
+        dev.eiriksb.theywilltalk.api.BeforeReply given = AdoptionTalk.beforeReply(turn);
+        return given != null ? given : dev.eiriksb.stad.planner.Architect.beforeReply(turn);
     }
 
     @Override

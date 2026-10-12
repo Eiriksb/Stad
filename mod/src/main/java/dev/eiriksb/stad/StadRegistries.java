@@ -48,6 +48,9 @@ public final class StadRegistries {
     public static final DeferredItem<BuildingPlansItem> BUILDING_PLANS = ITEMS.registerItem("building_plans", BuildingPlansItem::new,
             new Item.Properties().stacksTo(1));
 
+    public static final DeferredItem<dev.eiriksb.stad.item.ScanWandItem> SCAN_WAND = ITEMS.registerItem("scan_wand",
+            dev.eiriksb.stad.item.ScanWandItem::new, new Item.Properties().stacksTo(1));
+
     public static final DeferredItem<Item> CITIZEN_SPAWN_EGG = ITEMS.register("citizen_spawn_egg",
             () -> new DeferredSpawnEggItem(CITIZEN, 0x9c6b3e, 0x3f7a4c, new Item.Properties()));
 
@@ -73,6 +76,7 @@ public final class StadRegistries {
             event.accept(TOWN_HALL_ITEM);
         } else if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(BUILDING_PLANS);
+            event.accept(SCAN_WAND);
         }
     }
 }

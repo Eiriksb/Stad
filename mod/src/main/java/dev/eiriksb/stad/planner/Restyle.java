@@ -2,23 +2,22 @@ package dev.eiriksb.stad.planner;
 
 import dev.eiriksb.stad.building.Blueprint;
 import dev.eiriksb.stad.building.BuildingDef;
+import dev.eiriksb.stad.pack.Palette;
+import dev.eiriksb.stad.pack.Roles;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * "Pick and adapt" (PLAN.md §6.4): a pack building in other materials. Every block gets a rough role from its shape
- * and height (roof: stairs, slabs and whatever is above where they start; floor: the bottom layer; frame: logs;
- * walls: the most common full block in between), and each role can be given another material. Blocks the planner
- * doesn't know (glass, doors, beds, furniture) stay as they are.
+ * "Pick and adapt" (PLAN.md §6.4): a pack building in other materials, by its blocks' {@link Roles} (walls, roof,
+ * floor, frame) and a spec or a {@link Palette}. Glass, doors, beds and furniture stay as they are.
  */
 public final class Restyle {
     private Restyle() {}
@@ -53,113 +52,52 @@ public final class Restyle {
         }
     }
 
-    private record Roles(int floorY, int roofY, Materials.Material walls) {}
-
-    private static Roles roles(Blueprint bp) {
-        int floorY = Integer.MAX_VALUE, roofY = Integer.MAX_VALUE;
-        for (Blueprint.Entry e : bp.entries()) {
-            if (e.state().isAir()) {
-                continue;
-            }
-            floorY = Math.min(floorY, e.pos().getY());
-            var known = Materials.of(e.state().getBlock());
-            int x = e.pos().getX(), z = e.pos().getZ();
-            boolean edge = x == 0 || z == 0 || x == bp.size().getX() - 1 || z == bp.size().getZ() - 1; // eaves, not stairs and chairs inside
-            if (edge && known.isPresent() && (known.get().getValue() == Materials.Shape.STAIRS || known.get().getValue() == Materials.Shape.SLAB)) {
-                roofY = Math.min(roofY, e.pos().getY());
-            }
-        }
-        if (floorY == Integer.MAX_VALUE) {
-            floorY = 0;
-        }
-        Map<Materials.Material, Integer> counts = new HashMap<>();
-        for (Blueprint.Entry e : bp.entries()) {
-            int y = e.pos().getY();
-            if (y > floorY && y < roofY) {
-                Materials.of(e.state().getBlock()).filter(k -> k.getValue() == Materials.Shape.FULL)
-                        .ifPresent(k -> counts.merge(k.getKey(), 1, Integer::sum));
-            }
-        }
-        Materials.Material walls = counts.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
-        return new Roles(floorY, roofY, walls);
-    }
-
     public static Info info(BuildingDef def) {
         Blueprint bp = def.blueprint();
-        Roles r = roles(bp);
+        Roles.Analysis a = def.roles();
         int beds = 0;
         Set<String> facings = new HashSet<>();
-        Map<String, Integer> roofMats = new HashMap<>(), floorMats = new HashMap<>(), logs = new HashMap<>();
-        for (Blueprint.Entry e : bp.entries()) {
-            BlockState s = e.state();
+        List<Blueprint.Entry> entries = bp.entries();
+        for (int i = 0; i < entries.size(); i++) {
+            BlockState s = entries.get(i).state();
             if (s.getBlock() instanceof BedBlock && s.getValue(BedBlock.PART) == BedPart.HEAD) {
                 beds++;
             }
-            var known = Materials.of(s.getBlock());
-            if (known.isEmpty()) {
-                continue;
-            }
-            Materials.Shape shape = known.get().getValue();
-            String name = known.get().getKey().name();
-            if (shape == Materials.Shape.LOG) {
-                logs.merge(name, 1, Integer::sum);
-            } else if (e.pos().getY() >= r.roofY) {
-                roofMats.merge(name, 1, Integer::sum);
-                if (shape == Materials.Shape.STAIRS) {
-                    facings.add(s.getValue(StairBlock.FACING).getName());
-                }
-            } else if (e.pos().getY() == r.floorY) {
-                floorMats.merge(name, 1, Integer::sum);
+            if (a.roles()[i] == Roles.Role.ROOF && s.getBlock() instanceof StairBlock) {
+                facings.add(s.getValue(StairBlock.FACING).getName());
             }
         }
-        String roof = facings.isEmpty() ? (r.roofY == Integer.MAX_VALUE ? "flat" : "unknown") : facings.size() >= 4 ? "hip" : "gable";
-        int height = r.roofY == Integer.MAX_VALUE ? bp.size().getY() : r.roofY - r.floorY;
-        int floors = Math.max(1, (int) Math.round((height - 1) / (double) Generator.STOREY));
-        return new Info(def, bp.size().getX(), bp.size().getZ(), floors, beds, roof, r.walls == null ? "unknown" : r.walls.name(),
-                top(roofMats), top(floorMats), logs.isEmpty() ? "none" : top(logs));
-    }
-
-    private static String top(Map<String, Integer> counts) {
-        return counts.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("unknown");
+        String roof = facings.isEmpty() ? (a.hasRoof() ? "unknown" : "flat") : facings.size() >= 4 ? "hip" : "gable";
+        int floors = Math.max(1, (int) Math.round((a.height() - 1) / (double) Generator.STOREY));
+        Map<Roles.Role, String> m = Roles.materials(a);
+        String frame = m.getOrDefault(Roles.Role.FRAME, "none");
+        return new Info(def, bp.size().getX(), bp.size().getZ(), floors, beds, roof, m.getOrDefault(Roles.Role.WALL, "unknown"),
+                m.getOrDefault(Roles.Role.ROOF, "unknown"), m.getOrDefault(Roles.Role.FLOOR, "unknown"),
+                Materials.get(frame).filter(Materials.Material::wood).isPresent() ? frame : "none");
     }
 
     /** {@code def}'s blueprint in the spec's materials. */
     public static Blueprint apply(BuildingDef def, BuildSpec spec) {
-        Blueprint bp = def.blueprint();
-        Roles r = roles(bp);
-        Materials.Material walls = Materials.get(spec.walls()).orElse(null);
-        Materials.Material roof = Materials.get(spec.roofMaterial()).orElse(null);
-        Materials.Material floor = Materials.get(spec.floor()).orElse(null);
-        Materials.Material frame = spec.frame().equals("none") ? null : Materials.get(spec.frame()).orElse(null);
-        List<Blueprint.Entry> out = new ArrayList<>(bp.entries().size());
-        for (Blueprint.Entry e : bp.entries()) {
-            out.add(new Blueprint.Entry(e.pos(), restyle(e, r, walls, roof, floor, frame)));
+        Map<Roles.Role, Materials.Material> to = new EnumMap<>(Roles.Role.class);
+        Materials.get(spec.walls()).ifPresent(m -> to.put(Roles.Role.WALL, m));
+        Materials.get(spec.roofMaterial()).ifPresent(m -> to.put(Roles.Role.ROOF, m));
+        Materials.get(spec.floor()).ifPresent(m -> to.put(Roles.Role.FLOOR, m));
+        if (!spec.frame().equals("none")) {
+            Materials.get(spec.frame()).ifPresent(m -> to.put(Roles.Role.FRAME, m));
         }
-        return new Blueprint(bp.size(), List.copyOf(out));
+        return Roles.restyle(def.roles(), to);
     }
 
-    private static BlockState restyle(Blueprint.Entry e, Roles r, Materials.Material walls, Materials.Material roof,
-                                      Materials.Material floor, Materials.Material frame) {
-        BlockState s = e.state();
-        var known = Materials.of(s.getBlock());
-        if (known.isEmpty()) {
-            return s;
-        }
-        Materials.Material was = known.get().getKey();
-        Materials.Shape shape = known.get().getValue();
-        int y = e.pos().getY();
-        Materials.Material to;
-        if (shape == Materials.Shape.LOG) {
-            to = frame;
-        } else if (y >= r.roofY) {
-            to = roof;
-        } else if (y == r.floorY && shape == Materials.Shape.FULL) {
-            to = floor;
-        } else if (was == r.walls) {
-            to = walls;
-        } else {
-            to = null;
-        }
-        return to == null || to == was ? s : Materials.copyProperties(s, to.block(shape));
+    /** {@code def}'s blueprint in a palette's style. */
+    public static Blueprint apply(BuildingDef def, Palette palette) {
+        return Roles.restyle(def.roles(), palette.materials());
+    }
+
+    /** A spec for {@code def} in a palette's materials (what a builder's draft of it in that style starts from). */
+    public static BuildSpec spec(BuildingDef def, Palette palette) {
+        BuildSpec s = info(def).spec();
+        return new BuildSpec(s.name(), s.type(), s.base(), s.width(), s.depth(), s.floors(), s.roof(),
+                palette.material(Roles.Role.WALL, s.walls()), palette.material(Roles.Role.FRAME, s.frame()),
+                palette.material(Roles.Role.ROOF, s.roofMaterial()), palette.material(Roles.Role.FLOOR, s.floor()), s.beds(), s.rooms(), s.features());
     }
 }

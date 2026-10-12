@@ -50,7 +50,8 @@ public class BuildingPlansItem extends Item {
             options.add(new PlansPayload.Option(d.key().toString(), d.name(), d.description(), size.getX(), size.getY(), size.getZ(), materials));
         });
         PacketDistributor.sendToPlayer(player, new PlansPayload(colony.get().id, ctx.getClickedPos(),
-                Placement.facingViewer(player.getDirection()), options));
+                Placement.facingViewer(player.getDirection()), options,
+                dev.eiriksb.stad.pack.Palettes.all().stream().map(dev.eiriksb.stad.pack.Palette::name).toList()));
         return InteractionResult.CONSUME;
     }
 }

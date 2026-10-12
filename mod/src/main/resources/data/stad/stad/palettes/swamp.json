@@ -1,0 +1,9 @@
+{
+  "name": "Swamp",
+  "description": "Mud brick and mangrove, for the wetlands.",
+  "walls": "mud_bricks",
+  "frame": "mangrove",
+  "roof": "mangrove",
+  "floor": "mangrove",
+  "trim": "mud_bricks"
+}

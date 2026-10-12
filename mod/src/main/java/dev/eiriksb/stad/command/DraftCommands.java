@@ -37,6 +37,10 @@ final class DraftCommands {
                 .then(Commands.literal("here").executes(c -> move(c, Drafts.Where.HERE)))
                 .then(Commands.literal("turn").executes(c -> move(c, Drafts.Where.TURN)))
                 .then(Commands.literal("save").executes(DraftCommands::save))
+                .then(Commands.literal("style").then(Commands.argument("palette", StringArgumentType.word())
+                        .suggests((c, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(
+                                dev.eiriksb.stad.pack.Palettes.all().stream().map(p -> p.id().getPath()), b))
+                        .executes(DraftCommands::style)))
                 .then(Commands.literal("spec").then(Commands.argument("json", StringArgumentType.greedyString()).executes(DraftCommands::spec)))
                 .then(Commands.literal("describe").then(Commands.argument("text", StringArgumentType.greedyString()).executes(DraftCommands::describe)));
     }
@@ -119,6 +123,31 @@ final class DraftCommands {
             Stad.LOGGER.warn("Couldn't save design", e);
             return fail(ctx.getSource(), "Couldn't save it: " + e.getMessage());
         }
+    }
+
+    /** The draft in a palette's style: its walls, roof, floor and frame in the palette's materials. */
+    private static int style(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Optional<Drafts.Draft> d = draft(ctx);
+        var palette = dev.eiriksb.stad.pack.Palettes.get(StringArgumentType.getString(ctx, "palette"));
+        if (d.isEmpty()) {
+            return fail(ctx.getSource(), "You have no draft.");
+        }
+        if (palette.isEmpty()) {
+            return fail(ctx.getSource(), "There's no such style; see /stad pack palettes.");
+        }
+        Colony colony = ColonyManager.get(player.server).byId(d.get().colony).orElse(null);
+        if (colony == null) {
+            return fail(ctx.getSource(), "Your draft's town is gone.");
+        }
+        BuildSpec s = d.get().design.spec();
+        var p = palette.get();
+        BuildSpec styled = new BuildSpec(s.name(), s.type(), s.base(), s.width(), s.depth(), s.floors(), s.roof(),
+                p.material(dev.eiriksb.stad.pack.Roles.Role.WALL, s.walls()), p.material(dev.eiriksb.stad.pack.Roles.Role.FRAME, s.frame()),
+                p.material(dev.eiriksb.stad.pack.Roles.Role.ROOF, s.roofMaterial()), p.material(dev.eiriksb.stad.pack.Roles.Role.FLOOR, s.floor()),
+                s.beds(), s.rooms(), s.features());
+        report(ctx, player, colony, Drafts.draw(player, colony, d.get().builder, styled, Drafts.Where.SAME, null));
+        return 1;
     }
 
     /** A spec straight from JSON (for testing the generator, or for scripted building). */

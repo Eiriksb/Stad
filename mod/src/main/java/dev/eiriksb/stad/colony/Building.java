@@ -33,6 +33,13 @@ public final class Building {
     /** the builder working on it, if any */
     public UUID builder;
 
+    /** materials the builder was told to use instead of others, from some step on */
+    public final java.util.List<dev.eiriksb.stad.building.Substitutions.Swap> swaps = new java.util.ArrayList<>();
+    /** the swap the builder has asked about and is waiting to hear on (not saved) */
+    public dev.eiriksb.stad.building.Substitutions.Offer offer;
+    /** swaps the leaders said no to, "spruce>birch" (not saved) */
+    public final java.util.Set<String> declined = new java.util.HashSet<>();
+
     /** what's still missing when it's waiting (not saved) */
     public Map<Item, Integer> missing = new LinkedHashMap<>();
     /** game time the builder last asked for materials (not saved) */
@@ -70,8 +77,16 @@ public final class Building {
         if (placement == null) {
             placement = design != null ? Placement.of(design.blueprint(), origin, rotation)
                     : def().map(d -> Placement.of(d.blueprint(), origin, rotation)).orElse(null);
+            if (placement != null && !swaps.isEmpty()) {
+                placement = dev.eiriksb.stad.building.Substitutions.apply(placement, swaps);
+            }
         }
         return Optional.ofNullable(placement);
+    }
+
+    /** Forgets the cached placement (after a swap). */
+    public void replan() {
+        placement = null;
     }
 
     public boolean done() {
@@ -102,6 +117,11 @@ public final class Building {
         if (design != null) {
             t.put("Design", design.save());
         }
+        if (!swaps.isEmpty()) {
+            net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+            swaps.forEach(s -> list.add(s.save()));
+            t.put("Swaps", list);
+        }
         return t;
     }
 
@@ -112,6 +132,9 @@ public final class Building {
         b.status = Status.valueOf(t.getString("Status"));
         b.progress = t.getInt("Progress");
         b.builder = t.hasUUID("Builder") ? t.getUUID("Builder") : null;
+        for (net.minecraft.nbt.Tag s : t.getList("Swaps", net.minecraft.nbt.Tag.TAG_COMPOUND)) {
+            b.swaps.add(dev.eiriksb.stad.building.Substitutions.Swap.load((CompoundTag) s));
+        }
         return b;
     }
 }

@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.Rotation;
 import java.util.List;
 
 /** Server to client: open the building plans for a spot (the buildings that can be planned there). */
-public record PlansPayload(int colony, BlockPos at, Rotation rotation, List<Option> options) implements CustomPacketPayload {
+public record PlansPayload(int colony, BlockPos at, Rotation rotation, List<Option> options, List<String> palettes) implements CustomPacketPayload {
     public record Option(String key, String name, String description, int sizeX, int sizeY, int sizeZ, String materials) {}
 
     public static final Type<PlansPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "plans"));
@@ -28,8 +28,10 @@ public record PlansPayload(int colony, BlockPos at, Rotation rotation, List<Opti
             b.writeVarInt(o.sizeZ());
             b.writeUtf(o.materials());
         });
+        buf.writeCollection(p.palettes, FriendlyByteBuf::writeUtf);
     }, buf -> new PlansPayload(buf.readVarInt(), buf.readBlockPos(), buf.readEnum(Rotation.class),
-            buf.readList(b -> new Option(b.readUtf(), b.readUtf(), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readUtf()))));
+            buf.readList(b -> new Option(b.readUtf(), b.readUtf(), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readUtf())),
+            buf.readList(FriendlyByteBuf::readUtf)));
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

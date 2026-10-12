@@ -63,12 +63,17 @@ public final class ColonyStorage {
         List<Box> found = new ArrayList<>();
         for (Building b : colony.buildings()) {
             if (b.done() && b.is(type)) {
-                b.placement().ifPresent(p -> BlockPos.betweenClosedStream(p.bounds()).forEach(pos -> {
-                    BlockEntity be = level.getBlockEntity(pos);
-                    if (be instanceof Container c && !(c instanceof TownHallBlockEntity)) {
-                        found.add(new Box(pos.immutable(), c));
-                    }
-                }));
+                b.placement().ifPresent(p -> {
+                    // with storage markers, only the containers next to them are the town's; without, all of them
+                    List<BlockPos> marked = p.markers("stad:storage");
+                    BlockPos.betweenClosedStream(p.bounds()).forEach(pos -> {
+                        BlockEntity be = level.getBlockEntity(pos);
+                        if (be instanceof Container c && !(c instanceof TownHallBlockEntity)
+                                && (marked.isEmpty() || marked.stream().anyMatch(m -> m.distManhattan(pos) <= 2 && m.closerThan(pos, 1.8)))) {
+                            found.add(new Box(pos.immutable(), c));
+                        }
+                    });
+                });
             }
         }
         return found;

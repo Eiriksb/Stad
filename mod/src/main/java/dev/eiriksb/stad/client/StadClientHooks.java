@@ -16,6 +16,10 @@ public final class StadClientHooks {
         Minecraft.getInstance().setScreen(new PlansScreen(plans));
     }
 
+    public static void openEditor(dev.eiriksb.stad.net.EditorPayload editor) {
+        Minecraft.getInstance().setScreen(new PackEditorScreen(editor));
+    }
+
     public static void draftPreview(dev.eiriksb.stad.net.DraftPreviewPayload preview) {
         GhostPreview.set(preview);
     }

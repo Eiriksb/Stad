@@ -19,8 +19,8 @@ public final class OrderService {
         ColonyManager colonies = ColonyManager.get(player.server);
         Optional<Colony> found = switch (order.kind()) {
             case INVITE -> colonies.at(citizen.level().dimension(), citizen.blockPosition());
-            case DISMISS, ASSIGN_JOB -> colonies.ofCitizen(citizen.getUUID());
-            case PLAN_BUILDING -> throw new IllegalArgumentException("plans go through Planning");
+            case DISMISS, ASSIGN_JOB, ASSIGN_HOME -> colonies.ofCitizen(citizen.getUUID());
+            case PLAN_BUILDING, ADOPT_BUILDING -> throw new IllegalArgumentException("buildings go through Planning and Adoption");
         };
         if (found.isEmpty()) {
             return new Order.Result(Order.Outcome.INVALID, order.kind() == OrderKind.INVITE
@@ -62,7 +62,19 @@ public final class OrderService {
                     return new Order.Result(Order.Outcome.INVALID, "There's no such job as " + order.arg() + ".");
                 }
             }
-            case PLAN_BUILDING -> {
+            case ASSIGN_HOME -> {
+                Building home = home(order, colony);
+                if (home == null) {
+                    return new Order.Result(Order.Outcome.INVALID, "There's no such house in " + colony.name() + ".");
+                }
+                if (Homes.inside(order.citizen().home().orElse(null), home)) {
+                    return new Order.Result(Order.Outcome.INVALID, who + " already lives in the " + home.name + ".");
+                }
+                if (Homes.freeBed((net.minecraft.server.level.ServerLevel) order.citizen().level(), colony, home, order.citizen().getUUID()) == null) {
+                    return new Order.Result(Order.Outcome.INVALID, "There's no free bed in the " + home.name + ".");
+                }
+            }
+            case PLAN_BUILDING, ADOPT_BUILDING -> {
             }
         }
         if (order.kind() == OrderKind.ASSIGN_JOB && order.arg() != null && order.citizen().isBaby()) {
@@ -103,7 +115,7 @@ public final class OrderService {
             case GRUDGING -> "(" + player + " just asked you to " + what + ". You agree, but grudgingly"
                     + (result.reason() == null ? "" : ": " + result.reason().replace("they're", "you're").replace("they ", "you ").replace("their", "your"))
                     + ". Say so, in a sentence.)";
-            case ACCEPTED -> order.kind() == OrderKind.ASSIGN_JOB || order.kind() == OrderKind.INVITE
+            case ACCEPTED -> order.kind() == OrderKind.ASSIGN_JOB || order.kind() == OrderKind.INVITE || order.kind() == OrderKind.ASSIGN_HOME
                     ? "(" + player + " just asked you to " + what + ". You're glad to. Say so, in a sentence.)" : null;
             default -> null;
         };
@@ -124,8 +136,21 @@ public final class OrderService {
                 colony.buildings().stream().filter(b -> order.citizen().getUUID().equals(b.builder) && !b.done()).forEach(b -> b.builder = null);
                 colony.changed();
             });
-            case PLAN_BUILDING -> {
+            case ASSIGN_HOME -> colony.citizen(order.citizen().getUUID()).ifPresent(r -> {
+                Building home = home(order, colony);
+                r.home = Homes.freeBed((net.minecraft.server.level.ServerLevel) order.citizen().level(), colony, home, r.uuid);
+                colony.changed();
+            });
+            case PLAN_BUILDING, ADOPT_BUILDING -> {
             }
+        }
+    }
+
+    private static Building home(Order order, Colony colony) {
+        try {
+            return colony.building(Integer.parseInt(order.arg())).filter(Building::done).orElse(null);
+        } catch (NumberFormatException e) {
+            return null;
         }
     }
 }

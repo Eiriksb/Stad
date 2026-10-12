@@ -58,6 +58,28 @@ public final class Homes {
         }
     }
 
+    /** A bed in {@code building} nobody else sleeps in ({@code citizen}'s own counts as free), or null. */
+    public static BlockPos freeBed(ServerLevel level, Colony colony, Building building, java.util.UUID citizen) {
+        Set<BlockPos> taken = colony.citizens().stream().filter(c -> c.home != null && !c.uuid.equals(citizen)).map(c -> c.home)
+                .collect(Collectors.toSet());
+        for (BlockPos bed : beds(level, colony)) {
+            if (inside(bed, building) && !taken.contains(bed)) {
+                return bed;
+            }
+        }
+        return null;
+    }
+
+    /** Whether a bed is in a building. */
+    public static boolean inside(BlockPos bed, Building building) {
+        return bed != null && building.placement().map(p -> p.bounds().isInside(bed)).orElse(false);
+    }
+
+    /** The town's house a citizen's bed is in, if any. */
+    public static java.util.Optional<Building> houseOf(Colony colony, BlockPos bed) {
+        return colony.buildings().stream().filter(b -> b.done() && inside(bed, b)).findFirst();
+    }
+
     public static int freeBeds(ServerLevel level, Colony colony) {
         long homed = colony.citizens().stream().filter(c -> c.home != null).count();
         return (int) Math.max(0, beds(level, colony).size() - homed);

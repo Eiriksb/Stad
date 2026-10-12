@@ -197,7 +197,7 @@ adds talk and priorities on top, nothing else.
 ### 6.3 Packs and blueprints
 
 ```
-<pack>/                                   # zip, folder in config/stad/packs/, or a datapack
+<pack>/                                   # a data pack (zip or folder): a world's datapacks, or stadpacks/ for every world
   pack.json        { "id", "name", "author", "description", "icon", "biomes": [...], "palette": "palettes/default.json" }
   palettes/*.json  { "wall": "minecraft:spruce_planks", "roof": "minecraft:dark_oak_stairs", "trim": ..., "window": ..., ... }
   buildings/<id>/
@@ -440,7 +440,7 @@ Everything after that widens it.
 | **M4** | Jobs + logistics | Courier/warehouse request system. Farmer and Lumberjack. Morning-plan and react loops drive priorities. Happiness from needs and workload. |
 | **M5** | Social life + leadership | Citizen↔citizen relations, gossip spreading along friendships, ambient chatter, group conversations, courting/marriage/children, consolidation summaries (moved to later: not done in M5). **Standing and willingness:** grudging work, refusals with reasons, negotiation turning into requests, strikes and leaving, difficulty setting, standing panel in the GUI. |
 | **M6** | Talk-to-plan | BuildSpec schema. *Pick & adapt* mode first, then the procedural generator. Ghost preview with material list. Revising by conversation. Save to "My pack". (Done: both modes; the builder refuses approvals like other orders; drafts avoid what's already built. Not done: "facing the lake"-style placement, material substitution questions, moved to M7 with palettes.) |
-| **M7** | Custom packs + adoption | Scan wand, role/marker editor GUI, palette restyling, house adoption with "what's missing" feedback, sharing packs as zips. |
+| **M7** | Custom packs + adoption | Scan wand, role/marker editor GUI, palette restyling, house adoption with "what's missing" feedback, sharing packs as zips. (Done, plus M6's leftovers: "facing the lake" placement and material substitution questions. Markers are kept and read but only `stad:storage` changes behaviour so far; markers are placed with vanilla structure blocks, not in the editor. Upgrading adopted buildings with the generator is not done.) |
 | **M8** | Raids + rivalry | Guard job, barracks and watchtowers. Mob raids with warnings, sheltering, snapshots and repair orders. Claim protection. Poaching (with a switch for each colony). War stance for each colony (peaceful/open, with cooldown). PvP: declaring war, raid windows, banner capture, capped loot, truces, envoys. Citizens' opinions of war feed into standing. |
 | **M9** | Voice polish | Voice already works through TWT. This milestone adds voice designs from a citizen's genes and age, and voice support in the planner conversation and chat screen. |
 | **M10** | Scale + hosting | Think budget/LOD tuned for 50+ citizens. **In TWT:** client-lent GPU backend and planner-model setting (item 8). Also a performance pass (pathing, chunk loading of colony areas, raid mob counts). |

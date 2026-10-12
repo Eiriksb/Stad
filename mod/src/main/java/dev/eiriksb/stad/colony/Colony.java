@@ -288,7 +288,7 @@ public final class Colony {
 
     // ---- saving -------------------------------------------------------------------------------------------------
 
-    CompoundTag save() {
+    public CompoundTag save() {
         CompoundTag t = new CompoundTag();
         t.putInt("Id", id);
         t.putString("Name", name);
@@ -333,7 +333,7 @@ public final class Colony {
         return t;
     }
 
-    static Colony load(CompoundTag t) {
+    public static Colony load(CompoundTag t) {
         ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(t.getString("Dimension")));
         UUID owner = t.getUUID("Owner");
         Colony c = new Colony(t.getInt("Id"), t.getString("Name"), dim, NbtUtils.readBlockPos(t, "Center").orElse(BlockPos.ZERO),

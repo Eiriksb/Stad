@@ -19,19 +19,22 @@ import java.util.Optional;
  * have a log, a fence and a door). The names are what the language model picks from.
  */
 public final class Materials {
-    public enum Shape { FULL, STAIRS, SLAB, LOG }
+    public enum Shape { FULL, STAIRS, SLAB, LOG, FENCE, DOOR }
 
     public record Material(String name, String label, Block full, Block stairs, Block slab, Block log, Block fence, Block door) {
         public boolean wood() {
             return log != null;
         }
 
+        /** The block of that shape; null when there's none (stone has no fence or door). */
         public Block block(Shape shape) {
             return switch (shape) {
                 case FULL -> full;
                 case STAIRS -> stairs;
                 case SLAB -> slab;
                 case LOG -> log != null ? log : full;
+                case FENCE -> fence;
+                case DOOR -> door;
             };
         }
     }
@@ -82,6 +85,12 @@ public final class Materials {
         BY_BLOCK.put(sl, Map.entry(m, Shape.SLAB));
         if (m.log != null) {
             BY_BLOCK.put(m.log, Map.entry(m, Shape.LOG));
+        }
+        if (m.fence != null) {
+            BY_BLOCK.put(m.fence, Map.entry(m, Shape.FENCE));
+        }
+        if (m.door != null) {
+            BY_BLOCK.put(m.door, Map.entry(m, Shape.DOOR));
         }
     }
 

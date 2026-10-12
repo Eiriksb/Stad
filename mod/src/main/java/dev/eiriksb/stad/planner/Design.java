@@ -54,6 +54,35 @@ public record Design(String name, ResourceLocation type, BuildSpec spec, Bluepri
         return new Design(spec.name(), spec.buildingType(), gen, r.blueprint(), null, r.beds(), r.rooms(), r.notes());
     }
 
+    /** A pack building in a palette's style ("Nordic Cottage"). */
+    public static Design styled(BuildingDef def, dev.eiriksb.stad.pack.Palette palette) {
+        Restyle.Info info = Restyle.info(def);
+        String name = palette.name() + " " + def.name();
+        BuildSpec spec = Restyle.spec(def, palette);
+        spec = new BuildSpec(name, spec.type(), spec.base(), spec.width(), spec.depth(), spec.floors(), spec.roof(), spec.walls(), spec.frame(),
+                spec.roofMaterial(), spec.floor(), spec.beds(), spec.rooms(), spec.features());
+        return new Design(name, def.type(), spec, Restyle.apply(def, palette), def.key(), info.beds(), Map.of(), List.of());
+    }
+
+    /** A building someone made, taken over by the town as it stands (PLAN.md §6.5), or scanned into a pack. */
+    public static Design asBuilt(String name, ResourceLocation type, Blueprint bp, String base) {
+        dev.eiriksb.stad.pack.Roles.Analysis a = dev.eiriksb.stad.pack.Roles.analyse(bp);
+        Map<dev.eiriksb.stad.pack.Roles.Role, String> m = dev.eiriksb.stad.pack.Roles.materials(a);
+        int beds = dev.eiriksb.stad.building.Contents.of(bp).count(dev.eiriksb.stad.building.Contents.Thing.BED);
+        int floors = Math.max(1, Math.min(BuildSpec.MAX_FLOORS, (int) Math.round((a.height() - 1) / (double) Generator.STOREY)));
+        String t = switch (type.getPath()) {
+            case "home", "warehouse", "builder_hut", "workshop" -> type.getPath();
+            default -> "other";
+        };
+        String frame = m.getOrDefault(dev.eiriksb.stad.pack.Roles.Role.FRAME, "none");
+        BuildSpec spec = new BuildSpec(name, t, base, bp.size().getX(), bp.size().getZ(), floors, a.hasRoof() ? "gable" : "flat",
+                m.getOrDefault(dev.eiriksb.stad.pack.Roles.Role.WALL, "oak"),
+                Materials.get(frame).filter(Materials.Material::wood).isPresent() ? frame : "none",
+                m.getOrDefault(dev.eiriksb.stad.pack.Roles.Role.ROOF, "spruce"), m.getOrDefault(dev.eiriksb.stad.pack.Roles.Role.FLOOR, "oak"),
+                beds, List.of(), List.of());
+        return new Design(name, type, spec, bp, null, beds, Map.of(), List.of());
+    }
+
     /** A pack building in other materials (rather than a generated one). */
     public boolean adapted() {
         return base != null;
@@ -123,7 +152,7 @@ public record Design(String name, ResourceLocation type, BuildSpec spec, Bluepri
         return num + " " + thing + (n == 1 ? "" : thing.endsWith("y") ? "" : "s");
     }
 
-    static String join(List<String> parts) {
+    public static String join(List<String> parts) {
         if (parts.size() <= 1) {
             return String.join("", parts);
         }

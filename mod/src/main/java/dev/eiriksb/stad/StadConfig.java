@@ -48,6 +48,16 @@ public final class StadConfig {
 
     static {
         B.pop();
+        B.push("packs");
+    }
+
+    public static final ModConfigSpec.BooleanValue EVERYONE_EDITS_PACKS = B
+            .comment("Whether every player may scan buildings, save designs and edit My pack (the world's own building pack).",
+                    "Off: only operators (and the host in singleplayer).")
+            .define("everyoneEditsPacks", true);
+
+    static {
+        B.pop();
         B.push("needs");
     }
 

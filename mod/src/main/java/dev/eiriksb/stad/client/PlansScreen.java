@@ -18,6 +18,8 @@ public class PlansScreen extends Screen {
     private int selected;
     private Rotation rotation;
     private Button turn;
+    /** -1: the building's own materials, else an index into the palettes */
+    private int palette = -1;
 
     public PlansScreen(PlansPayload plans) {
         super(Component.literal("Building plans"));
@@ -44,12 +46,22 @@ public class PlansScreen extends Screen {
             rotation = rotation.getRotated(Rotation.CLOCKWISE_90);
             b.setMessage(doorLabel());
         }).bounds(x, by, 100, 20).build());
+        if (!plans.palettes().isEmpty()) {
+            addRenderableWidget(Button.builder(styleLabel(), b -> {
+                palette = palette + 1 >= plans.palettes().size() ? -1 : palette + 1;
+                b.setMessage(styleLabel());
+            }).bounds(x, by - 24, 150, 20).build());
+        }
         addRenderableWidget(Button.builder(Component.literal("Preview"), b -> send(true)).bounds(x + 106, by, 70, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Plan it").withStyle(ChatFormatting.GREEN), b -> {
             send(false);
             onClose();
         }).bounds(x + 182, by, 70, 20).build());
         addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose()).bounds(x + 258, by, 62, 20).build());
+    }
+
+    private Component styleLabel() {
+        return Component.literal("Style: " + (palette < 0 ? "its own" : plans.palettes().get(palette)));
     }
 
     private Component doorLabel() {
@@ -61,7 +73,8 @@ public class PlansScreen extends Screen {
         if (plans.options().isEmpty()) {
             return;
         }
-        PacketDistributor.sendToServer(new PlanActionPayload(plans.colony(), plans.options().get(selected).key(), plans.at(), rotation, preview));
+        PacketDistributor.sendToServer(new PlanActionPayload(plans.colony(), plans.options().get(selected).key(), plans.at(), rotation, preview,
+                palette < 0 ? "" : plans.palettes().get(palette)));
     }
 
     @Override
@@ -92,7 +105,8 @@ public class PlansScreen extends Screen {
         }
         y += 6;
         for (var line : font.split(Component.literal("Centred on the block you clicked, floor level with it. Builders take the "
-                + "materials from the town hall."), W - 120)) {
+                + "materials from the town hall." + (palette < 0 ? "" : " In the " + plans.palettes().get(palette)
+                + " style, walls, roof, floor and frame are built in its materials instead.")), W - 120)) {
             g.drawString(font, line, x, y, 0x888888);
             y += 10;
         }

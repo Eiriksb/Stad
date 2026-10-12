@@ -1,0 +1,9 @@
+{
+  "name": "Birch",
+  "description": "Light and airy pale wood.",
+  "walls": "birch",
+  "frame": "oak",
+  "roof": "oak",
+  "floor": "birch",
+  "trim": "stone"
+}

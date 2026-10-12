@@ -21,6 +21,10 @@ public final class ColonyTicker {
     public static void register() {
         NeoForge.EVENT_BUS.addListener(ColonyTicker::tick);
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> dev.eiriksb.stad.planner.Drafts.clearAll());
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
+            dev.eiriksb.stad.pack.Scans.forget(e.getEntity().getUUID());
+            dev.eiriksb.stad.pack.PackEditor.forget(e.getEntity().getUUID());
+        });
     }
 
     private static void tick(ServerTickEvent.Post event) {
@@ -30,6 +34,9 @@ public final class ColonyTicker {
             for (ServerLevel level : server.getAllLevels()) {
                 Outlines.draw(level, all);
             }
+        }
+        if (ticks % 20 == 0) {
+            dev.eiriksb.stad.pack.Scans.tick(server);
         }
         if (ticks % EVERY != 0) {
             return;

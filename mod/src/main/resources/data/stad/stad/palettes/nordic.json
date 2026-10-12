@@ -1,0 +1,9 @@
+{
+  "name": "Nordic",
+  "description": "Dark timber and steep dark roofs, like a fjord farm.",
+  "walls": "spruce",
+  "frame": "dark_oak",
+  "roof": "dark_oak",
+  "floor": "spruce",
+  "trim": "cobblestone"
+}

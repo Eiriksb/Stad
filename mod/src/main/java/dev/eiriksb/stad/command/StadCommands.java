@@ -46,8 +46,9 @@ public final class StadCommands {
     private StadCommands() {}
 
     public static void register(CommandDispatcher<CommandSourceStack> d) {
-        d.register(Commands.literal("stad")
-                .then(DraftCommands.node())
+        var stad = Commands.literal("stad").then(DraftCommands.node());
+        PackCommands.nodes().forEach(stad::then);
+        d.register(stad
                 .then(Commands.literal("colony")
                         .then(Commands.literal("info").executes(StadCommands::info))
                         .then(Commands.literal("found").requires(s -> s.hasPermission(2)).executes(StadCommands::found))
@@ -65,7 +66,11 @@ public final class StadCommands {
                                 .then(Commands.argument("value", IntegerArgumentType.integer(-100, 100)).executes(StadCommands::setStanding))))
                         .then(Commands.literal("plan").then(Commands.argument("building", ResourceLocationArgument.id())
                                 .suggests((c, b) -> SharedSuggestionProvider.suggestResource(BuildingPacks.all().stream().map(BuildingDef::key), b))
-                                .executes(StadCommands::plan)))
+                                .executes(StadCommands::plan)
+                                .then(Commands.argument("palette", StringArgumentType.word())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(
+                                                dev.eiriksb.stad.pack.Palettes.all().stream().map(p -> p.id().getPath()), b))
+                                        .executes(StadCommands::plan))))
                         .then(Commands.literal("cancel").then(Commands.argument("id", IntegerArgumentType.integer(1)).executes(StadCommands::cancel))))
                 .then(Commands.literal("citizen")
                         .then(Commands.literal("invite").then(Commands.argument("uuid", StringArgumentType.word())
@@ -271,15 +276,24 @@ public final class StadCommands {
         if (found.isEmpty()) {
             return fail(ctx.getSource(), "Stand on your town's land.");
         }
+        String paletteName = ctx.getNodes().stream().anyMatch(n -> n.getNode().getName().equals("palette"))
+                ? StringArgumentType.getString(ctx, "palette") : null;
+        Optional<dev.eiriksb.stad.pack.Palette> palette = dev.eiriksb.stad.pack.Palettes.get(paletteName);
+        if (paletteName != null && palette.isEmpty()) {
+            return fail(ctx.getSource(), "There's no style called " + paletteName + " (see /stad pack palettes).");
+        }
+        dev.eiriksb.stad.planner.Design styled = palette.map(p -> dev.eiriksb.stad.planner.Design.styled(def.get(), p)).orElse(null);
+        var blueprint = styled != null ? styled.blueprint() : def.get().blueprint();
         Rotation rotation = Placement.facingViewer(player.getDirection());
         BlockPos ground = player.blockPosition().below();
-        BlockPos origin = Placement.originFor(def.get().blueprint(), ground, rotation).relative(player.getDirection(),
-                Placement.rotatedSize(def.get().blueprint().size(), rotation).getZ() / 2 + 2);
-        Planning.Result r = Planning.plan(player, player.serverLevel(), found.get(), def.get(), origin, rotation);
+        BlockPos origin = Placement.originFor(blueprint, ground, rotation).relative(player.getDirection(),
+                Placement.rotatedSize(blueprint.size(), rotation).getZ() / 2 + 2);
+        Planning.Result r = styled != null ? Planning.plan(player, player.serverLevel(), found.get(), styled, origin, rotation)
+                : Planning.plan(player, player.serverLevel(), found.get(), def.get(), origin, rotation);
         if (r.building() == null) {
             return fail(ctx.getSource(), r.problem());
         }
-        ctx.getSource().sendSuccess(() -> Component.literal("Planned the " + def.get().name() + " (#" + r.building().id + "). Its outline shows for a few seconds.")
+        ctx.getSource().sendSuccess(() -> Component.literal("Planned the " + r.building().name + " (#" + r.building().id + "). Its outline shows for a few seconds.")
                 .withStyle(ChatFormatting.GREEN), false);
         return r.building().id;
     }
@@ -371,7 +385,8 @@ public final class StadCommands {
                 case INVITE -> who + " moves into " + (c == null ? "town" : c.name()) + "!";
                 case DISMISS -> who + " packs up and leaves town.";
                 case ASSIGN_JOB -> job == null ? who + " stops working." : who + " is now the town's " + job + ".";
-                case PLAN_BUILDING -> "";
+                case ASSIGN_HOME -> who + " moves in.";
+                case PLAN_BUILDING, ADOPT_BUILDING -> "";
             }).withStyle(ChatFormatting.GREEN), false);
             return 1;
         }

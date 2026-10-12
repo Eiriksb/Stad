@@ -46,11 +46,30 @@ public final class StadNetwork {
             }
         });
         r.playToServer(PlanActionPayload.TYPE, PlanActionPayload.CODEC, StadNetwork::planAction);
+        r.playToClient(EditorPayload.TYPE, EditorPayload.CODEC, (p, ctx) -> {
+            if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.openEditor(p);
+            }
+        });
+        r.playToServer(EditorSavePayload.TYPE, EditorSavePayload.CODEC, StadNetwork::editorSave);
         r.playToClient(DraftPreviewPayload.TYPE, DraftPreviewPayload.CODEC, (p, ctx) -> {
             if (FMLEnvironment.dist.isClient()) {
                 dev.eiriksb.stad.client.StadClientHooks.draftPreview(p);
             }
         });
+    }
+
+    private static void editorSave(EditorSavePayload p, IPayloadContext ctx) {
+        if (!(ctx.player() instanceof ServerPlayer player)) {
+            return;
+        }
+        try {
+            ResourceLocation key = dev.eiriksb.stad.pack.PackEditor.save(player, p.token(), p.name(), p.kind(), p.rows());
+            player.sendSystemMessage(Component.literal("Saved " + p.name().strip() + " in My pack (" + key + "). It's in the Building Plans now.")
+                    .withStyle(ChatFormatting.GREEN));
+        } catch (Exception e) {
+            player.sendSystemMessage(Component.literal("Couldn't save it: " + e.getMessage()).withStyle(ChatFormatting.RED));
+        }
     }
 
     private static void planAction(PlanActionPayload p, IPayloadContext ctx) {
@@ -62,17 +81,22 @@ public final class StadNetwork {
         if (colony.isEmpty() || def.isEmpty() || player.distanceToSqr(p.at().getCenter()) > 64 * 64) {
             return;
         }
-        BlockPos origin = Placement.originFor(def.get().blueprint(), p.at(), p.rotation());
+        Optional<dev.eiriksb.stad.pack.Palette> palette = dev.eiriksb.stad.pack.Palettes.get(p.palette());
+        dev.eiriksb.stad.planner.Design styled = palette.map(pal -> dev.eiriksb.stad.planner.Design.styled(def.get(), pal)).orElse(null);
+        var blueprint = styled != null ? styled.blueprint() : def.get().blueprint();
+        String name = styled != null ? styled.name() : def.get().name();
+        BlockPos origin = Placement.originFor(blueprint, p.at(), p.rotation());
         if (p.preview()) {
-            Outlines.preview(player, Placement.of(def.get().blueprint(), origin, p.rotation()).bounds(), 100);
-            String problem = Planning.problem(colony.get(), def.get(), origin, p.rotation());
-            player.displayClientMessage(problem == null ? Component.literal("The outline shows where the " + def.get().name() + " would go.")
+            Outlines.preview(player, Placement.of(blueprint, origin, p.rotation()).bounds(), 100);
+            String problem = Planning.problem(colony.get(), blueprint, origin, p.rotation());
+            player.displayClientMessage(problem == null ? Component.literal("The outline shows where the " + name + " would go.")
                     : Component.literal(problem).withStyle(ChatFormatting.RED), true);
             return;
         }
-        Planning.Result result = Planning.plan(player, player.serverLevel(), colony.get(), def.get(), origin, p.rotation());
+        Planning.Result result = styled != null ? Planning.plan(player, player.serverLevel(), colony.get(), styled, origin, p.rotation())
+                : Planning.plan(player, player.serverLevel(), colony.get(), def.get(), origin, p.rotation());
         player.sendSystemMessage(result.building() == null ? Component.literal(result.problem()).withStyle(ChatFormatting.RED)
-                : Component.literal("Planned the " + def.get().name() + ". A builder will start on it"
+                : Component.literal("Planned the " + name + ". A builder will start on it"
                 + (colony.get().citizens().stream().anyMatch(c -> Jobs.BUILDER.equals(c.job)) ? "." : " once someone is made the builder (right-click a citizen)."))
                 .withStyle(ChatFormatting.GREEN));
     }

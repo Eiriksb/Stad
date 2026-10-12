@@ -38,7 +38,7 @@ import java.util.Map;
  * (clear the site from the top down, then build from the bottom up, things that hang on other blocks last in each
  * layer), and what each block costs.
  */
-public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Step> steps) {
+public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Step> steps, List<Blueprint.Marker> markers) {
     /** Clear {@code pos} (state is air), or put {@code state} there for {@code count} of {@code item} (count 0: free). */
     public record Step(BlockPos pos, BlockState state, Item item, int count) {
         public boolean clearing() {
@@ -64,7 +64,11 @@ public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Ste
         build.sort(Comparator.comparingInt((Step s) -> s.pos().getY()).thenComparing(s -> hangsOnOthers(s.state())));
         List<Step> steps = new ArrayList<>(clear);
         steps.addAll(build);
-        return new Placement(origin, rotation, size, List.copyOf(steps));
+        List<Blueprint.Marker> markers = new ArrayList<>();
+        for (Blueprint.Marker m : blueprint.markers()) {
+            markers.add(new Blueprint.Marker(origin.offset(rotate(m.pos(), blueprint.size(), rotation)), m.name()));
+        }
+        return new Placement(origin, rotation, size, List.copyOf(steps), List.copyOf(markers));
     }
 
     /** The rotation that makes a building's front (north in its blueprint) face someone looking {@code facing}. */
@@ -94,7 +98,7 @@ public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Ste
     }
 
     /** Items it takes: the second half of beds and doors comes with the first, double slabs take two. */
-    static int cost(BlockState state, Item item) {
+    public static int cost(BlockState state, Item item) {
         if (item == Items.AIR) {
             return 0;
         }
@@ -117,6 +121,11 @@ public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Ste
         return b instanceof DoorBlock || b instanceof BedBlock || b instanceof TorchBlock || b instanceof LanternBlock
                 || b instanceof CarpetBlock || b instanceof BushBlock || b instanceof LadderBlock || b instanceof ButtonBlock
                 || b instanceof LeverBlock || b instanceof SignBlock || b instanceof TrapDoorBlock || b instanceof DoublePlantBlock;
+    }
+
+    /** Where the markers called {@code name} are, in the world. */
+    public List<BlockPos> markers(String name) {
+        return markers.stream().filter(m -> m.name().equals(name)).map(Blueprint.Marker::pos).toList();
     }
 
     public BoundingBox bounds() {

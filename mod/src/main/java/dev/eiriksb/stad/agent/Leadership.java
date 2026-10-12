@@ -80,6 +80,9 @@ public final class Leadership {
         if (kind == OrderKind.ASSIGN_JOB && arg != null) {
             factors.add(new Factor(-8, "they'd rather not take on new work", null));
         }
+        if (kind == OrderKind.ASSIGN_HOME) {
+            factors.add(new Factor(c.home().isEmpty() ? 25 : 10, "", null)); // a home is a gift, not a chore
+        }
         double score = factors.stream().mapToDouble(Factor::value).sum();
         StadConfig.Leadership difficulty = StadConfig.LEADERSHIP.get();
         if (difficulty == StadConfig.Leadership.HARSH) {
@@ -131,7 +134,17 @@ public final class Leadership {
             case ASSIGN_JOB -> arg == null ? "stop working" : "be the town's " + arg;
             case DISMISS -> "leave town";
             case PLAN_BUILDING -> "build something";
+            case ADOPT_BUILDING -> "take over a building for the town";
+            case ASSIGN_HOME -> "move into " + homeName(arg, colony);
         };
+    }
+
+    private static String homeName(String id, Colony colony) {
+        try {
+            return colony.building(Integer.parseInt(id)).map(b -> "the " + b.name).orElse("a new home");
+        } catch (NumberFormatException e) {
+            return "a new home";
+        }
     }
 
     /** What would change their mind, in words. */

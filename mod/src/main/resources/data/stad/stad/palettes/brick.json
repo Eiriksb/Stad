@@ -1,0 +1,9 @@
+{
+  "name": "Brick",
+  "description": "Red brick under a dark roof, like a town house.",
+  "walls": "bricks",
+  "frame": "dark_oak",
+  "roof": "dark_oak",
+  "floor": "spruce",
+  "trim": "stone_bricks"
+}

@@ -9,7 +9,11 @@ public enum OrderKind {
     /** a citizen is given a job (or told to stop working) */
     ASSIGN_JOB(Rank.OFFICER),
     /** a building is planned for the builders (no citizen in particular) */
-    PLAN_BUILDING(Rank.OFFICER);
+    PLAN_BUILDING(Rank.OFFICER),
+    /** a building someone made becomes one of the town's (no citizen in particular) */
+    ADOPT_BUILDING(Rank.OFFICER),
+    /** a citizen is given a home: a bed in one of the town's houses (arg: the building's id) */
+    ASSIGN_HOME(Rank.OFFICER);
 
     public final Rank minRank;
 

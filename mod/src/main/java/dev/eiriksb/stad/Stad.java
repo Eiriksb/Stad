@@ -40,6 +40,9 @@ public final class Stad {
         TheyWillTalkApi.get().addConversationHook(new StadConversations());
         ColonyTicker.register();
         BuildingPacks.register();
+        dev.eiriksb.stad.pack.Palettes.register();
+        dev.eiriksb.stad.pack.SharedPacks.register(modBus);
+        dev.eiriksb.stad.item.ScanWandItem.register();
         ColonyProtection.register();
         dev.eiriksb.stad.agent.Leadership.register();
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> StadCommands.register(e.getDispatcher()));

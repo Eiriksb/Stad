@@ -135,10 +135,18 @@ public final class StadAdapter implements VillagerAdapter {
         }
         int pct = (int) Math.round(current.fractionDone() * 100);
         switch (current.status) {
-            case WAITING -> f.context.add("You're building the " + current.name + " (" + pct + "% done) but you're stuck: the town is missing "
+            case WAITING -> f.context.add(current.offer != null
+                    ? "You're building the " + current.name + " (" + pct + "% done) but the town has run out of " + current.offer.from().label()
+                    + ". You've asked the leaders whether you should " + current.offer.describe() + ", and you're waiting for a yes or no."
+                    : "You're building the " + current.name + " (" + pct + "% done) but you're stuck: the town is missing "
                     + Construction.describe(current.missing, 5) + ". Ask for them to be put in the town hall.");
             case PLANNED -> f.context.add("Next you'll build the " + current.name + "; you haven't started yet.");
             default -> f.context.add("You're building the " + current.name + " (" + pct + "% done).");
+        }
+        if (!current.swaps.isEmpty()) {
+            var s = current.swaps.getLast();
+            f.context.add("You were told to use " + s.to().replace('_', ' ') + " instead of " + s.from().replace('_', ' ') + " for the rest of the "
+                    + current.name + ".");
         }
         t.buildings().stream().filter(b -> !b.done() && b != current).findFirst()
                 .ifPresent(b -> f.context.add("After that, the " + b.name + " is planned."));

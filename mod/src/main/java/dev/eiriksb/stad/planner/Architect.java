@@ -47,7 +47,7 @@ public final class Architect {
     private static final long BUDGET_MS = 7_000;
     /** Words that say where: without one, a new design goes wherever there's room. */
     private static final Pattern PLACE_TALK = Pattern.compile("\\b(here|there|this spot|that spot|next to|near|beside|by the|behind|"
-            + "in front|across from|opposite|over by|turn|around|face|facing)\\b", Pattern.CASE_INSENSITIVE);
+            + "in front|across from|opposite|over by|turn|around|face|facing|overlooking|view of|on the hill|up the hill)\\b", Pattern.CASE_INSENSITIVE);
 
     enum Intent { NONE, DESIGN, REVISE, APPROVE, CANCEL, MOVE, SAVE }
 
@@ -55,7 +55,7 @@ public final class Architect {
 
     /** What the hook needs to know, read on the server thread. */
     private record Scene(CitizenEntity citizen, ServerPlayer player, Colony colony, boolean builder, String otherBuilder,
-                         String draftJson, String draftText, Rank rank) {}
+                         String draftJson, String draftText, Rank rank, Building asking) {}
 
     /** Called from the conversation hook (a background thread). */
     public static BeforeReply beforeReply(TurnInfo turn) {
@@ -85,6 +85,17 @@ public final class Architect {
                     + ", the town's builder, who draws up buildings with people."
                     : "You can't design or build buildings, and nobody in town has the builder job yet. If " + turn.playerName()
                     + " asks for a building, say they'll need to make someone the builder first.");
+        }
+        if (scene.asking != null) {
+            var offer = scene.asking.offer;
+            Boolean yes = dev.eiriksb.stad.building.Substitutions.answer(turn.text(), offer);
+            if (yes != null) {
+                try {
+                    return BeforeReply.context(server.submit(() -> swapAnswer(scene, yes)).get(2, TimeUnit.SECONDS));
+                } catch (Exception e) {
+                    return BeforeReply.CONTINUE;
+                }
+            }
         }
         if (!buildingTalk && scene.draftJson == null) {
             return BeforeReply.CONTINUE;
@@ -131,8 +142,11 @@ public final class Architect {
         boolean builder = Jobs.BUILDER.equals(citizen.job().orElse(null));
         String other = colony.citizens().stream().filter(r -> Jobs.BUILDER.equals(r.job)).map(r -> r.name).findFirst().orElse(null);
         Drafts.Draft d = Drafts.get(player.getUUID()).filter(x -> x.colony == colony.id).orElse(null);
+        CitizenEntity c = citizen;
+        Building asking = !builder ? null : colony.buildings().stream()
+                .filter(b -> b.offer != null && !b.done() && (b.builder == null || b.builder.equals(c.getUUID()))).findFirst().orElse(null);
         return new Scene(citizen, player, colony, builder, other, d == null ? null : d.design.spec().toJson(),
-                d == null ? null : d.design.describe(), colony.rank(player.getUUID()));
+                d == null ? null : d.design.describe(), colony.rank(player.getUUID()), asking);
     }
 
     // ---- what do they want? -------------------------------------------------------------------------------------
@@ -168,8 +182,8 @@ public final class Architect {
                     """);
         }
         sb.append("- none: anything else (questions, chat, asking how the building work is going)\n");
-        sb.append("where (for design or move): here = where the player is or is looking; near = next to a building (name it in \"near\"); "
-                + "turn = turned around; same = not said\n");
+        sb.append("where (for design or move): here = where the player is or is looking; near = next to a building, or by a place such as "
+                + "the lake, the river, the forest, the hill or the fields (name it in \"near\"); turn = turned around; same = not said\n");
         JsonObject props = new JsonObject();
         props.add("intent", BuildSpec.enumOf(intents));
         props.add("where", BuildSpec.enumOf(List.of("same", "here", "near", "turn")));
@@ -226,6 +240,12 @@ public final class Architect {
             sb.append("Designs the player kept before (they can ask for one by name; copy it):\n");
             saved.stream().limit(6).forEach(d -> sb.append("- ").append(d.name()).append(": ").append(d.spec()).append('\n'));
         }
+        if (!dev.eiriksb.stad.pack.Palettes.all().isEmpty()) {
+            sb.append("Styles (when they ask for one, use its materials): ");
+            List<String> styles = new ArrayList<>();
+            dev.eiriksb.stad.pack.Palettes.all().forEach(p -> styles.add(p.name() + " = " + p.describe()));
+            sb.append(String.join("; ", styles)).append(".\n");
+        }
         sb.append("""
                 name: what to call it, in plain words ("Stone Cottage", "Lakeside Workshop").
                 Sizes are in blocks, walls included: small 7x7, medium 9x9 or 9x11, large 13x11; at most 17. Each floor is 4 blocks high.
@@ -259,7 +279,7 @@ public final class Architect {
                             + "'s people; you only draw up buildings for the town."));
                 }
                 boolean revise = ask.intent == Intent.REVISE && scene.draftJson != null;
-                Ask placed = PLACE_TALK.matcher(text).find() ? ask : new Ask(ask.intent, Drafts.Where.SAME, "");
+                Ask placed = byPlace(scene, text, PLACE_TALK.matcher(text).find() ? ask : new Ask(ask.intent, Drafts.Where.SAME, ""));
                 yield spec(who, text, revise ? scene.draftJson : null)
                         .thenCompose(spec -> server.submit(() -> drew(scene, spec, placed, revise)));
             }
@@ -269,11 +289,28 @@ public final class Architect {
                 return List.of(who + " doesn't want the drawing any more; you've put it away. Say so briefly.");
             });
             case MOVE -> server.submit(() -> {
-                Drafts.move(scene.player, ask.where == Drafts.Where.SAME ? Drafts.Where.HERE : ask.where, ask.near);
+                Ask m = byPlace(scene, text, ask);
+                Drafts.move(scene.player, m.where == Drafts.Where.SAME ? Drafts.Where.HERE : m.where, m.near);
                 return placeLines(scene, "You've moved the drawing as " + who + " asked.");
             });
             case SAVE -> server.submit(() -> saved(scene));
         };
+    }
+
+    /** "facing the lake": when they name a place in the land (and not one of the town's buildings), it goes by that. */
+    private static Ask byPlace(Scene scene, String text, Ask ask) {
+        var kind = Landmarks.kind(text);
+        if (kind.isEmpty() || ask.where == Drafts.Where.TURN
+                || (ask.where == Drafts.Where.NEAR && Drafts.anchor(scene.colony, ask.near) != null)) {
+            return ask;
+        }
+        String place = switch (kind.get()) {
+            case WATER -> "lake";
+            case TREES -> "forest";
+            case HILL -> "hill";
+            case FIELDS -> "fields";
+        };
+        return new Ask(ask.intent, Drafts.Where.NEAR, place);
     }
 
     private static List<String> drew(Scene scene, BuildSpec spec, Ask ask, boolean revise) {
@@ -347,6 +384,24 @@ public final class Architect {
         }
     }
 
+    private static List<String> swapAnswer(Scene scene, boolean yes) {
+        Building b = scene.asking;
+        var offer = b.offer;
+        if (offer == null) {
+            return List.of();
+        }
+        String who = scene.player.getGameProfile().getName();
+        String problem = yes ? dev.eiriksb.stad.building.Substitutions.accept(scene.player, scene.colony, b)
+                : dev.eiriksb.stad.building.Substitutions.decline(scene.player, scene.colony, b);
+        if (problem != null) {
+            return List.of(who + " answered your question about the " + b.name + ", but it isn't theirs to decide: " + problem
+                    + " Say you'll wait to hear from " + scene.colony.ownerName() + " or an officer.");
+        }
+        return List.of(yes ? who + " said yes: you'll " + offer.describe() + " and get on with the " + b.name + ". Say so briefly."
+                : who + " said no: you'll wait for more " + offer.from().label() + " for the " + b.name + ". Say so briefly, and that it"
+                + " needs putting in the town hall.");
+    }
+
     /** Has the builder say something once they're free (they may still be finishing their last reply). */
     static void followUp(MinecraftServer server, Scene scene, String instruction, int attempt) {
         if (attempt > 8) {
@@ -372,7 +427,7 @@ public final class Architect {
         if (c == null || colony.isEmpty() || c.distanceTo(player) > 24) {
             return;
         }
-        Scene scene = new Scene(c, player, colony.get(), true, null, null, null, colony.get().rank(player.getUUID()));
+        Scene scene = new Scene(c, player, colony.get(), true, null, null, null, colony.get().rank(player.getUUID()), null);
         TheyWillTalkApi.get().speak(c, player, "(" + String.join(" ", approved(scene, a)) + ")");
     }
 

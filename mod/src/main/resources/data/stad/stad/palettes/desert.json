@@ -1,0 +1,9 @@
+{
+  "name": "Desert",
+  "description": "Warm sandstone, for towns among the dunes.",
+  "walls": "sandstone",
+  "frame": "jungle",
+  "roof": "red_sandstone",
+  "floor": "acacia",
+  "trim": "red_sandstone"
+}
