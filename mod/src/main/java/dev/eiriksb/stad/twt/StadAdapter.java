@@ -6,6 +6,7 @@ import dev.eiriksb.stad.citizen.goal.EatAtTownHallGoal;
 import dev.eiriksb.stad.building.ColonyStorage;
 import dev.eiriksb.stad.building.Construction;
 import dev.eiriksb.stad.colony.Request;
+import dev.eiriksb.stad.colony.Standing;
 import dev.eiriksb.stad.colony.WorkSites;
 import dev.eiriksb.stad.colony.Building;
 import dev.eiriksb.stad.colony.Colony;
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.Entity;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /** Tells They Will Talk who a citizen is and how their life in town is going. Server thread. */
 public final class StadAdapter implements VillagerAdapter {
@@ -47,7 +49,7 @@ public final class StadAdapter implements VillagerAdapter {
             f.name = c.getCustomName().getString();
         }
         f.gender = c.isFemale() ? "f" : "m";
-        f.ageGroup = "adult";
+        f.ageGroup = c.isBaby() ? "child" : "adult";
         f.biomeType = c.level().getBiome(c.blockPosition()).unwrapKey().map(k -> k.location().getPath()).orElse("plains");
         f.sleeping = c.isSleeping();
         f.backstory = c.backstory().isEmpty() ? null : c.backstory();
@@ -102,8 +104,18 @@ public final class StadAdapter implements VillagerAdapter {
         f.extra.put("happiness", c.happiness() + "%");
         if (player != null) {
             Rank r = t.rank(player.getUUID());
-            f.context.add(player.getGameProfile().getName() + " is " + r.describe() + ".");
+            String name = player.getGameProfile().getName();
+            f.context.add(name + " is " + r.describe() + ".");
+            Standing s = t.standing(player.getUUID());
+            if (r.atLeast(Rank.OFFICER) || s.score() != 0) {
+                List<String> why = new ArrayList<>();
+                s.worst(2).forEach(e -> why.add(e.cause()));
+                s.best(1).forEach(e -> why.add(e.cause()));
+                f.context.add("As a leader, the town sees " + name + " as " + s.word() + (why.isEmpty() ? "" : " (lately: "
+                        + String.join("; ", why).replace("you ", name + " ") + ")") + ".");
+            }
         }
+        family(c, t, f);
     }
 
     /** What the builder is working on, and what they're missing: they can tell the player when asked. */
@@ -142,6 +154,23 @@ public final class StadAdapter implements VillagerAdapter {
             default -> {
             }
         }
+    }
+
+    /** Spouse, parents and children, so They Will Talk knows the family. */
+    private static void family(CitizenEntity c, Colony t, VillagerFacts f) {
+        c.record().ifPresent(r -> {
+            if (r.spouse != null) {
+                t.citizen(r.spouse).ifPresent(s -> f.family.add(new VillagerFacts.FamilyLink("spouse", s.uuid, s.name, false, false)));
+            }
+            for (UUID p : r.parents) {
+                t.citizen(p).ifPresent(s -> f.family.add(new VillagerFacts.FamilyLink("parent", s.uuid, s.name, false, false)));
+            }
+            for (var other : t.citizens()) {
+                if (other.parents.contains(r.uuid)) {
+                    f.family.add(new VillagerFacts.FamilyLink("child", other.uuid, other.name, false, false));
+                }
+            }
+        });
     }
 
     private static String officers(Colony t) {

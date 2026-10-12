@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** What the town hall screen shows, as sent to one player. */
-public record ColonyView(int id, String name, String owner, BlockPos center, int radius, int beds, Rank viewerRank,
+public record ColonyView(int id, String name, String owner, BlockPos center, int radius, int beds, Rank viewerRank, String standing,
                          List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> needs, List<String> recentOrders) {
     public record Member(String name, Rank rank) {}
 
@@ -42,8 +42,16 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         for (dev.eiriksb.stad.colony.Request r : c.requests()) {
             needs.add(r.label() + " for " + r.destName + " (" + r.reason + ")");
         }
+        var st = c.standing(viewer.getUUID());
+        StringBuilder standing = new StringBuilder("You're " + st.word() + " (" + (st.score() > 0 ? "+" : "") + st.score() + ")");
+        List<String> why = new ArrayList<>();
+        st.worst(2).forEach(e -> why.add(e.delta() + " " + e.cause()));
+        st.best(2).forEach(e -> why.add("+" + e.delta() + " " + e.cause()));
+        if (!why.isEmpty()) {
+            standing.append(": ").append(String.join(", ", why));
+        }
         return new ColonyView(c.id, c.name(), c.ownerName(), c.center, c.radius, Homes.beds(level, c).size(), c.rank(viewer.getUUID()),
-                members, citizens, buildings, needs, orders);
+                standing.toString(), members, citizens, buildings, needs, orders);
     }
 
     public static void send(ServerPlayer player, Colony colony, ServerLevel level) {
@@ -58,6 +66,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         buf.writeVarInt(radius);
         buf.writeVarInt(beds);
         buf.writeEnum(viewerRank);
+        buf.writeUtf(standing);
         buf.writeCollection(members, (b, m) -> {
             b.writeUtf(m.name());
             b.writeEnum(m.rank());
@@ -78,6 +87,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
     static ColonyView read(FriendlyByteBuf buf) {
         return new ColonyView(buf.readVarInt(), buf.readUtf(), buf.readUtf(), buf.readBlockPos(), buf.readVarInt(), buf.readVarInt(),
                 buf.readEnum(Rank.class),
+                buf.readUtf(),
                 buf.readList(b -> new Member(b.readUtf(), b.readEnum(Rank.class))),
                 buf.readList(b -> new Citizen(b.readUtf(), b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt())),
                 buf.readList(FriendlyByteBuf::readUtf),

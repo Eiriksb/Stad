@@ -150,6 +150,11 @@ abstract class WorkGoal extends Goal {
         approach.reset();
     }
 
+    /** How long something takes: twice as long when they're working grudgingly. */
+    protected int pace(int ticks) {
+        return citizen.grudging() ? ticks * 2 : ticks;
+    }
+
     /** Puts what they gathered in their pockets; what doesn't fit drops at their feet. */
     protected void pocket(ItemStack stack) {
         ItemStack rest = citizen.inventory().addItem(stack);

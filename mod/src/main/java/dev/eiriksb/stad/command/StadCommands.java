@@ -59,6 +59,9 @@ public final class StadCommands {
                         .then(Commands.literal("dissolve").executes(StadCommands::dissolve))
                         .then(Commands.literal("builds").executes(StadCommands::builds))
                         .then(Commands.literal("requests").executes(StadCommands::requests))
+                        .then(Commands.literal("standing").executes(StadCommands::standing))
+                        .then(Commands.literal("setstanding").requires(s -> s.hasPermission(2)).then(Commands.argument("player", EntityArgument.player())
+                                .then(Commands.argument("value", IntegerArgumentType.integer(-100, 100)).executes(StadCommands::setStanding))))
                         .then(Commands.literal("plan").then(Commands.argument("building", ResourceLocationArgument.id())
                                 .suggests((c, b) -> SharedSuggestionProvider.suggestResource(BuildingPacks.all().stream().map(BuildingDef::key), b))
                                 .executes(StadCommands::plan)))
@@ -202,6 +205,34 @@ public final class StadCommands {
         return c.buildings().size();
     }
 
+    private static int standing(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Optional<Colony> found = here(ctx.getSource());
+        if (found.isEmpty()) {
+            return fail(ctx.getSource(), "You're not in a town.");
+        }
+        var s = found.get().standing(player.getUUID());
+        ctx.getSource().sendSuccess(() -> Component.literal("In " + found.get().name() + " you're " + s.word() + " (" + (s.score() > 0 ? "+" : "")
+                + s.score() + ").").withStyle(ChatFormatting.GOLD), false);
+        for (var e : s.events().subList(0, Math.min(8, s.events().size()))) {
+            ctx.getSource().sendSuccess(() -> Component.literal(" " + (e.delta() > 0 ? "+" : "") + e.delta() + "  " + e.cause())
+                    .withStyle(e.delta() > 0 ? ChatFormatting.GREEN : ChatFormatting.RED), false);
+        }
+        return s.score();
+    }
+
+    private static int setStanding(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        int value = IntegerArgumentType.getInteger(ctx, "value");
+        Optional<Colony> found = here(ctx.getSource());
+        if (found.isEmpty()) {
+            return fail(ctx.getSource(), "You're not in a town.");
+        }
+        found.get().setStanding(target.getUUID(), value);
+        ctx.getSource().sendSuccess(() -> Component.literal(target.getGameProfile().getName() + "'s standing in " + found.get().name() + " is now " + value + "."), true);
+        return value;
+    }
+
     private static int requests(CommandContext<CommandSourceStack> ctx) {
         Optional<Colony> found = here(ctx.getSource());
         if (found.isEmpty()) {
@@ -330,6 +361,10 @@ public final class StadCommands {
         Order.Result r = OrderService.issue(new Order(player, kind, citizen, arg));
         String who = citizen.getName().getString();
         if (r.done()) {
+            if (r.outcome() == Order.Outcome.GRUDGING) {
+                ctx.getSource().sendSuccess(() -> Component.literal(who + " agrees, grudgingly" + (r.reason() == null ? "" : " (" + r.reason() + ")")
+                        + ", and will work slower today.").withStyle(ChatFormatting.YELLOW), false);
+            }
             Colony c = ColonyManager.get(player.server).ofCitizen(uuid).orElse(null);
             ctx.getSource().sendSuccess(() -> Component.literal(switch (kind) {
                 case INVITE -> who + " moves into " + (c == null ? "town" : c.name()) + "!";

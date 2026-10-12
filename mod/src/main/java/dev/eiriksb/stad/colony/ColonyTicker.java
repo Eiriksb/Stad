@@ -1,6 +1,8 @@
 package dev.eiriksb.stad.colony;
 
 import dev.eiriksb.stad.agent.DayPlanner;
+import dev.eiriksb.stad.agent.Leadership;
+import dev.eiriksb.stad.agent.Social;
 import dev.eiriksb.stad.building.Outlines;
 import net.minecraft.server.MinecraftServer;
 
@@ -37,6 +39,11 @@ public final class ColonyTicker {
                 Homes.update(level, colony);
                 Arrivals.tick(level, colony);
                 Requests.update(level, colony);
+                Leadership.checkConditions(level, colony);
+                if (level.getDayTime() % 24000 <= 4000 && colony.lastReviewDay != level.getDayTime() / 24000) {
+                    Leadership.review(level, colony);
+                    Social.morning(level, colony);
+                }
                 DayPlanner.tick(level, colony);
             }
         }

@@ -41,6 +41,7 @@ public final class Stad {
         ColonyTicker.register();
         BuildingPacks.register();
         ColonyProtection.register();
+        dev.eiriksb.stad.agent.Leadership.register();
         NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> StadCommands.register(e.getDispatcher()));
         NeoForge.EVENT_BUS.addListener(this::onTwtReady);
     }

@@ -8,14 +8,15 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M4). Found a town with a **town hall**; newcomers move in when there
-> are free beds. Citizens sleep in their own beds, eat from the town hall, and each morning plan their day (in
-> character, with the local AI): a visit to a friend in the evening, an afternoon off. Give them jobs from their card
-> (right-click): **builder** (plan buildings with the Building Plans; they build them from town storage), **farmer**
-> (harvests and replants the town's farmland), **lumberjack** (fells and replants natural trees, never your log
-> walls) and **courier** (carries what the town needs from the warehouse to the town hall and the builder). The town
-> posts what it needs; ask anyone how their day is going. Players have ranks, and every order is checked and logged.
-> The design and roadmap are in [PLAN.md](PLAN.md).
+> **Status:** early development (milestone M5). Found a town with a **town hall**; newcomers move in when there
+> are free beds. Citizens sleep in their own beds, eat from the town hall, plan their day each morning (in character,
+> with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
+> Give them jobs from their card (right-click): **builder** (plans from the Building Plans, built from town storage),
+> **farmer**, **lumberjack** and **courier**. **Lead them well**: your standing with the town rises and falls with
+> how they're fed, housed and treated (and with what they make of your conversations). A respected leader is obeyed;
+> a doubted one gets grudging, slower work; a resented one hears "no", with a reason, or "only once I've eaten".
+> Miserable citizens leave, and an unhappy town goes on strike. Players have ranks, and every order is checked and
+> logged. The design and roadmap are in [PLAN.md](PLAN.md).
 
 ### Building packs
 
@@ -38,6 +39,8 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad colony dissolve` | the founder (or an admin) ends the town |
 | `/stad colony builds` | planned buildings and how they're going |
 | `/stad colony requests` | what the town needs, and where |
+| `/stad colony standing` | how the town sees you as a leader, and why |
+| `/stad colony setstanding <player> <value>` | admins, for testing |
 | `/stad colony plan <building>` | officers: plan a building in front of you (what the Building Plans do) |
 | `/stad colony cancel <id>` | officers |
 | `/stad citizen job <uuid> <builder\|farmer\|lumberjack\|courier\|none>` | officers (the citizen card has buttons for it) |

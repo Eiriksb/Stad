@@ -1,5 +1,6 @@
 package dev.eiriksb.stad.colony;
 
+import dev.eiriksb.stad.agent.Leadership;
 import dev.eiriksb.stad.citizen.CitizenEntity;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -30,6 +31,7 @@ public final class OrderService {
         if (result.done()) {
             carryOut(order, colony, colonies);
         }
+        react(order, colony, result);
         colony.log(new OrderRecord(citizen.level().getGameTime(), player.getUUID(), player.getGameProfile().getName(),
                 citizen.getUUID(), citizen.getName().getString(), order.kind(), result.outcome(), result.reason()));
         return result;
@@ -63,8 +65,54 @@ public final class OrderService {
             case PLAN_BUILDING -> {
             }
         }
-        // M5: the citizen's willingness (standing, affinity, happiness, persona, cost) decides here.
+        if (order.kind() == OrderKind.ASSIGN_JOB && order.arg() != null && order.citizen().isBaby()) {
+            return new Order.Result(Order.Outcome.INVALID, who + " is a child; children don't work.");
+        }
+        if (order.kind() == OrderKind.DISMISS) {
+            colony.changeStanding(order.player().getUUID(), order.player().getGameProfile().getName(), -2, "you sent " + who + " away",
+                    order.citizen().level().getGameTime());
+            return new Order.Result(Order.Outcome.ACCEPTED, null);
+        }
+        // Whether they're willing: standing, how they feel about the player, how they're doing, who they are.
+        Leadership.Willingness w = Leadership.willingness(order.citizen(), order.player(), colony, order.kind(), order.arg());
+        if (w.outcome() == Order.Outcome.REFUSED) {
+            if (w.condition() != null && order.kind() == OrderKind.ASSIGN_JOB) {
+                colony.citizen(order.citizen().getUUID()).ifPresent(r -> {
+                    r.condition = w.condition();
+                    r.pendingJob = order.arg();
+                    r.pendingFrom = order.player().getUUID();
+                });
+                return new Order.Result(Order.Outcome.REFUSED, who + " won't: " + w.reason() + ". They'll do it once "
+                        + Leadership.conditionText(w.condition()) + ".");
+            }
+            return new Order.Result(Order.Outcome.REFUSED, who + " won't: " + w.reason() + ".");
+        }
+        if (w.outcome() == Order.Outcome.GRUDGING) {
+            return new Order.Result(Order.Outcome.GRUDGING, w.reason());
+        }
         return new Order.Result(Order.Outcome.ACCEPTED, null);
+    }
+
+    /** The citizen says what they think of it, in their own words (when the language model is running). */
+    private static void react(Order order, Colony colony, Order.Result result) {
+        String what = Leadership.describe(order.kind(), order.arg(), colony);
+        String player = order.player().getGameProfile().getName();
+        String instruction = switch (result.outcome()) {
+            case REFUSED -> "(" + player + " just asked you to " + what + ". You refuse: " + result.reason().replaceFirst("^[^:]*: ", "")
+                    .replace("they're", "you're").replace("they ", "you ").replace("their", "your") + " Say so in your own words, in a sentence or two.)";
+            case GRUDGING -> "(" + player + " just asked you to " + what + ". You agree, but grudgingly"
+                    + (result.reason() == null ? "" : ": " + result.reason().replace("they're", "you're").replace("they ", "you ").replace("their", "your"))
+                    + ". Say so, in a sentence.)";
+            case ACCEPTED -> order.kind() == OrderKind.ASSIGN_JOB || order.kind() == OrderKind.INVITE
+                    ? "(" + player + " just asked you to " + what + ". You're glad to. Say so, in a sentence.)" : null;
+            default -> null;
+        };
+        if (instruction != null) {
+            dev.eiriksb.theywilltalk.api.TheyWillTalkApi.get().speak(order.citizen(), order.player(), instruction);
+        }
+        if (result.outcome() == Order.Outcome.GRUDGING) {
+            colony.citizen(order.citizen().getUUID()).ifPresent(r -> r.grudgingUntil = order.citizen().level().getGameTime() + 24000);
+        }
     }
 
     private static void carryOut(Order order, Colony colony, ColonyManager colonies) {

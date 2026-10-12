@@ -74,7 +74,7 @@ public class FarmGoal extends WorkGoal {
         if (--cooldown > 0) {
             return;
         }
-        cooldown = 12;
+        cooldown = pace(12);
         BlockState state = level.getBlockState(crop);
         if (state.getBlock() instanceof CropBlock c && c.isMaxAge(state)) {
             for (ItemStack drop : Block.getDrops(state, level, crop, null)) {

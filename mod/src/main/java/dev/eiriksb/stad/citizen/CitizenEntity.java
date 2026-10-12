@@ -53,6 +53,7 @@ import java.util.Optional;
 public class CitizenEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> FEMALE = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> SKIN = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> CHILD = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.BOOLEAN);
     public static final float MAX_NEED = 20f;
 
     /** Where they come from (server side only; They Will Talk tells it in conversation). */
@@ -63,6 +64,8 @@ public class CitizenEntity extends PathfinderMob {
     private float rest = MAX_NEED;
     /** what they carry for work: harvests, logs, deliveries */
     private final SimpleContainer inventory = new SimpleContainer(9);
+    /** game time they were born (children) */
+    private long born;
 
     public CitizenEntity(EntityType<? extends CitizenEntity> type, Level level) {
         super(type, level);
@@ -85,6 +88,7 @@ public class CitizenEntity extends PathfinderMob {
         super.defineSynchedData(builder);
         builder.define(FEMALE, false);
         builder.define(SKIN, 0);
+        builder.define(CHILD, false);
     }
 
     @Override
@@ -128,6 +132,45 @@ public class CitizenEntity extends PathfinderMob {
 
     public String backstory() {
         return backstory;
+    }
+
+    public void setBackstory(String b) {
+        backstory = b;
+    }
+
+    @Override
+    public boolean isBaby() {
+        return entityData.get(CHILD);
+    }
+
+    /** Children are half size and don't work; they grow up after a few days ({@link dev.eiriksb.stad.agent.Social}). */
+    public void setChild(boolean child) {
+        entityData.set(CHILD, child);
+        if (child) {
+            born = level().getGameTime();
+        }
+        refreshDimensions();
+    }
+
+    public long born() {
+        return born;
+    }
+
+    public void setBorn(long time) {
+        born = time;
+    }
+
+    @Override
+    public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
+        super.onSyncedDataUpdated(key);
+        if (CHILD.equals(key)) {
+            refreshDimensions();
+        }
+    }
+
+    /** Working slower today: they agreed to an order but didn't like it. */
+    public boolean grudging() {
+        return record().map(r -> r.grudgingUntil > level().getGameTime()).orElse(false);
     }
 
     // ---- town -----------------------------------------------------------------------------------------------------
@@ -206,7 +249,10 @@ public class CitizenEntity extends PathfinderMob {
 
     /** Working hours: daytime, awake, fed, and not taking the afternoon off when their plan says to rest. */
     public boolean canWork() {
-        if (isSleeping() || isNight() || hunger < 4) {
+        if (isSleeping() || isNight() || hunger < 4 || isBaby()) {
+            return false;
+        }
+        if (colony().map(c -> c.onStrike(level().getDayTime() / 24000)).orElse(false)) {
             return false;
         }
         long t = level().getDayTime() % 24000;
@@ -267,6 +313,9 @@ public class CitizenEntity extends PathfinderMob {
     private void tickNeeds() {
         // per second: a full stomach lasts HUNGER_DAYS Minecraft days (20 minutes each)
         setHunger(hunger - (float) (MAX_NEED / (StadConfig.HUNGER_DAYS.get() * 1200.0)));
+        if (hunger < 4) {
+            record().ifPresent(r -> r.wentHungry = true);
+        }
         if (isSleeping()) {
             rest = Math.min(MAX_NEED, rest + MAX_NEED / 400f); // a night's sleep fills it
         } else if (isNight() && home().isEmpty()) {
@@ -297,6 +346,8 @@ public class CitizenEntity extends PathfinderMob {
         tag.putFloat("Hunger", hunger);
         tag.putFloat("Rest", rest);
         tag.put("Inventory", inventory.createTag(registryAccess()));
+        tag.putBoolean("Child", isBaby());
+        tag.putLong("Born", born);
     }
 
     @Override
@@ -309,6 +360,8 @@ public class CitizenEntity extends PathfinderMob {
         hunger = tag.contains("Hunger") ? tag.getFloat("Hunger") : MAX_NEED;
         rest = tag.contains("Rest") ? tag.getFloat("Rest") : MAX_NEED;
         inventory.fromTag(tag.getList("Inventory", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
+        entityData.set(CHILD, tag.getBoolean("Child"));
+        born = tag.getLong("Born");
     }
 
     @Override

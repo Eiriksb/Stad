@@ -123,7 +123,7 @@ public class BuildGoal extends Goal {
         if (--cooldown > 0) {
             return;
         }
-        cooldown = StadConfig.BUILDER_TICKS_PER_BLOCK.get();
+        cooldown = StadConfig.BUILDER_TICKS_PER_BLOCK.get() * (citizen.grudging() ? 2 : 1);
         if (storage == null) {
             storage = ColonyStorage.supply(level, colony);
         }

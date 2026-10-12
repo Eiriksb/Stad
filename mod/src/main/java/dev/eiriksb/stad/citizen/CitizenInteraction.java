@@ -24,11 +24,16 @@ final class CitizenInteraction {
         MutableComponent card = Component.literal(citizen.getName().getString()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
         if (home.isPresent()) {
             card.append(Component.literal("  of " + home.get().name()).withStyle(ChatFormatting.GRAY));
-            String job = citizen.job().orElse(null);
+            String job = citizen.isBaby() ? "child" : citizen.job().orElse(null);
             card.append(Component.literal(String.format("\n%s · Food %d/20 · Rest %d/20 · Happiness %d%% · %s", job == null ? "No job" : capitalize(job),
                     Math.round(citizen.hunger()), Math.round(citizen.rest()), citizen.happiness(), citizen.home().isPresent() ? "has a bed" : "homeless"))
                     .withStyle(ChatFormatting.GRAY));
-            if (home.get().rank(player.getUUID()).atLeast(OrderKind.ASSIGN_JOB.minRank)) {
+            citizen.record().filter(r -> r.condition != null).ifPresent(r -> card.append(Component.literal("\nWaiting until "
+                    + dev.eiriksb.stad.agent.Leadership.conditionText(r.condition) + " to be the " + r.pendingJob).withStyle(ChatFormatting.YELLOW)));
+            if (citizen.grudging()) {
+                card.append(Component.literal("\nWorking grudgingly today").withStyle(ChatFormatting.YELLOW));
+            }
+            if (!citizen.isBaby() && home.get().rank(player.getUUID()).atLeast(OrderKind.ASSIGN_JOB.minRank)) {
                 card.append("\n");
                 if (job == null) {
                     for (String j : Jobs.all()) {

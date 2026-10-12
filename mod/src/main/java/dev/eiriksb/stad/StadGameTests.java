@@ -3,10 +3,13 @@ package dev.eiriksb.stad;
 import dev.eiriksb.stad.block.TownHallBlockEntity;
 import dev.eiriksb.stad.citizen.CitizenEntity;
 import dev.eiriksb.stad.agent.DayPlan;
+import dev.eiriksb.stad.agent.Leadership;
+import dev.eiriksb.stad.agent.Social;
 import dev.eiriksb.stad.building.BuildingDef;
 import dev.eiriksb.stad.building.BuildingPacks;
 import dev.eiriksb.stad.building.Placement;
 import dev.eiriksb.stad.colony.Building;
+import dev.eiriksb.stad.colony.CitizenRecord;
 import dev.eiriksb.stad.colony.Colony;
 import dev.eiriksb.stad.colony.Jobs;
 import dev.eiriksb.stad.colony.Request;
@@ -18,9 +21,9 @@ import dev.eiriksb.stad.colony.OrderKind;
 import dev.eiriksb.stad.colony.OrderService;
 import dev.eiriksb.stad.colony.Rank;
 import dev.eiriksb.theywilltalk.api.Memory;
+import dev.eiriksb.theywilltalk.api.Relation;
 import dev.eiriksb.theywilltalk.api.MemoryApi;
 import dev.eiriksb.theywilltalk.api.NewMemory;
-import dev.eiriksb.theywilltalk.api.Relation;
 import dev.eiriksb.theywilltalk.api.Subject;
 import dev.eiriksb.theywilltalk.api.TheyWillTalkApi;
 import dev.eiriksb.theywilltalk.villager.VillagerKind;
@@ -453,6 +456,135 @@ public final class StadGameTests {
         helper.assertTrue("Ingrid Berg".equals(plan.visit()), "visit " + plan.visit());
         DayPlan stranger = DayPlan.parse(json.replace("\"ingrid\"", "\"Herobrine\""), List.of("Ingrid Berg"));
         helper.assertTrue(stranger.visit() == null, "visits only townsfolk: " + stranger.visit());
+        helper.succeed();
+    }
+
+    // ---- leadership and social life (M5) ----------------------------------------------------------------------
+
+    @GameTest(template = "room", batch = "leadership")
+    public static void citizensFollowGoodLeadersAndBargainWithBadOnes(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = foundHere(helper, owner);
+        CitizenEntity c = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, G, 3);
+        ColonyManager.get(helper.getLevel().getServer()).join(colony, c);
+        CitizenRecord record = colony.citizen(c.getUUID()).orElseThrow();
+
+        colony.setStanding(owner.getUUID(), 60);
+        Order.Result liked = OrderService.issue(new Order(owner, OrderKind.ASSIGN_JOB, c, Jobs.FARMER));
+        helper.assertTrue(liked.outcome() == Order.Outcome.ACCEPTED, "a respected leader is obeyed: " + liked);
+
+        record.job = null;
+        colony.setStanding(owner.getUUID(), -80);
+        Order.Result distrust = OrderService.issue(new Order(owner, OrderKind.ASSIGN_JOB, c, Jobs.FARMER));
+        helper.assertTrue(distrust.outcome() == Order.Outcome.REFUSED && record.condition == null,
+                "a despised leader gets a flat no, no bargaining: " + distrust);
+        colony.setStanding(owner.getUUID(), -20);
+        c.setHunger(2);
+        Order.Result refused = OrderService.issue(new Order(owner, OrderKind.ASSIGN_JOB, c, Jobs.FARMER));
+        helper.assertTrue(refused.outcome() == Order.Outcome.REFUSED && refused.reason().contains("starving"), "refused: " + refused);
+        helper.assertTrue("food".equals(record.condition) && Jobs.FARMER.equals(record.pendingJob) && record.job == null, "bargains for food");
+        c.setHunger(20);
+        Leadership.checkConditions(helper.getLevel(), colony);
+        helper.assertTrue(Jobs.FARMER.equals(record.job) && record.condition == null, "keeps their word once fed: " + record.job);
+
+        record.job = null;
+        StadConfig.LEADERSHIP.set(StadConfig.Leadership.LOYAL);
+        colony.setStanding(owner.getUUID(), -100);
+        Order.Result loyal = OrderService.issue(new Order(owner, OrderKind.ASSIGN_JOB, c, Jobs.FARMER));
+        StadConfig.LEADERSHIP.set(StadConfig.Leadership.NORMAL);
+        helper.assertTrue(loyal.outcome() == Order.Outcome.GRUDGING && c.grudging(), "loyal citizens grumble but obey: " + loyal);
+        cleanUp(helper, colony, owner);
+        helper.succeed();
+    }
+
+    @GameTest(template = "room", batch = "leadership")
+    public static void theMorningReviewJudgesTheLeaders(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = foundHere(helper, owner);
+        CitizenEntity hungry = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, G, 3);
+        CitizenEntity miserable = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 5, G, 3);
+        ColonyManager manager = ColonyManager.get(helper.getLevel().getServer());
+        manager.join(colony, hungry);
+        manager.join(colony, miserable);
+        colony.citizen(hungry.getUUID()).orElseThrow().wentHungry = true;
+        CitizenRecord sad = colony.citizen(miserable.getUUID()).orElseThrow();
+        sad.happiness = 10;
+        sad.unhappyDays = 2;
+        colony.citizen(hungry.getUUID()).orElseThrow().happiness = 20;
+        colony.setStanding(owner.getUUID(), -40);
+        long day = helper.getLevel().getDayTime() / 24000 + 1;
+        helper.getLevel().setDayTime(day * 24000 + 1000);
+        colony.lastReviewDay = day - 1;
+        Leadership.review(helper.getLevel(), colony);
+        var standing = colony.standing(owner.getUUID());
+        helper.assertTrue(standing.events().stream().anyMatch(e -> e.cause().contains(hungry.getName().getString()) && e.cause().contains("hungry")),
+                "a hungry citizen counts against the leader: " + standing.events());
+        helper.assertTrue(!colony.hasCitizen(miserable.getUUID()) && miserable.colony().isEmpty(), "three miserable days and they leave");
+        helper.assertTrue(colony.onStrike(day), "an unhappy town with a resented leader strikes");
+        helper.assertTrue(!hungry.canWork(), "nobody works during a strike");
+        cleanUp(helper, colony, owner);
+        helper.succeed();
+    }
+
+    @GameTest(template = "room", batch = "leadership")
+    public static void hurtingCitizensCostsStanding(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = foundHere(helper, owner);
+        CitizenEntity c = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, G, 3);
+        ColonyManager.get(helper.getLevel().getServer()).join(colony, c);
+        c.hurt(helper.getLevel().damageSources().playerAttack(owner), 1f);
+        var standing = colony.standing(owner.getUUID());
+        helper.assertTrue(standing.score() < 0 && standing.events().getFirst().cause().startsWith("you attacked"), "standing " + standing.events());
+        cleanUp(helper, colony, owner);
+        helper.succeed();
+    }
+
+    @GameTest(template = "room", batch = "leadership")
+    public static void whatCitizensMakeOfAConversationMovesStanding(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = foundHere(helper, owner);
+        CitizenEntity c = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, G, 3);
+        ColonyManager.get(helper.getLevel().getServer()).join(colony, c);
+        var turn = new dev.eiriksb.theywilltalk.api.TurnInfo(c.getUUID(), "Gunnar Kvam", Stad.CITIZEN, owner.getUUID(), "Owner",
+                "I'll bring the stone myself", null, "en", "text", new dev.eiriksb.theywilltalk.villager.VillagerFacts());
+        var field = new Leadership.RespectField();
+        helper.assertTrue(field.appliesTo(turn), "asked about citizens");
+        field.apply(turn, com.google.gson.JsonParser.parseString("{\"change\": 2, \"why\": \"you promised me stone walls\"}"));
+        helper.succeedWhen(() -> {
+            var s = colony.standing(owner.getUUID());
+            helper.assertTrue(s.score() == 4 && s.events().getFirst().cause().equals("you promised me stone walls"), "standing " + s.events());
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "room", batch = "leadership")
+    public static void couplesCourtMarryAndRaiseChildren(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = foundHere(helper, owner);
+        CitizenEntity a = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3, G, 3);
+        CitizenEntity b = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 5, G, 3);
+        ColonyManager.get(helper.getLevel().getServer()).join(colony, a);
+        ColonyManager.get(helper.getLevel().getServer()).join(colony, b);
+        CitizenRecord ra = colony.citizen(a.getUUID()).orElseThrow(), rb = colony.citizen(b.getUUID()).orElseThrow();
+
+        Social.decide(helper.getLevel(), colony, ra, rb, new Relation(ra.uuid, rb.uuid, rb.name, 45, 5, null, 0),
+                new Relation(rb.uuid, ra.uuid, ra.name, 50, 5, null, 0));
+        helper.assertTrue(ra.spouse == null, "courting first, not married at once");
+        Social.decide(helper.getLevel(), colony, ra, rb, new Relation(ra.uuid, rb.uuid, rb.name, 70, 10, "partner", 0),
+                new Relation(rb.uuid, ra.uuid, ra.name, 65, 10, "partner", 0));
+        helper.assertTrue(rb.uuid.equals(ra.spouse) && ra.uuid.equals(rb.spouse), "they married");
+
+        CitizenEntity baby = Social.haveChild(helper.getLevel(), colony, ra, rb);
+        helper.assertTrue(baby != null && baby.isBaby() && colony.hasCitizen(baby.getUUID()), "a baby in town");
+        CitizenRecord rbaby = colony.citizen(baby.getUUID()).orElseThrow();
+        helper.assertTrue(rbaby.parents.containsAll(List.of(ra.uuid, rb.uuid)), "parents recorded");
+        helper.assertTrue(baby.getName().getString().endsWith(ra.name.substring(ra.name.indexOf(' ') + 1)), "family name: " + baby.getName().getString());
+        Order.Result work = OrderService.issue(new Order(owner, OrderKind.ASSIGN_JOB, baby, Jobs.FARMER));
+        helper.assertTrue(work.outcome() == Order.Outcome.INVALID, "children don't work: " + work);
+        baby.setBorn(helper.getLevel().getGameTime() - StadConfig.CHILD_DAYS.get() * 24000L - 1);
+        Social.morning(helper.getLevel(), colony);
+        helper.assertTrue(!baby.isBaby(), "grown up");
+        cleanUp(helper, colony, owner);
         helper.succeed();
     }
 

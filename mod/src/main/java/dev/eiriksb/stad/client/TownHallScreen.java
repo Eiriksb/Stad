@@ -58,6 +58,8 @@ public class TownHallScreen extends Screen {
         y += LINE;
         g.drawString(font, view.citizens().size() + " citizens · " + view.beds() + " beds (" + (view.beds() - homed) + " free) · land: "
                 + view.radius() + " blocks around the hall", x, y, 0xAAAAAA);
+        y += LINE;
+        g.drawString(font, font.plainSubstrByWidth(view.standing(), W), x, y, 0xDDDD99);
         y += LINE + 4;
 
         g.drawString(font, Component.literal("Citizens").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF);

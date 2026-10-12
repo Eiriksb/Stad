@@ -38,6 +38,11 @@ public final class Colony {
     private int nextBuildingId = 1;
     private final Map<Integer, Request> requests = new LinkedHashMap<>();
     private int nextRequestId = 1;
+    private final Map<UUID, Standing> standing = new LinkedHashMap<>();
+    /** the last day the leadership was reviewed (see {@link dev.eiriksb.stad.agent.Leadership}) */
+    public long lastReviewDay = -1;
+    /** the day the workers are on strike, if they are */
+    public long strikeDay = -1;
     /** game time of the last newcomer, for {@link Arrivals} */
     long lastArrival;
     private Runnable onChange = () -> {};
@@ -142,7 +147,7 @@ public final class Colony {
         return r;
     }
 
-    void removeCitizen(UUID uuid) {
+    public void removeCitizen(UUID uuid) {
         if (citizens.remove(uuid) != null) {
             changed();
         }
@@ -226,6 +231,41 @@ public final class Colony {
         }
     }
 
+    // ---- standing -----------------------------------------------------------------------------------------------
+
+    /** How the town sees a player as a leader. */
+    public Standing standing(UUID player) {
+        return standing.computeIfAbsent(player, p -> new Standing());
+    }
+
+    public void changeStanding(UUID player, String playerName, int delta, String cause, long time) {
+        if (delta == 0) {
+            return;
+        }
+        standing(player).change(delta, cause, time);
+        playerNames.putIfAbsent(player, playerName);
+        changed();
+    }
+
+    /** Something that's down to whoever leads the town (the founder and officers). */
+    public void changeLeadersStanding(int delta, String cause, long time) {
+        ranks.forEach((uuid, rank) -> {
+            if (rank.atLeast(Rank.OFFICER)) {
+                standing(uuid).change(delta, cause, time);
+            }
+        });
+        changed();
+    }
+
+    public void setStanding(UUID player, int value) {
+        standing(player).set(value);
+        changed();
+    }
+
+    public boolean onStrike(long day) {
+        return strikeDay == day;
+    }
+
     // ---- orders -------------------------------------------------------------------------------------------------
 
     public void log(OrderRecord r) {
@@ -276,6 +316,15 @@ public final class Colony {
         ListTag rs = new ListTag();
         requests.values().forEach(r -> rs.add(r.save()));
         t.put("Requests", rs);
+        ListTag st = new ListTag();
+        standing.forEach((uuid, s) -> {
+            CompoundTag e = s.save();
+            e.putUUID("Player", uuid);
+            st.add(e);
+        });
+        t.put("Standing", st);
+        t.putLong("LastReviewDay", lastReviewDay);
+        t.putLong("StrikeDay", strikeDay);
         return t;
     }
 
@@ -309,6 +358,12 @@ public final class Colony {
             Request r = Request.load((CompoundTag) tag);
             c.requests.put(r.id, r);
         }
+        for (Tag tag : t.getList("Standing", Tag.TAG_COMPOUND)) {
+            CompoundTag e = (CompoundTag) tag;
+            c.standing.put(e.getUUID("Player"), Standing.load(e));
+        }
+        c.lastReviewDay = t.contains("LastReviewDay") ? t.getLong("LastReviewDay") : -1;
+        c.strikeDay = t.contains("StrikeDay") ? t.getLong("StrikeDay") : -1;
         return c;
     }
 }

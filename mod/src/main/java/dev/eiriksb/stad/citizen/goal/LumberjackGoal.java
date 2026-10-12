@@ -80,7 +80,7 @@ public class LumberjackGoal extends WorkGoal {
         if (--cooldown > 0) {
             return;
         }
-        cooldown = 15;
+        cooldown = pace(15);
         BlockState state = level.getBlockState(log);
         for (ItemStack drop : Block.getDrops(state, level, log, null)) {
             pocket(drop);

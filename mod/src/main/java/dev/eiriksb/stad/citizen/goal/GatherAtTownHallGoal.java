@@ -52,7 +52,10 @@ public class GatherAtTownHallGoal extends Goal {
         var near = citizen.level().getEntitiesOfClass(CitizenEntity.class, citizen.getBoundingBox().inflate(4), c -> c != citizen);
         if (!near.isEmpty()) {
             citizen.hadCompany();
-            near.forEach(CitizenEntity::hadCompany);
+            near.forEach(other -> {
+                other.hadCompany();
+                dev.eiriksb.stad.agent.Social.met(citizen, other);
+            });
         }
     }
 

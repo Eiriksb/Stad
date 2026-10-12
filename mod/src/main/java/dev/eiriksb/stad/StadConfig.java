@@ -26,6 +26,17 @@ public final class StadConfig {
             .comment("Minutes between newcomers moving into a town that has a free bed.")
             .defineInRange("arrivalMinutes", 5, 1, 1440);
 
+    public enum Leadership { LOYAL, NORMAL, HARSH }
+
+    public static final ModConfigSpec.EnumValue<Leadership> LEADERSHIP = B
+            .comment("How much citizens put up with. LOYAL: they grumble but always do as they're told. NORMAL: a bad leader",
+                    "gets refused, struck against and left. HARSH: they're quicker to say no.")
+            .defineEnum("leadership", Leadership.NORMAL);
+
+    public static final ModConfigSpec.IntValue CHILD_DAYS = B
+            .comment("Minecraft days a child takes to grow up.")
+            .defineInRange("childDays", 4, 1, 100);
+
     static {
         B.pop();
         B.push("work");
