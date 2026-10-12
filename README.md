@@ -15,7 +15,7 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 ## Development
 
 Requirements: JDK 21 (Gradle downloads it if needed), and a checkout of
-[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.2 or newer, for its public
+[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.3 or newer, for its public
 API). TWT in turn needs [Sipher](https://github.com/Eiriksb/Sipher) built next to it
 (see TWT's README).
 
