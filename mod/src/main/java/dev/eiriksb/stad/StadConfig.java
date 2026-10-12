@@ -10,6 +10,35 @@ public final class StadConfig {
             .comment("Whether citizens talk (through They Will Talk). Off: they still live and work, silently.")
             .define("citizensTalk", true);
 
+    static {
+        B.push("colonies");
+    }
+
+    public static final ModConfigSpec.IntValue CLAIM_RADIUS = B
+            .comment("How far (in blocks) a town hall's land reaches.")
+            .defineInRange("claimRadius", 48, 16, 256);
+
+    public static final ModConfigSpec.IntValue MAX_COLONIES_PER_PLAYER = B
+            .comment("How many towns one player may found (0: no limit).")
+            .defineInRange("maxColoniesPerPlayer", 1, 0, 100);
+
+    public static final ModConfigSpec.IntValue ARRIVAL_MINUTES = B
+            .comment("Minutes between newcomers moving into a town that has a free bed.")
+            .defineInRange("arrivalMinutes", 5, 1, 1440);
+
+    static {
+        B.pop();
+        B.push("needs");
+    }
+
+    public static final ModConfigSpec.DoubleValue HUNGER_DAYS = B
+            .comment("Minecraft days a citizen can go on a full stomach before they're starving.")
+            .defineInRange("hungerDays", 1.5, 0.1, 100.0);
+
+    static {
+        B.pop();
+    }
+
     public static final ModConfigSpec SPEC = B.build();
 
     private StadConfig() {}

@@ -1,0 +1,219 @@
+package dev.eiriksb.stad.colony;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.level.Level;
+
+import java.util.ArrayDeque;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+/** A town: founded with a town hall, it claims the land around it and has members (players) and citizens. */
+public final class Colony {
+    private static final int ORDER_LOG = 200;
+
+    public final int id;
+    private String name;
+    public final ResourceKey<Level> dimension;
+    public final BlockPos center;
+    public final int radius;
+    public final long founded;
+    private UUID owner;
+    private final Map<UUID, Rank> ranks = new LinkedHashMap<>();
+    private final Map<UUID, String> playerNames = new LinkedHashMap<>();
+    private final Map<UUID, CitizenRecord> citizens = new LinkedHashMap<>();
+    private final Deque<OrderRecord> orders = new ArrayDeque<>();
+    /** game time of the last newcomer, for {@link Arrivals} */
+    long lastArrival;
+    private Runnable onChange = () -> {};
+
+    Colony(int id, String name, ResourceKey<Level> dimension, BlockPos center, int radius, long founded, UUID owner, String ownerName) {
+        this.id = id;
+        this.name = name;
+        this.dimension = dimension;
+        this.center = center;
+        this.radius = radius;
+        this.founded = founded;
+        this.owner = owner;
+        ranks.put(owner, Rank.OWNER);
+        playerNames.put(owner, ownerName);
+    }
+
+    void onChange(Runnable r) {
+        onChange = r;
+    }
+
+    void changed() {
+        onChange.run();
+    }
+
+    public String name() {
+        return name;
+    }
+
+    public void rename(String n) {
+        name = n;
+        changed();
+    }
+
+    public UUID owner() {
+        return owner;
+    }
+
+    public String ownerName() {
+        return playerNames.getOrDefault(owner, "?");
+    }
+
+    public Rank rank(UUID player) {
+        return ranks.getOrDefault(player, Rank.VISITOR);
+    }
+
+    /** Sets a player's rank (VISITOR removes them). There is always exactly one owner: making someone owner hands it over. */
+    public void setRank(UUID player, String playerName, Rank rank) {
+        if (rank == Rank.OWNER) {
+            ranks.put(owner, Rank.OFFICER);
+            owner = player;
+        } else if (player.equals(owner)) {
+            return; // the owner hands over by making someone else owner
+        }
+        if (rank == Rank.VISITOR) {
+            ranks.remove(player);
+        } else {
+            ranks.put(player, rank);
+        }
+        playerNames.put(player, playerName);
+        changed();
+    }
+
+    public Map<UUID, Rank> ranks() {
+        return Map.copyOf(ranks);
+    }
+
+    public String playerName(UUID player) {
+        return playerNames.getOrDefault(player, "?");
+    }
+
+    public boolean contains(ResourceKey<Level> dim, BlockPos pos) {
+        return dim.equals(dimension) && horizontalDistSqr(pos) <= (long) radius * radius;
+    }
+
+    long horizontalDistSqr(BlockPos pos) {
+        long dx = pos.getX() - center.getX();
+        long dz = pos.getZ() - center.getZ();
+        return dx * dx + dz * dz;
+    }
+
+    // ---- citizens -----------------------------------------------------------------------------------------------
+
+    public Collection<CitizenRecord> citizens() {
+        return List.copyOf(citizens.values());
+    }
+
+    public Optional<CitizenRecord> citizen(UUID uuid) {
+        return Optional.ofNullable(citizens.get(uuid));
+    }
+
+    public boolean hasCitizen(UUID uuid) {
+        return citizens.containsKey(uuid);
+    }
+
+    public int population() {
+        return citizens.size();
+    }
+
+    CitizenRecord addCitizen(UUID uuid, String name, long time) {
+        CitizenRecord r = citizens.computeIfAbsent(uuid, u -> new CitizenRecord(u, name, time));
+        changed();
+        return r;
+    }
+
+    void removeCitizen(UUID uuid) {
+        if (citizens.remove(uuid) != null) {
+            changed();
+        }
+    }
+
+    /** Who sleeps in the bed whose head is at {@code pos}, if anyone. */
+    public Optional<CitizenRecord> sleeperAt(BlockPos pos) {
+        return citizens.values().stream().filter(c -> pos.equals(c.home)).findFirst();
+    }
+
+    // ---- orders -------------------------------------------------------------------------------------------------
+
+    void log(OrderRecord r) {
+        orders.addFirst(r);
+        while (orders.size() > ORDER_LOG) {
+            orders.removeLast();
+        }
+        changed();
+    }
+
+    /** Newest first. */
+    public List<OrderRecord> orders() {
+        return List.copyOf(orders);
+    }
+
+    // ---- saving -------------------------------------------------------------------------------------------------
+
+    CompoundTag save() {
+        CompoundTag t = new CompoundTag();
+        t.putInt("Id", id);
+        t.putString("Name", name);
+        t.putString("Dimension", dimension.location().toString());
+        t.put("Center", NbtUtils.writeBlockPos(center));
+        t.putInt("Radius", radius);
+        t.putLong("Founded", founded);
+        t.putUUID("Owner", owner);
+        t.putLong("LastArrival", lastArrival);
+        ListTag members = new ListTag();
+        ranks.forEach((uuid, rank) -> {
+            CompoundTag m = new CompoundTag();
+            m.putUUID("Uuid", uuid);
+            m.putString("Name", playerNames.getOrDefault(uuid, "?"));
+            m.putString("Rank", rank.id());
+            members.add(m);
+        });
+        t.put("Members", members);
+        ListTag cs = new ListTag();
+        citizens.values().forEach(c -> cs.add(c.save()));
+        t.put("Citizens", cs);
+        ListTag os = new ListTag();
+        orders.forEach(o -> os.add(o.save()));
+        t.put("Orders", os);
+        return t;
+    }
+
+    static Colony load(CompoundTag t) {
+        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(t.getString("Dimension")));
+        UUID owner = t.getUUID("Owner");
+        Colony c = new Colony(t.getInt("Id"), t.getString("Name"), dim, NbtUtils.readBlockPos(t, "Center").orElse(BlockPos.ZERO),
+                t.getInt("Radius"), t.getLong("Founded"), owner, "?");
+        c.lastArrival = t.getLong("LastArrival");
+        c.ranks.clear();
+        for (Tag tag : t.getList("Members", Tag.TAG_COMPOUND)) {
+            CompoundTag m = (CompoundTag) tag;
+            c.ranks.put(m.getUUID("Uuid"), Rank.byId(m.getString("Rank")));
+            c.playerNames.put(m.getUUID("Uuid"), m.getString("Name"));
+        }
+        c.ranks.put(owner, Rank.OWNER);
+        for (Tag tag : t.getList("Citizens", Tag.TAG_COMPOUND)) {
+            CitizenRecord r = CitizenRecord.load((CompoundTag) tag);
+            c.citizens.put(r.uuid, r);
+        }
+        for (Tag tag : t.getList("Orders", Tag.TAG_COMPOUND)) {
+            c.orders.addLast(OrderRecord.load((CompoundTag) tag));
+        }
+        return c;
+    }
+}

@@ -1,5 +1,9 @@
 package dev.eiriksb.stad;
 
+import dev.eiriksb.stad.colony.ColonyProtection;
+import dev.eiriksb.stad.colony.ColonyTicker;
+import dev.eiriksb.stad.command.StadCommands;
+import dev.eiriksb.stad.net.StadNetwork;
 import dev.eiriksb.stad.twt.StadAdapter;
 import dev.eiriksb.theywilltalk.api.TheyWillTalkApi;
 import dev.eiriksb.theywilltalk.api.TwtReadyEvent;
@@ -9,6 +13,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +33,11 @@ public final class Stad {
     public Stad(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.COMMON, StadConfig.SPEC);
         StadRegistries.register(modBus);
+        StadNetwork.register(modBus);
         TheyWillTalkApi.get().registerAdapter(new StadAdapter());
+        ColonyTicker.register();
+        ColonyProtection.register();
+        NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent e) -> StadCommands.register(e.getDispatcher()));
         NeoForge.EVENT_BUS.addListener(this::onTwtReady);
     }
 

@@ -8,9 +8,24 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M1). Citizens exist and talk: spawn one with the spawn egg or
-> `/summon stad:citizen` and chat with them. No towns, jobs or buildings yet. The design and roadmap are in
-> [PLAN.md](PLAN.md).
+> **Status:** early development (milestone M2). You can found a town with a **town hall** (sneak + right-click
+> opens its storage). Newcomers move in when there are free beds, and you can invite citizens you meet
+> (right-click them). Citizens sleep in their own beds at night, eat food from the town hall when they're hungry,
+> gather there in the evening, and know their town, its leader and how they're doing when you talk to them. Players
+> have ranks (owner, officer, member, visitor), and every order is checked and logged. No jobs or buildings yet. The
+> design and roadmap are in [PLAN.md](PLAN.md).
+
+### Commands
+
+| Command | |
+|---|---|
+| `/stad colony info` | the town you're in (or lead): citizens, beds, ranks |
+| `/stad colony rename <name>` | officers |
+| `/stad colony rank <player> <owner\|officer\|member\|visitor>` | the founder |
+| `/stad colony dissolve` | the founder (or an admin) ends the town |
+| `/stad colony found` / `list` | admins |
+| `/stad citizen status <citizens>` | admins: what they're doing right now |
+| `/stad citizen needs <citizens> <hunger> <rest>` | admins, for testing |
 
 ## Development
 

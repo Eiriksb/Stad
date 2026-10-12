@@ -1,13 +1,25 @@
 package dev.eiriksb.stad.citizen;
 
+import dev.eiriksb.stad.StadConfig;
+import dev.eiriksb.stad.citizen.goal.EatAtTownHallGoal;
+import dev.eiriksb.stad.citizen.goal.GatherAtTownHallGoal;
+import dev.eiriksb.stad.citizen.goal.SleepAtHomeGoal;
+import dev.eiriksb.stad.colony.CitizenRecord;
+import dev.eiriksb.stad.colony.Colony;
+import dev.eiriksb.stad.colony.ColonyManager;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
@@ -18,6 +30,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.MoveTowardsRestrictionGoal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
@@ -26,16 +39,23 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 
+import java.util.Optional;
+
 /**
  * A Stad citizen: a person who lives in (or is looking for) a town. Talking, memory and voice come from They Will
- * Talk through {@link dev.eiriksb.stad.twt.StadAdapter}; this class is the body: looks, movement and saving.
+ * Talk through {@link dev.eiriksb.stad.twt.StadAdapter}; this class is the body: looks, needs, daily routine and saving.
  */
 public class CitizenEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> FEMALE = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> SKIN = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.INT);
+    public static final float MAX_NEED = 20f;
 
     /** Where they come from (server side only; They Will Talk tells it in conversation). */
     private String backstory = "";
+    /** Their colony's id, 0 for none (the colony's citizen list is the truth; this is a quick lookup). */
+    private int colonyId;
+    private float hunger = MAX_NEED;
+    private float rest = MAX_NEED;
 
     public CitizenEntity(EntityType<? extends CitizenEntity> type, Level level) {
         super(type, level);
@@ -50,7 +70,7 @@ public class CitizenEntity extends PathfinderMob {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.5)
-                .add(Attributes.FOLLOW_RANGE, 48.0);
+                .add(Attributes.FOLLOW_RANGE, 64.0);
     }
 
     @Override
@@ -64,12 +84,16 @@ public class CitizenEntity extends PathfinderMob {
     protected void registerGoals() {
         goalSelector.addGoal(0, new FloatGoal(this));
         goalSelector.addGoal(1, new OpenDoorGoal(this, true));
+        goalSelector.addGoal(2, new SleepAtHomeGoal(this));
+        goalSelector.addGoal(3, new EatAtTownHallGoal(this));
+        goalSelector.addGoal(4, new MoveTowardsRestrictionGoal(this, 0.6));
+        goalSelector.addGoal(5, new GatherAtTownHallGoal(this));
         goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.6));
         goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0f));
         goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
-    /** A new citizen gets their looks and name when they first appear (spawn egg, /summon, arriving in town). */
+    /** A new citizen gets their looks, name and story when they first appear (spawn egg, /summon, moving into town). */
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason,
                                         SpawnGroupData data) {
@@ -95,12 +119,141 @@ public class CitizenEntity extends PathfinderMob {
         return backstory;
     }
 
+    // ---- town -----------------------------------------------------------------------------------------------------
+
+    /** Their colony (server side). */
+    public Optional<Colony> colony() {
+        if (colonyId == 0 || !(level() instanceof ServerLevel server)) {
+            return Optional.empty();
+        }
+        return ColonyManager.get(server.getServer()).byId(colonyId).filter(c -> c.hasCitizen(getUUID()));
+    }
+
+    public Optional<CitizenRecord> record() {
+        return colony().flatMap(c -> c.citizen(getUUID()));
+    }
+
+    /** The head of their bed, if they have one. */
+    public Optional<BlockPos> home() {
+        return record().map(r -> r.home);
+    }
+
+    /** Called by {@link ColonyManager#join}. */
+    public void joinedColony(Colony colony) {
+        colonyId = colony.id;
+        restrictTo(colony.center, colony.radius);
+    }
+
+    /** Called when they leave their colony, or it's dissolved. */
+    public void leftColony() {
+        colonyId = 0;
+        clearRestriction();
+        if (isSleeping()) {
+            stopSleeping();
+        }
+    }
+
+    // ---- needs and routine --------------------------------------------------------------------------------------
+
+    public float hunger() {
+        return hunger;
+    }
+
+    public float rest() {
+        return rest;
+    }
+
+    public void setHunger(float h) {
+        hunger = Math.max(0, Math.min(MAX_NEED, h));
+    }
+
+    public void setRest(float r) {
+        rest = Math.max(0, Math.min(MAX_NEED, r));
+    }
+
+    public void eat(int nutrition) {
+        setHunger(hunger + nutrition * 2);
+    }
+
+    /** 0..100, from food, sleep and having a home (later also work, friends and how the town is led). */
+    public int happiness() {
+        double h = 35 * hunger / MAX_NEED + 30 * rest / MAX_NEED + (home().isPresent() ? 25 : 0) + 10;
+        return (int) Math.round(Math.max(0, Math.min(100, h)));
+    }
+
+    public boolean isNight() {
+        long t = level().getDayTime() % 24000;
+        return t >= 12500 && t < 23500;
+    }
+
+    /** What they're up to, for admins: running goals, where they're walking, needs. */
+    public String activity() {
+        var path = getNavigation().getPath();
+        return "doing " + goalSelector.getAvailableGoals().stream().filter(g -> g.isRunning())
+                .map(g -> g.getGoal().getClass().getSimpleName().replace("Goal", "")).toList()
+                + (path == null ? ", standing" : ", walking to " + path.getTarget().toShortString() + (path.canReach() ? "" : " (can't reach)"))
+                + (isSleeping() ? ", asleep" : "") + String.format(", food %.1f, rest %.1f", hunger, rest)
+                + home().map(h -> ", bed at " + h.toShortString()).orElse(", homeless");
+    }
+
+    @Override
+    protected boolean isImmobile() {
+        return super.isImmobile() || isSleeping();
+    }
+
+    @Override
+    public void aiStep() {
+        if (!level().isClientSide) {
+            if (isSleeping() && (!isNight() || hunger < 2)) {
+                stopSleeping();
+            }
+            if (tickCount % 20 == 0) {
+                tickNeeds();
+            }
+            if (tickCount % 100 == 0) {
+                record().ifPresent(r -> {
+                    r.name = getName().getString();
+                    r.hunger = Math.round(hunger);
+                    r.rest = Math.round(rest);
+                    r.happiness = happiness();
+                });
+            }
+        }
+        super.aiStep();
+    }
+
+    private void tickNeeds() {
+        // per second: a full stomach lasts HUNGER_DAYS Minecraft days (20 minutes each)
+        setHunger(hunger - (float) (MAX_NEED / (StadConfig.HUNGER_DAYS.get() * 1200.0)));
+        if (isSleeping()) {
+            rest = Math.min(MAX_NEED, rest + MAX_NEED / 400f); // a night's sleep fills it
+        } else if (isNight() && home().isEmpty()) {
+            rest = Math.min(MAX_NEED, rest + MAX_NEED / 1200f); // dozing on the ground
+        } else {
+            rest = Math.max(0, rest - MAX_NEED / 1500f);
+        }
+    }
+
+    @Override
+    protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sp) {
+            CitizenInteraction.show(sp, this);
+            return InteractionResult.SUCCESS;
+        }
+        return hand == InteractionHand.MAIN_HAND ? InteractionResult.SUCCESS : InteractionResult.PASS;
+    }
+
+    // ---- saving -----------------------------------------------------------------------------------------------------
+
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("Female", isFemale());
         tag.putInt("Skin", skin());
         tag.putString("Backstory", backstory);
+        tag.putInt("Colony", colonyId);
+        tag.putFloat("Hunger", hunger);
+        tag.putFloat("Rest", rest);
     }
 
     @Override
@@ -109,6 +262,16 @@ public class CitizenEntity extends PathfinderMob {
         entityData.set(FEMALE, tag.getBoolean("Female"));
         entityData.set(SKIN, Math.floorMod(tag.getInt("Skin"), CitizenLooks.SKIN_COUNT));
         backstory = tag.getString("Backstory");
+        colonyId = tag.getInt("Colony");
+        hunger = tag.contains("Hunger") ? tag.getFloat("Hunger") : MAX_NEED;
+        rest = tag.contains("Rest") ? tag.getFloat("Rest") : MAX_NEED;
+    }
+
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        // Back in the world: stay within the town's land (the restriction itself isn't saved).
+        colony().ifPresentOrElse(c -> restrictTo(c.center, c.radius), () -> colonyId = 0);
     }
 
     @Override

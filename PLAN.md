@@ -137,8 +137,10 @@ CREATE TABLE villager_relations (a TEXT, b TEXT, affinity INTEGER, familiarity I
                                  last_interaction INTEGER, PRIMARY KEY (a, b));
 ```
 
-**Stad's own database** (`world/stad/stad.db`, opened with TWT's `Database` class, rows keyed by the same citizen
-UUIDs):
+**Stad's own data.** Since M2, colony state (colonies, ranks, citizens' homes, the order log) is saved with the world
+as Minecraft saved data (`data/stad_colonies.dat`), which keeps it in step with the world and its backups. Needs and
+looks are saved on the citizen entity. The tables below show the shape of the data. Append-heavy history (standing
+events, raids) may move to a SQLite file (`world/stad/stad.db`) when it gets large:
 
 ```sql
 CREATE TABLE citizens (uuid TEXT PRIMARY KEY, colony, genes_json, job, home, workplace, skills_json, happiness);

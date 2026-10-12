@@ -1,0 +1,15 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "BBB",
+    "PLP",
+    "PPP"
+  ],
+  "key": {
+    "B": { "item": "minecraft:bookshelf" },
+    "P": { "tag": "minecraft:planks" },
+    "L": { "item": "minecraft:bell" }
+  },
+  "result": { "id": "stad:town_hall", "count": 1 }
+}
