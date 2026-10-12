@@ -1,5 +1,6 @@
 package dev.eiriksb.stad;
 
+import dev.eiriksb.stad.twt.StadAdapter;
 import dev.eiriksb.theywilltalk.api.TheyWillTalkApi;
 import dev.eiriksb.theywilltalk.api.TwtReadyEvent;
 import dev.eiriksb.theywilltalk.villager.VillagerKind;
@@ -26,6 +27,8 @@ public final class Stad {
 
     public Stad(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.COMMON, StadConfig.SPEC);
+        StadRegistries.register(modBus);
+        TheyWillTalkApi.get().registerAdapter(new StadAdapter());
         NeoForge.EVENT_BUS.addListener(this::onTwtReady);
     }
 

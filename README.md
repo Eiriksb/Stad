@@ -8,20 +8,21 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M0: foundations). Nothing playable yet. The design and roadmap are in
+> **Status:** early development (milestone M1). Citizens exist and talk: spawn one with the spawn egg or
+> `/summon stad:citizen` and chat with them. No towns, jobs or buildings yet. The design and roadmap are in
 > [PLAN.md](PLAN.md).
 
 ## Development
 
 Requirements: JDK 21 (Gradle downloads it if needed), and a checkout of
-[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one. Stad needs TWT's public API, which is
-currently on TWT's `public-api` branch. TWT in turn needs [Sipher](https://github.com/Eiriksb/Sipher) built next to it
+[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.2 or newer, for its public
+API). TWT in turn needs [Sipher](https://github.com/Eiriksb/Sipher) built next to it
 (see TWT's README).
 
 ```
 Projects/
   Sipher/           ./gradlew assemble
-  they-will-talk/   git switch public-api
+  they-will-talk/
   Stad/             this repository
 ```
 
