@@ -108,6 +108,10 @@ public class CitizenEntity extends PathfinderMob {
         goalSelector.addGoal(4, new FarmGoal(this));
         goalSelector.addGoal(4, new LumberjackGoal(this));
         goalSelector.addGoal(4, new CourierGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.CookGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.FishGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.ShepherdGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.MineGoal(this));
         goalSelector.addGoal(5, new MoveTowardsRestrictionGoal(this, 0.6));
         goalSelector.addGoal(6, new GatherAtTownHallGoal(this));
         goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.6));
@@ -350,6 +354,9 @@ public class CitizenEntity extends PathfinderMob {
                 heal(isSleeping() ? 2 : 1); // well fed, they mend
             }
             if (tickCount % 100 == 0) {
+                trainedAsGuard(dev.eiriksb.stad.colony.Jobs.GUARD.equals(job().orElse(null)));
+            }
+            if (tickCount % 100 == 0) {
                 record().ifPresent(r -> {
                     r.name = getName().getString();
                     r.hunger = Math.round(hunger);
@@ -359,6 +366,27 @@ public class CitizenEntity extends PathfinderMob {
             }
         }
         super.aiStep();
+    }
+
+    private static final net.minecraft.resources.ResourceLocation GUARD_TRAINING = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("stad", "guard");
+
+    /** Guards are trained fighters: tougher and harder-hitting while they have the job. */
+    private void trainedAsGuard(boolean guard) {
+        var health = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+        var attack = getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        if (health == null || attack == null || health.hasModifier(GUARD_TRAINING) == guard) {
+            return;
+        }
+        if (guard) {
+            health.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(GUARD_TRAINING, 10,
+                    net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+            attack.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(GUARD_TRAINING, 1.5,
+                    net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_VALUE));
+        } else {
+            health.removeModifier(GUARD_TRAINING);
+            attack.removeModifier(GUARD_TRAINING);
+            setHealth(Math.min(getHealth(), getMaxHealth()));
+        }
     }
 
     private void tickNeeds() {

@@ -18,7 +18,7 @@ import java.util.Map;
  */
 public final class WorkSites {
     private static final long REFRESH = 600;
-    private record Scan(long time, List<BlockPos> farmland, List<BlockPos> trees) {}
+    private record Scan(long time, List<BlockPos> farmland, List<BlockPos> trees, List<BlockPos> cooking, List<BlockPos> shore) {}
     private static final Map<Integer, Scan> scans = new HashMap<>();
 
     private WorkSites() {}
@@ -30,6 +30,30 @@ public final class WorkSites {
     /** The bottom log of each natural tree (logs with leaves that grew there, not a player's log wall). */
     public static List<BlockPos> trees(ServerLevel level, Colony colony) {
         return scan(level, colony).trees;
+    }
+
+    /** Furnaces, smokers and campfires on the town's land, where a cook can work. */
+    public static List<BlockPos> cooking(ServerLevel level, Colony colony) {
+        return scan(level, colony).cooking;
+    }
+
+    /**
+     * Where a fisher can stand: open ground beside a pond or a river (at least eight blocks of water close by), the
+     * water's surface open to the sky. Each spot is the block they stand on; {@link #waterBeside} finds the water.
+     */
+    public static List<BlockPos> shore(ServerLevel level, Colony colony) {
+        return scan(level, colony).shore;
+    }
+
+    /** The water next to a shore spot (where the line goes), if it's still there. */
+    public static java.util.Optional<BlockPos> waterBeside(ServerLevel level, BlockPos stand) {
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos w = stand.relative(d).below();
+            if (level.getFluidState(w).is(net.minecraft.tags.FluidTags.WATER) && level.getFluidState(w).isSource()) {
+                return java.util.Optional.of(w);
+            }
+        }
+        return java.util.Optional.empty();
     }
 
     /** Forget the last scan (a tree was felled). */
@@ -45,6 +69,8 @@ public final class WorkSites {
         }
         List<BlockPos> farmland = new ArrayList<>();
         List<BlockPos> trees = new ArrayList<>();
+        List<BlockPos> cooking = new ArrayList<>();
+        java.util.Set<BlockPos> shore = new java.util.LinkedHashSet<>();
         int r = colony.radius;
         BlockPos c = colony.center;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
@@ -58,6 +84,11 @@ public final class WorkSites {
                     BlockState state = level.getBlockState(p);
                     if (state.is(Blocks.FARMLAND)) {
                         farmland.add(p.immutable());
+                    } else if (state.is(Blocks.FURNACE) || state.is(Blocks.SMOKER) || state.is(BlockTags.CAMPFIRES)) {
+                        cooking.add(p.immutable());
+                    } else if (shore.size() < 48 && state.getFluidState().is(net.minecraft.tags.FluidTags.WATER) && state.getFluidState().isSource()
+                            && level.getBlockState(p.above()).isAir() && (dx + dz) % 3 == 0) {
+                        standBeside(level, p.immutable()).ifPresent(shore::add);
                     } else if (state.is(BlockTags.LOGS) && level.getBlockState(p.below()).is(BlockTags.DIRT) && naturalTree(level, p.immutable())
                             && !insideBuilding(colony, p)) {
                         trees.add(p.immutable());
@@ -65,9 +96,33 @@ public final class WorkSites {
                 }
             }
         }
-        s = new Scan(now, List.copyOf(farmland), List.copyOf(trees));
+        s = new Scan(now, List.copyOf(farmland), List.copyOf(trees), List.copyOf(cooking), List.copyOf(shore));
         scans.put(colony.id, s);
         return s;
+    }
+
+    /** Dry ground to stand on beside this water, when it's a real pond (eight or more water blocks close by). */
+    private static java.util.Optional<BlockPos> standBeside(ServerLevel level, BlockPos water) {
+        int wet = 0;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (level.getFluidState(water.offset(dx, 0, dz)).is(net.minecraft.tags.FluidTags.WATER)) {
+                    wet++;
+                }
+            }
+        }
+        if (wet < 8) {
+            return java.util.Optional.empty();
+        }
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos ground = water.relative(d);
+            if (level.getBlockState(ground).isFaceSturdy(level, ground, net.minecraft.core.Direction.UP) // a dusting of snow is fine
+                    && level.getBlockState(ground.above()).getCollisionShape(level, ground.above()).isEmpty()
+                    && level.getBlockState(ground.above(2)).getCollisionShape(level, ground.above(2)).isEmpty()) {
+                return java.util.Optional.of(ground.above());
+            }
+        }
+        return java.util.Optional.empty();
     }
 
     /** A trunk going up into leaves that grew naturally (not placed by a player). */

@@ -35,7 +35,10 @@ final class PerfCommands {
                     ctx.getSource().sendSuccess(() -> Component.literal("Cleared the timings."), false);
                     return 1;
                 }))
-                .then(Commands.literal("crowd").then(Commands.argument("count", IntegerArgumentType.integer(1, 200)).executes(PerfCommands::crowd))
+                .then(Commands.literal("crowd").then(Commands.argument("count", IntegerArgumentType.integer(1, 200)).executes(c -> crowd(c, null))
+                                .then(Commands.argument("job", com.mojang.brigadier.arguments.StringArgumentType.word())
+                                        .suggests((c, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(Jobs.all(), b))
+                                        .executes(c -> crowd(c, com.mojang.brigadier.arguments.StringArgumentType.getString(c, "job")))))
                         .then(Commands.literal("clear").executes(PerfCommands::clear)));
     }
 
@@ -67,8 +70,8 @@ final class PerfCommands {
         return 1;
     }
 
-    /** Adds {@code count} citizens to the town, with jobs, around its town hall. For load testing. */
-    private static int crowd(CommandContext<CommandSourceStack> ctx) {
+    /** Adds {@code count} citizens to the town around its town hall, with jobs ({@code only}'s, or a mix). For testing. */
+    private static int crowd(CommandContext<CommandSourceStack> ctx, String only) {
         CommandSourceStack s = ctx.getSource();
         Optional<Colony> found = StadCommands.here(s);
         if (found.isEmpty()) {
@@ -76,6 +79,10 @@ final class PerfCommands {
             return 0;
         }
         Colony colony = found.get();
+        if (only != null && !Jobs.exists(only)) {
+            s.sendFailure(Component.literal("No such job: " + only));
+            return 0;
+        }
         ServerLevel level = s.getServer().getLevel(colony.dimension);
         int count = IntegerArgumentType.getInteger(ctx, "count");
         List<String> jobs = List.of(Jobs.FARMER, Jobs.LUMBERJACK, Jobs.COURIER, Jobs.GUARD, Jobs.FARMER, Jobs.LUMBERJACK);
@@ -95,7 +102,7 @@ final class PerfCommands {
             c.addTag(CROWD);
             level.addFreshEntity(c);
             ColonyManager.get(s.getServer()).join(colony, c);
-            String job = !builder ? Jobs.BUILDER : jobs.get(i % jobs.size());
+            String job = only != null ? only : !builder ? Jobs.BUILDER : jobs.get(i % jobs.size());
             builder = true;
             colony.citizen(c.getUUID()).ifPresent(r -> r.job = job);
             made++;

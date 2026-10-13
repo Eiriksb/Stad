@@ -291,4 +291,56 @@ public final class WarGameTests {
         }
         helper.succeed();
     }
+
+    @GameTest(template = "lot", batch = "war_factions", timeoutTicks = 200)
+    public static void raidersComeDressedForTheirLand(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = found(helper, owner, 2, 2, 12);
+        for (int i = 0; i < 9; i++) {
+            ColonyManager.get(level.getServer()).join(colony, helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 3 + i % 3, G, 3 + i / 3));
+        }
+        boolean factions = StadConfig.RAIDER_FACTIONS.get();
+        try {
+            StadConfig.RAIDER_FACTIONS.set(false);
+            helper.assertTrue(dev.eiriksb.stad.war.Faction.of(level, colony, level.random) == dev.eiriksb.stad.war.Faction.PILLAGERS, "off: pillagers");
+            StadConfig.RAIDER_FACTIONS.set(true);
+            Raids.MobRaid raid = Raids.start(level, colony, 0);
+            raid.faction = dev.eiriksb.stad.war.Faction.NORSE;
+            raid.leaderName = "Test Ironside";
+            Raids.tick(level, colony);
+            helper.assertTrue(raid.phase == Raids.Phase.FIGHT && raid.spawned >= 3, "they came: " + raid.spawned);
+            List<dev.eiriksb.stad.war.RaiderEntity> raiders = new java.util.ArrayList<>();
+            raid.raiders.forEach(id -> {
+                if (level.getEntity(id) instanceof dev.eiriksb.stad.war.RaiderEntity r) {
+                    raiders.add(r);
+                }
+            });
+            helper.assertTrue(raiders.size() == raid.spawned, "all Norse raiders: " + raiders.size());
+            dev.eiriksb.stad.war.RaiderEntity leader = raiders.stream().filter(dev.eiriksb.stad.war.RaiderEntity::leader).findFirst().orElseThrow();
+            helper.assertTrue("Test Ironside".equals(leader.getCustomName().getString()) && leader.isCustomNameVisible() && leader.getMaxHealth() == 36
+                    && leader.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST).is(net.minecraft.world.item.Items.IRON_CHESTPLATE),
+                    "the leader: " + leader.getCustomName() + ", " + leader.getMaxHealth());
+            for (dev.eiriksb.stad.war.RaiderEntity r : raiders) {
+                helper.assertTrue(r.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD).is(net.minecraft.world.item.Items.IRON_HELMET)
+                        && Raids.isRaider(r, colony.id) && r.faction() == dev.eiriksb.stad.war.Faction.NORSE, "dressed as Norse raiders");
+                boolean bow = r.getMainHandItem().is(net.minecraft.world.item.Items.BOW);
+                helper.assertTrue(bow || r.getMainHandItem().is(net.minecraft.world.item.Items.IRON_AXE), "axes and bows: " + r.getMainHandItem());
+                helper.assertTrue(r.goalSelector.getAvailableGoals().stream().anyMatch(g -> g.getGoal() instanceof net.minecraft.world.entity.ai.goal.RangedBowAttackGoal) == bow,
+                        "bowmen shoot, the rest close in");
+            }
+            // saved and loaded, still themselves
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            leader.saveWithoutId(tag);
+            dev.eiriksb.stad.war.RaiderEntity copy = StadRegistries.RAIDER.get().create(level);
+            copy.load(tag);
+            helper.assertTrue(copy.faction() == dev.eiriksb.stad.war.Faction.NORSE && copy.leader() && copy.skin() == leader.skin(), "saved");
+        } finally {
+            StadConfig.RAIDER_FACTIONS.set(factions);
+            Raids.stop(level, colony);
+            ColonyManager.get(level.getServer()).dissolve(level.getServer(), colony);
+            level.getServer().getPlayerList().remove(owner);
+        }
+        helper.succeed();
+    }
 }

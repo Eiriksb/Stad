@@ -15,6 +15,7 @@ public final class StadClient {
     @SubscribeEvent
     static void renderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(StadRegistries.CITIZEN.get(), CitizenRenderer::new);
+        event.registerEntityRenderer(StadRegistries.RAIDER.get(), RaiderRenderer::new);
     }
 
     @SubscribeEvent

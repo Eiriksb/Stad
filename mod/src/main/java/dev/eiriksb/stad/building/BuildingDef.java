@@ -37,4 +37,6 @@ public record BuildingDef(ResourceLocation key, String pack, ResourceLocation ty
     /** where guards live: guards patrol between barracks and watchtowers */
     public static final ResourceLocation BARRACKS = ResourceLocation.fromNamespaceAndPath("stad", "barracks");
     public static final ResourceLocation WATCHTOWER = ResourceLocation.fromNamespaceAndPath("stad", "watchtower");
+    public static final ResourceLocation MINE = ResourceLocation.fromNamespaceAndPath("stad", "mine");
+    public static final ResourceLocation KITCHEN = ResourceLocation.fromNamespaceAndPath("stad", "kitchen");
 }

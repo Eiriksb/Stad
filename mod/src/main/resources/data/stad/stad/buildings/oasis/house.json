@@ -1,0 +1,10 @@
+{
+  "type": "stad:home",
+  "name": "Sandstone House",
+  "description": "A cool sandstone house with two beds.",
+  "structure": "stad:oasis/house",
+  "tags": [
+    "small",
+    "home"
+  ]
+}

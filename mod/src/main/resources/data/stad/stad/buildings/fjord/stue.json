@@ -1,0 +1,10 @@
+{
+  "type": "stad:home",
+  "name": "Stue",
+  "description": "A log house with a turf roof and two beds.",
+  "structure": "stad:fjord/stue",
+  "tags": [
+    "small",
+    "home"
+  ]
+}

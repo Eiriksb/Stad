@@ -1,0 +1,10 @@
+{
+  "type": "stad:kitchen",
+  "name": "Kitchen",
+  "description": "A smoker and a furnace for the town's cook.",
+  "structure": "stad:medieval/kitchen",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

@@ -33,6 +33,21 @@ abstract class WorkGoal extends Goal {
     /** One goal tick of the job's own work. */
     protected abstract void work(ServerLevel level, Colony colony);
 
+    /** The tool they hold while at work (a fishing rod, a pickaxe), or nothing. */
+    protected ItemStack tool() {
+        return ItemStack.EMPTY;
+    }
+
+    /** How much they carry before taking it in. */
+    protected int load() {
+        return 48;
+    }
+
+    /** Where they bring what they made. */
+    protected ColonyStorage deliverTo(ServerLevel level, Colony colony) {
+        return ColonyStorage.deliveries(level, colony);
+    }
+
     /** What they hang on to instead of delivering (seeds to sow, saplings to plant). */
     protected boolean keep(ItemStack stack) {
         return false;
@@ -103,11 +118,20 @@ abstract class WorkGoal extends Goal {
         approach.reset();
         cooldown = 0;
         delivering = false;
+        ItemStack tool = tool();
+        if (!tool.isEmpty() && citizen.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND).isEmpty()) {
+            citizen.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, tool.copy());
+            citizen.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0f); // the town's tool, not loot
+        }
     }
 
     @Override
     public void stop() {
         citizen.getNavigation().stop();
+        ItemStack tool = tool();
+        if (!tool.isEmpty() && citizen.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND).is(tool.getItem())) {
+            citizen.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        }
     }
 
     @Override
@@ -117,7 +141,7 @@ abstract class WorkGoal extends Goal {
         if (colony == null) {
             return;
         }
-        if (!delivering && somethingToDeliver() && (pocketsFull() || carried() >= 48 || lateInTheDay() || !hasWork(level, colony))) {
+        if (!delivering && somethingToDeliver() && (pocketsFull() || carried() >= load() || lateInTheDay() || !hasWork(level, colony))) {
             delivering = true;
             approach.reset();
         }
@@ -129,7 +153,7 @@ abstract class WorkGoal extends Goal {
     }
 
     private void deliver(ServerLevel level, Colony colony) {
-        ColonyStorage to = ColonyStorage.deliveries(level, colony);
+        ColonyStorage to = deliverTo(level, colony);
         if (to.isEmpty()) {
             delivering = false;
             return;

@@ -19,7 +19,10 @@ public class ShelterGoal extends Goal {
         setFlags(EnumSet.of(Flag.MOVE));
     }
 
-    /** Their bed if it's in one of the town's houses; else inside the nearest finished building; else the town hall. */
+    /**
+     * Their bed if it's in one of the town's houses; else inside the nearest finished building; else, out in the open, as
+     * far from the raiders as the town's land goes (not the town hall: that's where raiders head).
+     */
     private BlockPos shelter(Colony colony) {
         BlockPos bed = citizen.home().orElse(null);
         if (bed != null && dev.eiriksb.stad.colony.Homes.houseOf(colony, bed).isPresent()) {
@@ -39,7 +42,17 @@ public class ShelterGoal extends Goal {
                 bestD = d;
             }
         }
-        return best != null ? best : bed != null ? bed : colony.center;
+        return best != null ? best : away(citizen, colony);
+    }
+
+    /** Across the town from where the raiders come, on the ground. */
+    static BlockPos away(CitizenEntity citizen, Colony colony) {
+        net.minecraft.core.Direction from = dev.eiriksb.stad.war.Raids.of(colony).map(r -> r.from).orElse(null);
+        if (from == null) {
+            return colony.center;
+        }
+        BlockPos far = colony.center.relative(from.getOpposite(), Math.max(8, colony.radius * 3 / 4));
+        return citizen.level().getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, far);
     }
 
     @Override

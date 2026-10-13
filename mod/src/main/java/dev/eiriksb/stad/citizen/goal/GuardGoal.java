@@ -109,8 +109,8 @@ public class GuardGoal extends Goal {
     }
 
     private void fight(Colony colony) {
-        if (citizen.getHealth() < 6) { // badly hurt: back to the town hall
-            approach.tick(citizen, colony.center, 3, 0.8);
+        if (citizen.getHealth() < 6) { // badly hurt: fall back, away from the raiders (who head for the town hall)
+            approach.tick(citizen, ShelterGoal.away(citizen, colony), 3, 0.9);
             return;
         }
         citizen.getLookControl().setLookAt(target, 30, 30);

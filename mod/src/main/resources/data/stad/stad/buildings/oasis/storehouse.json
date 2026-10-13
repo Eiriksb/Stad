@@ -1,0 +1,9 @@
+{
+  "type": "stad:warehouse",
+  "name": "Storehouse",
+  "description": "Thick walls keep the town's goods cool.",
+  "structure": "stad:oasis/storehouse",
+  "tags": [
+    "storage"
+  ]
+}

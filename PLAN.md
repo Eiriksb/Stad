@@ -191,7 +191,7 @@ adds talk and priorities on top, nothing else.
 | Phase | Jobs |
 |---|---|
 | v1 | **Builder**, Courier (warehouse), Farmer, Lumberjack |
-| v2 | Miner, Guard, Cook, Fisher, Shepherd |
+| v2 | Miner, Guard, Cook, Fisher, Shepherd (done: guard in M8, the rest in M11) |
 | later | Smith, Researcher/Teacher (school), Healer, Merchant |
 
 ### 6.3 Packs and blueprints
@@ -445,7 +445,7 @@ Everything after that widens it.
 | **M8** | Raids + rivalry | Guard job, barracks and watchtowers. Mob raids with warnings, sheltering, snapshots and repair orders. Claim protection. Poaching (with a switch for each colony). War stance for each colony (peaceful/open, with cooldown). PvP: declaring war, raid windows, banner capture, capped loot, truces, envoys. Citizens' opinions of war feed into standing. (Done. Raiders are vanilla pillagers, plus vindicators on hard; biome raider factions, fire, alliances and tribute are not done. Snapshots and raids in progress aren't saved over a restart: a war raid cut off by a restart counts as held. No town hall banner block yet: the "banner" is the ground by the hall. Not on the dashboard or BlueMap yet.) |
 | **M9** | Voice polish | Voice already works through TWT. This milestone adds voice designs from a citizen's genes and age, and voice support in the planner conversation and chat screen. (Done, with TWT API v5: adapters give voices, `talk`, `history`. Adults don't age yet; only children's voices change. The chat screen and the spoken builder's shorter replies haven't been seen or heard on a real client.) |
 | **M10** | Scale + hosting | Think budget/LOD tuned for 50+ citizens. **In TWT:** client-lent GPU backend and planner-model setting (item 8). Also a performance pass (pathing, chunk loading of colony areas, raid mob counts). (Done, with TWT API v6: `planner()`, `forPlayer()`, `backlog()`. Citizens near players get model day plans, budgeted per town; the rest a routine plan. Workers re-path at most once a second and lumberjacks spread over the trees, which took 66 citizens from 7.5 to 1 ms per tick; 125 cost about 3 ms. Towns stay loaded through NeoForge forced chunks while a member is online. Lent GPUs and the planner model were tested live with a dev client and a second model process.) |
-| **M11** | Content + release | More jobs, two or three more style packs and raider factions, balancing, docs, CI build (TWT's workflow). |
+| **M11** | Content + release | More jobs, two or three more style packs and raider factions, balancing, docs, CI build (TWT's workflow). (Done as 0.1.0: cook, fisher, shepherd and miner (a spiral-step shaft under the Medieval pack's Mine); the Fjord and Oasis packs plus a Medieval kitchen and mine; Norse raiders, marauders and bandits by biome, each raid with a named leader; balancing from live raid trials (raider gear is for show, trained guards, falling back away from raiders); a player's guide and changelog. No CI build: the user asked for no GitHub Actions in Stad. Not published to Modrinth/CurseForge.) |
 
 ## 11. Risks
 

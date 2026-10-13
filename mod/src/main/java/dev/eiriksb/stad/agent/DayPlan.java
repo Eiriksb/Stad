@@ -34,6 +34,10 @@ public record DayPlan(List<String> intentions, String visit, boolean rest, Strin
             case dev.eiriksb.stad.colony.Jobs.LUMBERJACK -> "Fell trees and plant new ones";
             case dev.eiriksb.stad.colony.Jobs.COURIER -> "Carry supplies to where they're needed";
             case dev.eiriksb.stad.colony.Jobs.GUARD -> "Keep watch over the town";
+            case dev.eiriksb.stad.colony.Jobs.COOK -> "Bake bread and cook for everyone";
+            case dev.eiriksb.stad.colony.Jobs.FISHER -> "Catch some fish";
+            case dev.eiriksb.stad.colony.Jobs.SHEPHERD -> "See to the animals";
+            case dev.eiriksb.stad.colony.Jobs.MINER -> "Dig the mine deeper";
             case "" -> "Look for something useful to do";
             default -> "Get on with the work";
         });

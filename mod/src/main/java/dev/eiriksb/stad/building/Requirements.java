@@ -50,6 +50,10 @@ public final class Requirements {
                 new Need("a door", c -> c.entrance && c.has(Contents.Thing.DOOR), true),
                 new Need("some height (at least 8 blocks)", c -> c.height >= 8, true),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false)));
+        type(BuildingDef.KITCHEN,
+                new Need("somewhere to cook (a furnace, smoker or campfire)", c -> c.has(Contents.Thing.COOKING), true),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), false),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
         type(WORKSHOP,
                 new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true),
                 new Need("a workstation (a smithing table, stonecutter, loom, anvil...)", c -> c.has(Contents.Thing.WORKSTATION), true),

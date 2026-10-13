@@ -1,0 +1,9 @@
+{
+  "type": "stad:mine",
+  "name": "Mine",
+  "description": "A headframe over a shaft the town's miner digs deeper, layer by layer.",
+  "structure": "stad:medieval/mine",
+  "tags": [
+    "workplace"
+  ]
+}

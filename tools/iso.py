@@ -8,7 +8,7 @@ sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from nbtview import load
 
 COLORS = [
-    ("glass", (170, 210, 235)), ("dark_oak_log", (60, 46, 26)), ("spruce_log", (58, 37, 16)), ("oak_log", (109, 85, 50)),
+    ("glass", (170, 210, 235)), ("moss_block", (89, 109, 45)), ("structure_block", (255, 0, 255)), ("dark_oak_log", (60, 46, 26)), ("spruce_log", (58, 37, 16)), ("oak_log", (109, 85, 50)),
     ("birch_log", (216, 215, 210)), ("_log", (90, 70, 40)), ("dark_oak", (66, 43, 20)), ("spruce", (114, 84, 48)),
     ("birch", (196, 179, 123)), ("jungle", (160, 115, 80)), ("acacia", (168, 90, 50)), ("cherry", (226, 178, 172)),
     ("mangrove", (117, 54, 48)), ("oak", (162, 130, 78)), ("mossy_stone_brick", (115, 121, 105)), ("stone_brick", (122, 121, 122)),

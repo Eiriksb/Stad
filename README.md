@@ -8,10 +8,14 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M10). Found a town with a **town hall**; newcomers move in when there
+> **Status:** 0.1.0, the first release (all eleven milestones of [PLAN.md](PLAN.md) done). New players: start with the
+> [guide](docs/GUIDE.md); what's in this release is in the [changelog](CHANGELOG.md).
+>
+> Found a town with a **town hall**; newcomers move in when there
 > are free beds. Citizens sleep in their own beds, eat from the town hall, plan their day each morning (in character,
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
-> Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier** and **guard**.
+> Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier**, **guard**, **cook**,
+> **fisher**, **shepherd** and **miner**.
 > **Plan buildings by talking to your builder**: "a small stone cottage with two bedrooms, a spruce roof and a
 > chimney". They draw it up (restyling one of the pack's buildings when it fits, or designing a new one: framing,
 > rooms, stairs, furniture, gable, hip or flat roofs, porches, chimneys), a see-through ghost of it appears on free
@@ -21,7 +25,7 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 > and move in, or tell you what's missing ("I'd need a bed in here"). Scan your buildings into My pack with the
 > **scan wand**, fix what the game guessed about their blocks, and build any pack building in another **style**
 > (Nordic, Desert, Stone, Brick...). When the builder runs out of spruce they ask before using birch instead.
-> **Defend it**: raiders come for bigger towns at dusk; someone spots them and shouts a warning, guards fight, the rest
+> **Defend it**: raiders that fit the land (Norse raiders, marauders, bandits or pillagers) come for bigger towns at dusk; someone spots them and shouts a warning, guards fight, the rest
 > shelter, and the builders repair the damage afterwards. Towns that choose to be **open to war** can raid each other
 > (with warnings, raid windows and a banner to take at the town hall), lure away each other's unhappy citizens, and
 > make peace through envoys who argue for it in character.
@@ -44,6 +48,23 @@ passed on to their children, so families sound alike. A child's voice changes as
 same, whatever their job or town. (With They Will Talk's designed voices, each is described in words, like "A young
 woman in her twenties with a medium-pitched, crisp voice and a gentle sing-song cadence"; `/stad citizen voice` shows
 them.) When you talk to the builder aloud, they keep it short and leave the lists to the screen.
+
+### Jobs and food
+
+| Job | Works | Needs |
+|---|---|---|
+| Builder | builds what officers plan | the materials in the town hall |
+| Farmer | harvests and replants | farmland |
+| Lumberjack | fells natural trees and replants | trees |
+| Courier | carries food and materials to the town hall and the builder | a warehouse |
+| Guard | patrols and fights, trained (30 health, harder blows) | a sword from the town's stores |
+| Cook | bread from wheat; cooked meat, fish and potatoes, to the town hall | a furnace, smoker or campfire |
+| Fisher | fishes from the shore (the game's fishing loot) | a pond or river |
+| Shepherd | shears, breeds up to `herdSize` of each kind, butchers the extras | farm animals (named or leashed ones are pets) |
+| Miner | digs a 5x5 shaft deeper, layer by layer, down a spiral of steps; walls off water and lava | a Mine (Medieval pack) |
+
+All of it happens on the town's land. Wheat only feeds anyone once a cook bakes it, and cooked food fills far more than
+raw, so a farmer and a cook keep a small town fed.
 
 ### Talking a building through
 
@@ -70,13 +91,14 @@ barrels; a workshop a crafting table and a workstation. If it has them it become
 stands, and the citizen moves in (an order like any other: a resented leader may hear "no"). If not, they tell you
 what's missing.
 
-**The scan wand** (amethyst shard on two sticks, diagonally): left-click one corner of a building, right-click the
+**The scan wand** (an amethyst shard on top of two sticks): left-click one corner of a building, right-click the
 opposite one, then sneak and use it. The **pack editor** opens: name it, say what kind of building it is, and check
 what each kind of block is for. The game guesses every block's role (floor, walls, frame, roof, trim, windows, doors,
 lights, furniture, decoration) from its shape and where it sits; click a row to fix a wrong guess. Save, and it's in
 My pack and the Building Plans, turned so its door faces north like every pack building. Vanilla structure blocks in
-Data mode with `stad:storage`, `stad:work`, `stad:sit`, `stad:bed` or `stad:door` as their metadata are kept as
-markers (with storage markers, only the chests next to them count as the town's).
+Data mode with `stad:storage`, `stad:work`, `stad:sit`, `stad:bed`, `stad:door` or `stad:shaft` as their metadata are kept
+as markers (with storage markers, only the chests next to them count as the town's; `stad:shaft` is the middle of a
+mine's shaft).
 
 **Styles.** A palette gives the roles new materials, so any pack building can be built in another style: pick one in
 the Building Plans, say it to the builder ("in the Nordic style"), or `/stad colony plan <building> <style>`. The mod
@@ -88,6 +110,12 @@ brings seven; add your own as `data/<namespace>/stad/palettes/<id>.json`:
 ```
 
 ![The Medieval cottage in its own materials and in the seven styles](docs/palettes.png)
+
+**Packs.** Besides Medieval (cottage, builder's hut, warehouse, kitchen, mine) the mod brings **Fjord** (laid log walls
+on stone footings under turf roofs) and **Oasis** (sandstone with flat roofs and parapets), each with a home, a
+warehouse and a builder's hut.
+
+![The Fjord and Oasis packs, and the Medieval kitchen and mine](docs/packs.png)
 
 **Making do.** When the builder runs out of a material and the town has enough of a similar one (another wood for
 wood, another stone for stone), they ask before swapping: "We're out of oak. Shall I use birch for the walls?" Say
@@ -102,9 +130,14 @@ world's `datapacks` folder, or in `stadpacks/` in the game folder to have it in 
 They take the best sword and armour from the town's stores (and the town asks for a sword when there's none). Brave
 sorts (boastful or dramatic citizens) pick up a weapon when their town is attacked.
 
-**Mob raids.** Now and then at dusk raiders come for a town that's big enough (four citizens, by default). A citizen
-spots them and shouts which way they're coming from, a horn sounds, and a minute later they arrive: more for bigger,
-richer towns. Guards fight; everyone else shelters indoors. Afterwards the whole town remembers it ("Hild killed four
+**Mob raids.** Now and then at dusk raiders come for a town that's big enough (four citizens, by default). Who comes
+depends on the land round the town hall: **Norse raiders** (iron helmets and axes) in taiga and snowy lands,
+**marauders** (sand-coloured leathers, golden swords and bows) in deserts, badlands and savanna, and **bandits** (dark
+leathers, swords and bows) or the game's **pillagers** elsewhere. Every raid but the pillagers' has a named leader,
+tougher and better armoured than the rest ("Bjørn Ironside and 5 Norse raiders are attacking Lillestad from the
+north!"). A citizen spots them and shouts which way they're coming from, a horn sounds, and a minute later they
+arrive: more for bigger, richer towns (`maxRaiders` at most). Guards fight; everyone else shelters indoors, or runs to
+the far side of town when there's nowhere to hide. Afterwards the whole town remembers it ("Hild killed four
 of them"), your standing rises if you saw them through it (and drops if you weren't there), and anything broken
 becomes a repair order the builders do first. `mobRaids` in the config: off, easy, normal or hard.
 
@@ -205,7 +238,7 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad citizen status <citizens>` | admins: what they're doing right now |
 | `/stad citizen needs <citizens> <hunger> <rest>` | admins, for testing |
 | `/stad perf` / `perf reset` | admins: milliseconds per tick for the citizens and the town upkeep, day plans, loaded towns |
-| `/stad perf crowd <count>` / `crowd clear` | admins: add test citizens (with jobs) to the town you're in; take them away again |
+| `/stad perf crowd <count> [job]` / `crowd clear` | admins: add test citizens (with that job, or a mix) to the town you're in; take them away again |
 | `/lendgpu [on\|off]` | players with They Will Talk installed: lend your GPU to the server (They Will Talk's client command) |
 
 ## Development

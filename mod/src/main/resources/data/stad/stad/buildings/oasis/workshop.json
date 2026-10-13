@@ -1,0 +1,10 @@
+{
+  "type": "stad:builder_hut",
+  "name": "Builder's Workshop",
+  "description": "Where the builder works and sleeps.",
+  "structure": "stad:oasis/workshop",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

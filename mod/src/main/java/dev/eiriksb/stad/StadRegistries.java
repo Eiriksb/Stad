@@ -37,6 +37,13 @@ public final class StadRegistries {
                     .clientTrackingRange(10)
                     .build("citizen"));
 
+    public static final DeferredHolder<EntityType<?>, EntityType<dev.eiriksb.stad.war.RaiderEntity>> RAIDER = ENTITIES.register("raider",
+            () -> EntityType.Builder.of(dev.eiriksb.stad.war.RaiderEntity::new, MobCategory.MONSTER)
+                    .sized(0.6f, 1.8f)
+                    .eyeHeight(1.62f)
+                    .clientTrackingRange(10)
+                    .build("raider"));
+
     public static final DeferredBlock<TownHallBlock> TOWN_HALL = BLOCKS.registerBlock("town_hall", TownHallBlock::new,
             BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(3.0f, 1200.0f).sound(SoundType.WOOD));
 
@@ -67,6 +74,7 @@ public final class StadRegistries {
 
     private static void attributes(EntityAttributeCreationEvent event) {
         event.put(CITIZEN.get(), CitizenEntity.createAttributes().build());
+        event.put(RAIDER.get(), dev.eiriksb.stad.war.RaiderEntity.createAttributes().build());
     }
 
     private static void creativeTabs(BuildCreativeModeTabContentsEvent event) {

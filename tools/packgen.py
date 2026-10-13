@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the bundled "Medieval" building pack: vanilla structure templates (.nbt) plus their building manifests.
+"""Generates the bundled building packs (Medieval, Fjord, Oasis): vanilla structure templates (.nbt) plus their manifests.
 
     packgen.py <resources dir>      # mod/src/main/resources
 
@@ -35,7 +35,7 @@ def _state(name, props):
 DATA_VERSION_1_21_1 = 3955
 
 def write_structure(path, size, blocks):
-    """blocks: {(x, y, z): (name, {props})}; everything else in the box is air."""
+    """blocks: {(x, y, z): (name, {props}) or (name, {props}, {nbt strings})}; everything else in the box is air."""
     sx, sy, sz = size
     palette, index, entries = [], {}, []
     def state_id(name, props):
@@ -47,8 +47,12 @@ def write_structure(path, size, blocks):
     for y in range(sy):
         for z in range(sz):
             for x in range(sx):
-                name, props = blocks.get((x, y, z), ("minecraft:air", {}))
-                entries.append(_compound(_tag(9, "pos", _int_list([x, y, z])), _tag(3, "state", struct.pack(">i", state_id(name, props)))))
+                entry = blocks.get((x, y, z), ("minecraft:air", {}))
+                name, props = entry[0], entry[1]
+                items = [_tag(9, "pos", _int_list([x, y, z])), _tag(3, "state", struct.pack(">i", state_id(name, props)))]
+                if len(entry) > 2:
+                    items.append(_tag(10, "nbt", _compound(*[_tag(8, k, _name(str(v))) for k, v in sorted(entry[2].items())])))
+                entries.append(_compound(*items))
     root = _tag(10, "", _compound(
         _tag(3, "DataVersion", struct.pack(">i", DATA_VERSION_1_21_1)),
         _tag(9, "size", _int_list([sx, sy, sz])),
@@ -136,25 +140,249 @@ def warehouse():
     b[(4, 1, 3)] = ("minecraft:lantern", {"hanging": "false"})
     return size, b
 
-BUILDINGS = {
-    "builder_hut": ("stad:builder_hut", "Builder's Hut", "Where the town's builder lives and works.", builder_hut, ["small", "workplace"]),
-    "cottage": ("stad:home", "Cottage", "A cozy home with two beds.", cottage, ["small", "home"]),
-    "warehouse": ("stad:warehouse", "Warehouse", "Chests and barrels for the town's goods.", warehouse, ["storage"]),
+def marker(name):
+    """A Data structure block carrying one of Stad's markers (Blueprint.MARKERS); builders leave air there."""
+    return ("minecraft:structure_block", {"mode": "data"}, {"id": "minecraft:structure_block", "mode": "DATA", "metadata": name})
+
+def mine():
+    """An open timber headframe over a 5x5 shaft (the stad:shaft marker in the middle), fenced round with a gap at the front."""
+    b = {}
+    n = 9
+    for x in range(n):
+        for z in range(n):
+            if x in (0, n - 1) or z in (0, n - 1) or x in (1, n - 2) or z in (1, n - 2):
+                b[(x, 0, z)] = ("minecraft:cobblestone", {})
+    for x in range(n):
+        for z in range(n):
+            if (x in (0, n - 1) or z in (0, n - 1)) and not (z == 0 and x == 4):
+                b[(x, 1, z)] = ("minecraft:oak_fence", fence_sides(x, z, n, n, gap=(4, 0)))
+    for (x, z) in ((0, 0), (n - 1, 0), (0, n - 1), (n - 1, n - 1)):
+        for y in range(1, 5):
+            b[(x, y, z)] = ("minecraft:oak_log", {"axis": "y"})
+    for i in range(n):
+        b[(i, 5, 0)] = ("minecraft:oak_log", {"axis": "x"})
+        b[(i, 5, n - 1)] = ("minecraft:oak_log", {"axis": "x"})
+        b[(0, 5, i)] = ("minecraft:oak_log", {"axis": "z"})
+        b[(n - 1, 5, i)] = ("minecraft:oak_log", {"axis": "z"})
+        b[(i, 5, 4)] = ("minecraft:oak_planks", {})
+    b[(4, 4, 4)] = ("minecraft:lantern", {"hanging": "true"})
+    b[(1, 1, 7)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(4, 0, 4)] = marker("stad:shaft")
+    return (n, 6, n), b
+
+def fence_sides(x, z, w, d, gap=None):
+    """Which sides an edge fence post joins (its neighbours along the edge)."""
+    def edge(px, pz):
+        return 0 <= px < w and 0 <= pz < d and (px in (0, w - 1) or pz in (0, d - 1)) and (px, pz) != gap
+    return {"north": str(edge(x, z - 1) and x in (0, w - 1)).lower(), "south": str(edge(x, z + 1) and x in (0, w - 1)).lower(),
+            "west": str(edge(x - 1, z) and z in (0, d - 1)).lower(), "east": str(edge(x + 1, z) and z in (0, d - 1)).lower()}
+
+def kitchen():
+    size, b = house(7, 7, 3, "minecraft:cobblestone", "minecraft:oak_planks", "minecraft:oak_log", "minecraft:spruce_stairs",
+                    "minecraft:spruce_planks", "minecraft:spruce_slab", 3, [(0, 2, 3), (6, 2, 3)])
+    b[(1, 1, 5)] = ("minecraft:smoker", {"facing": "north", "lit": "false"})
+    b[(2, 1, 5)] = ("minecraft:furnace", {"facing": "north", "lit": "false"})
+    b[(3, 1, 5)] = ("minecraft:crafting_table", {})
+    b[(4, 1, 5)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(5, 1, 5)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    return size, b
+
+# ---- Fjord: laid log walls, stone footings and turf roofs ----------------------------------------------------------
+
+def gable(b, w, d, y0, slope, ridge, gable_wall, overhang=False):
+    """A gable roof across x (ridge along z, gable ends in the north and south walls). slope = stairs, or a full block
+    for a stepped turf roof. Returns the height above it."""
+    x0, x1, y = 0, w - 1, y0
+    stairs = slope.endswith("_stairs")
+    while x1 - x0 >= 1:
+        for z in range(d):
+            if stairs:
+                b[(x0, y, z)] = (slope, {"facing": "east", "half": "bottom", "shape": "straight"})
+                b[(x1, y, z)] = (slope, {"facing": "west", "half": "bottom", "shape": "straight"})
+            else:
+                b[(x0, y, z)] = (slope, {})
+                b[(x1, y, z)] = (slope, {})
+        for x in range(x0 + 1, x1):
+            for z in (0, d - 1):
+                b[(x, y, z)] = (gable_wall, {})
+        x0, x1, y = x0 + 1, x1 - 1, y + 1
+    if x0 == x1:
+        for z in range(d):
+            b[(x0, y, z)] = (ridge, {})
+        y += 1
+    return y
+
+def laft(w, d, wall_h, log, door_x, windows):
+    """Walls of logs laid on their side (axis along each wall), corners standing, on a stone footing."""
+    b = {}
+    for x in range(w):
+        for z in range(d):
+            b[(x, 0, z)] = ("minecraft:cobblestone" if x in (0, w - 1) or z in (0, d - 1) else "minecraft:spruce_planks", {})
+    for y in range(1, wall_h + 1):
+        for x in range(w):
+            for z in range(d):
+                corner = x in (0, w - 1) and z in (0, d - 1)
+                if corner:
+                    b[(x, y, z)] = (log, {"axis": "y"})
+                elif z in (0, d - 1):
+                    b[(x, y, z)] = (log, {"axis": "x"})
+                elif x in (0, w - 1):
+                    b[(x, y, z)] = (log, {"axis": "z"})
+    for (x, y, z) in windows:
+        along_x = z in (0, d - 1)
+        b[(x, y, z)] = ("minecraft:glass_pane", {"east": "true", "west": "true"} if along_x else {"north": "true", "south": "true"})
+    b[(door_x, 1, 0)] = ("minecraft:spruce_door", {"facing": "south", "half": "lower", "hinge": "left", "open": "false"})
+    b[(door_x, 2, 0)] = ("minecraft:spruce_door", {"facing": "south", "half": "upper", "hinge": "left", "open": "false"})
+    return b
+
+def fjord_stue():
+    w, d = 7, 9
+    b = laft(w, d, 3, "minecraft:spruce_log", 3, [(0, 2, 3), (0, 2, 6), (6, 2, 3), (6, 2, 6)])
+    # a turf roof: stepped moss over a spruce ceiling, birch bark at the gable ends
+    for x in range(1, w - 1):
+        for z in range(1, d - 1):
+            b[(x, 4, z)] = ("minecraft:spruce_planks", {})
+    top = gable(b, w, d, 4, "minecraft:moss_block", "minecraft:moss_block", "minecraft:spruce_planks")
+    bed(b, "red", (1, 1, 6), "south")
+    bed(b, "white", (5, 1, 6), "south")
+    b[(3, 1, 7)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:campfire", {"facing": "south", "lit": "false", "signal_fire": "false", "waterlogged": "false"})
+    b[(5, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    return (w, top, d), b
+
+def fjord_stabbur():
+    """The storehouse: a log store with a deep plank roof, its chests and barrels round the walls."""
+    w, d = 7, 7
+    b = laft(w, d, 3, "minecraft:dark_oak_log", 3, [(3, 2, 6)])
+    for x in range(1, w - 1):
+        for z in range(1, d - 1):
+            b[(x, 4, z)] = ("minecraft:dark_oak_planks", {})
+    top = gable(b, w, d, 4, "minecraft:dark_oak_stairs", "minecraft:dark_oak_slab", "minecraft:dark_oak_planks")
+    for x in (1, 2, 4, 5):
+        b[(x, 1, 5)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(5, 1, 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(5, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    return (w, top, d), b
+
+def fjord_smie():
+    """The builder's workshop and home under a turf roof."""
+    w, d = 7, 7
+    b = laft(w, d, 3, "minecraft:spruce_log", 3, [(0, 2, 3), (6, 2, 3)])
+    for x in range(1, w - 1):
+        for z in range(1, d - 1):
+            b[(x, 4, z)] = ("minecraft:spruce_planks", {})
+    top = gable(b, w, d, 4, "minecraft:moss_block", "minecraft:moss_block", "minecraft:spruce_planks")
+    b[(1, 1, 5)] = ("minecraft:crafting_table", {})
+    b[(2, 1, 5)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    bed(b, "brown", (5, 1, 5), "north")
+    return (w, top, d), b
+
+# ---- Oasis: sandstone, flat roofs with a parapet -------------------------------------------------------------------
+
+def flat_house(w, d, wall_h, door_x, windows):
+    b = {}
+    for x in range(w):
+        for z in range(d):
+            b[(x, 0, z)] = ("minecraft:smooth_sandstone", {})
+    for y in range(1, wall_h + 1):
+        for x in range(w):
+            for z in range(d):
+                if x in (0, w - 1) or z in (0, d - 1):
+                    corner = x in (0, w - 1) and z in (0, d - 1)
+                    b[(x, y, z)] = ("minecraft:cut_sandstone" if corner else "minecraft:sandstone", {})
+    for (x, y, z) in windows:
+        along_x = z in (0, d - 1)
+        b[(x, y, z)] = ("minecraft:glass_pane", {"east": "true", "west": "true"} if along_x else {"north": "true", "south": "true"})
+    b[(door_x, 1, 0)] = ("minecraft:jungle_door", {"facing": "south", "half": "lower", "hinge": "left", "open": "false"})
+    b[(door_x, 2, 0)] = ("minecraft:jungle_door", {"facing": "south", "half": "upper", "hinge": "left", "open": "false"})
+    roof = wall_h + 1
+    for x in range(w):
+        for z in range(d):
+            b[(x, roof, z)] = ("minecraft:smooth_sandstone", {})
+            if x in (0, w - 1) or z in (0, d - 1):
+                b[(x, roof + 1, z)] = ("minecraft:sandstone_wall", wall_sides(x, z, w, d))
+    # palm-wood beams poking out under the roof
+    for z in range(1, d - 1, 2):
+        b[(0, wall_h, z)] = ("minecraft:stripped_jungle_log", {"axis": "x"})
+        b[(w - 1, wall_h, z)] = ("minecraft:stripped_jungle_log", {"axis": "x"})
+    return roof + 2, b
+
+def wall_sides(x, z, w, d):
+    def edge(px, pz):
+        return 0 <= px < w and 0 <= pz < d and (px in (0, w - 1) or pz in (0, d - 1))
+    side = lambda ok: "low" if ok else "none"
+    return {"north": side(edge(x, z - 1) and x in (0, w - 1)), "south": side(edge(x, z + 1) and x in (0, w - 1)),
+            "west": side(edge(x - 1, z) and z in (0, d - 1)), "east": side(edge(x + 1, z) and z in (0, d - 1)),
+            "up": "true", "waterlogged": "false"}
+
+def oasis_house():
+    w, d = 7, 9
+    h, b = flat_house(w, d, 3, 3, [(0, 2, 2), (0, 2, 6), (6, 2, 2), (6, 2, 6)])
+    bed(b, "orange", (1, 1, 6), "south")
+    bed(b, "yellow", (5, 1, 6), "south")
+    b[(3, 1, 7)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    b[(5, 1, 1)] = ("minecraft:potted_cactus", {})
+    return (w, h, d), b
+
+def oasis_storehouse():
+    w, d = 9, 7
+    h, b = flat_house(w, d, 4, 4, [(0, 3, 3), (8, 3, 3)])
+    for x in (1, 3, 5, 7):
+        b[(x, 1, 5)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(7, 1, 1)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(4, 1, 3)] = ("minecraft:lantern", {"hanging": "false"})
+    return (w, h, d), b
+
+def oasis_workshop():
+    w, d = 7, 7
+    h, b = flat_house(w, d, 3, 3, [(0, 2, 3), (6, 2, 3)])
+    b[(1, 1, 5)] = ("minecraft:crafting_table", {})
+    b[(2, 1, 5)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    bed(b, "orange", (5, 1, 5), "north")
+    return (w, h, d), b
+
+PACKS = {
+    "medieval": ({"name": "Medieval", "description": "Timber, cobblestone and hip roofs.", "author": "Stad"}, {
+        "builder_hut": ("stad:builder_hut", "Builder's Hut", "Where the town's builder lives and works.", builder_hut, ["small", "workplace"]),
+        "cottage": ("stad:home", "Cottage", "A cozy home with two beds.", cottage, ["small", "home"]),
+        "warehouse": ("stad:warehouse", "Warehouse", "Chests and barrels for the town's goods.", warehouse, ["storage"]),
+        "kitchen": ("stad:kitchen", "Kitchen", "A smoker and a furnace for the town's cook.", kitchen, ["small", "workplace"]),
+        "mine": ("stad:mine", "Mine", "A headframe over a shaft the town's miner digs deeper, layer by layer.", mine, ["workplace"]),
+    }),
+    "fjord": ({"name": "Fjord", "description": "Laid log walls on stone footings, under turf roofs.", "author": "Stad"}, {
+        "stue": ("stad:home", "Stue", "A log house with a turf roof and two beds.", fjord_stue, ["small", "home"]),
+        "stabbur": ("stad:warehouse", "Stabbur", "The log storehouse, chests and barrels round its walls.", fjord_stabbur, ["storage"]),
+        "smie": ("stad:builder_hut", "Builder's Smie", "The builder's workshop and bed under a turf roof.", fjord_smie, ["small", "workplace"]),
+    }),
+    "oasis": ({"name": "Oasis", "description": "Sandstone houses with flat roofs and parapets, palm-wood beams.", "author": "Stad"}, {
+        "house": ("stad:home", "Sandstone House", "A cool sandstone house with two beds.", oasis_house, ["small", "home"]),
+        "storehouse": ("stad:warehouse", "Storehouse", "Thick walls keep the town's goods cool.", oasis_storehouse, ["storage"]),
+        "workshop": ("stad:builder_hut", "Builder's Workshop", "Where the builder works and sleeps.", oasis_workshop, ["small", "workplace"]),
+    }),
 }
 
 def main():
     res = sys.argv[1]
-    for key, (btype, name, description, make, tags) in BUILDINGS.items():
-        size, blocks = make()
-        write_structure(os.path.join(res, "data/stad/structure/medieval", key + ".nbt"), size, blocks)
-        manifest = {"type": btype, "name": name, "description": description, "structure": "stad:medieval/" + key, "tags": tags}
-        with open(os.path.join(res, "data/stad/stad/buildings/medieval", key + ".json"), "w") as f:
-            json.dump(manifest, f, indent=2)
+    for pack, (info, buildings) in PACKS.items():
+        os.makedirs(os.path.join(res, "data/stad/structure", pack), exist_ok=True)
+        os.makedirs(os.path.join(res, "data/stad/stad/buildings", pack), exist_ok=True)
+        for key, (btype, name, description, make, tags) in buildings.items():
+            size, blocks = make()
+            write_structure(os.path.join(res, "data/stad/structure", pack, key + ".nbt"), size, blocks)
+            manifest = {"type": btype, "name": name, "description": description, "structure": f"stad:{pack}/{key}", "tags": tags}
+            with open(os.path.join(res, "data/stad/stad/buildings", pack, key + ".json"), "w") as f:
+                json.dump(manifest, f, indent=2)
+                f.write("\n")
+            print(f"{pack}/{key}: {size[0]}x{size[1]}x{size[2]}, {len(blocks)} blocks")
+        with open(os.path.join(res, "data/stad/stad/packs", pack + ".json"), "w") as f:
+            json.dump(info, f, indent=2)
             f.write("\n")
-        print(f"{key}: {size[0]}x{size[1]}x{size[2]}, {len(blocks)} blocks")
-    with open(os.path.join(res, "data/stad/stad/packs/medieval.json"), "w") as f:
-        json.dump({"name": "Medieval", "description": "Timber, cobblestone and hip roofs.", "author": "Stad"}, f, indent=2)
-        f.write("\n")
 
 if __name__ == "__main__":
     main()

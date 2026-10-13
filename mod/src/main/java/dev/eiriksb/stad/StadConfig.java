@@ -118,6 +118,28 @@ public final class StadConfig {
             .comment("Whether new towns let rivals lure their unhappy citizens away (each town can change it).")
             .define("poachingDefault", true);
 
+    public static final ModConfigSpec.BooleanValue RAIDER_FACTIONS = B
+            .comment("Raiders that fit the town's land: Norse raiders in the cold north, marauders in deserts, badlands and savanna,",
+                    "bandits or pillagers elsewhere. Off: always the game's own pillagers.")
+            .define("raiderFactions", true);
+
+    public static final ModConfigSpec.IntValue MAX_RAIDERS = B
+            .comment("The most raiders in one mob raid, however big the town.")
+            .defineInRange("maxRaiders", 16, 2, 64);
+
+    static {
+        B.pop();
+        B.push("jobs");
+    }
+
+    public static final ModConfigSpec.IntValue HERD_SIZE = B
+            .comment("The shepherd breeds each kind of farm animal up to this many, and butchers them once there are four more.")
+            .defineInRange("herdSize", 6, 2, 64);
+
+    public static final ModConfigSpec.IntValue MINE_DEPTH = B
+            .comment("How many layers deep a miner digs a mine before it's done.")
+            .defineInRange("mineDepth", 48, 4, 320);
+
     static {
         B.pop();
         B.push("needs");
@@ -163,10 +185,6 @@ public final class StadConfig {
     public static final ModConfigSpec.IntValue LOADED_RADIUS = B
             .comment("How far from the town hall (in chunks of 16 blocks) a town's land is kept loaded.")
             .defineInRange("loadedRadius", 3, 1, 8);
-
-    public static final ModConfigSpec.IntValue MAX_RAIDERS = B
-            .comment("The most raiders in one mob raid, however big the town.")
-            .defineInRange("maxRaiders", 16, 2, 64);
 
     public enum KeepLoaded { NEVER, WHILE_ONLINE, ALWAYS }
 

@@ -73,6 +73,9 @@ public final class Raids {
         public final Map<String, Integer> heroes = new LinkedHashMap<>();
         public final List<String> dead = new ArrayList<>();
         public boolean leaderThere;
+        /** Who they are, and their leader's name (none for pillagers). */
+        public Faction faction = Faction.PILLAGERS;
+        public String leaderName;
         Snapshot snapshot;
 
         MobRaid(int colony, long started, Direction from) {
@@ -99,7 +102,7 @@ public final class Raids {
     /** How many raiders come: more for bigger, richer towns, and on harder settings. */
     public static int strength(Colony colony) {
         long built = colony.buildings().stream().filter(Building::done).count();
-        double n = 2 + colony.population() / 3.0 + built / 4.0;
+        double n = 2 + colony.population() / 4.0 + built / 4.0;
         n *= switch (StadConfig.MOB_RAIDS.get()) {
             case EASY -> 0.6;
             case HARD -> 1.5;
@@ -163,10 +166,24 @@ public final class Raids {
         return d.getName();
     }
 
+    private static String capitalize(String s) {
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /** One raider of the raid's faction: the game's pillagers (and vindicators on hard), or one of Stad's own. */
+    static Mob raider(ServerLevel level, MobRaid raid, int i, boolean tough) {
+        if (raid.faction == Faction.PILLAGERS) {
+            return (tough && i % 3 == 2 ? EntityType.VINDICATOR : EntityType.PILLAGER).create(level);
+        }
+        return dev.eiriksb.stad.StadRegistries.RAIDER.get().create(level);
+    }
+
     /** Raiders are seen coming: warns the town; they arrive after {@code warningTicks}. */
     public static MobRaid start(ServerLevel level, Colony colony, int warningTicks) {
         Direction from = Direction.Plane.HORIZONTAL.getRandomDirection(level.random);
         MobRaid raid = new MobRaid(colony.id, level.getGameTime(), from);
+        raid.faction = Faction.of(level, colony, level.random);
+        raid.leaderName = raid.faction == Faction.PILLAGERS ? null : raid.faction.leaderName(level.random);
         raid.fightAt = level.getGameTime() + warningTicks;
         raids.put(colony.id, raid);
         level.playSound(null, colony.center, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 64f, 1f);
@@ -174,11 +191,11 @@ public final class Raids {
                 c -> colony.hasCitizen(c.getUUID()) && !c.isBaby()).stream().findAny().orElse(null);
         String who = lookout == null ? "A lookout" : lookout.getName().getString();
         Announce.members(level.getServer(), colony, Component.literal("[" + colony.name() + "] ").withStyle(ChatFormatting.GOLD)
-                .append(Component.literal(who + ": Raiders! They're coming from the " + dir(from) + "! Guards to the " + dir(from)
-                        + ", everyone else get inside!").withStyle(ChatFormatting.RED)));
+                .append(Component.literal(who + ": " + capitalize(raid.faction.plural) + "! They're coming from the " + dir(from) + "! Guards to the "
+                        + dir(from) + ", everyone else get inside!").withStyle(ChatFormatting.RED)));
         if (lookout != null) {
-            StadConversations.speakUp(lookout, 48, "(You just saw raiders coming toward " + colony.name() + " from the " + dir(from)
-                    + ". Warn {player} urgently, in a sentence.)");
+            StadConversations.speakUp(lookout, 48, "(You just saw " + raid.faction.plural + (raid.leaderName == null ? "" : ", led by " + raid.leaderName)
+                    + ", coming toward " + colony.name() + " from the " + dir(from) + ". Warn {player} urgently, in a sentence.)");
         }
         // guards wake up and get ready
         for (CitizenEntity c : citizens(level, colony)) {
@@ -216,8 +233,7 @@ public final class Raids {
         }
         boolean tough = StadConfig.MOB_RAIDS.get() == StadConfig.MobRaids.HARD; // vindicators cut citizens down: hard only
         for (int i = 0; i < n; i++) {
-            EntityType<? extends Mob> type = tough && i % 3 == 2 ? EntityType.VINDICATOR : EntityType.PILLAGER;
-            Mob m = type.create(level);
+            Mob m = raider(level, raid, i, tough);
             if (m == null) {
                 continue;
             }
@@ -225,13 +241,20 @@ public final class Raids {
                     base.offset(level.random.nextInt(7) - 3, 0, level.random.nextInt(7) - 3));
             m.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, level.random.nextFloat() * 360, 0);
             m.finalizeSpawn(level, level.getCurrentDifficultyAt(at), MobSpawnType.EVENT, null);
+            if (m instanceof RaiderEntity r) {
+                r.outfit(raid.faction, i == 0, level.random); // after finalizeSpawn, which hands out its own gear
+                if (i == 0) {
+                    r.setCustomName(Component.literal(raid.leaderName));
+                }
+            }
             prepare(m, colony);
             level.addFreshEntity(m);
             raid.raiders.add(m.getUUID());
         }
         raid.spawned = raid.raiders.size();
         level.playSound(null, base, SoundEvents.RAID_HORN.value(), SoundSource.HOSTILE, 64f, 0.8f);
-        Announce.members(level.getServer(), colony, Component.literal(raid.spawned + " raiders are attacking " + colony.name() + " from the "
+        Announce.members(level.getServer(), colony, Component.literal((raid.leaderName == null ? raid.spawned + " " + raid.faction.plural
+                : raid.leaderName + " and " + (raid.spawned - 1) + " " + raid.faction.plural) + " are attacking " + colony.name() + " from the "
                 + dir(raid.from) + "!").withStyle(ChatFormatting.RED));
     }
 
@@ -303,7 +326,8 @@ public final class Raids {
         long now = level.getGameTime();
         colony.politics.lastMobRaidDay = level.getDayTime() / 24000;
         long t = level.getDayTime() % 24000;
-        StringBuilder story = new StringBuilder("Raiders attacked " + colony.name() + (t >= 12000 || t < 1000 ? " at night" : "") + ", from the "
+        StringBuilder story = new StringBuilder(capitalize(raid.faction.plural) + (raid.leaderName == null ? "" : " led by " + raid.leaderName)
+                + " attacked " + colony.name() + (t >= 12000 || t < 1000 ? " at night" : "") + ", from the "
                 + dir(raid.from) + ".");
         List<String> heroes = new ArrayList<>();
         raid.heroes.forEach((who, n) -> heroes.add(who + " killed " + (n == 1 ? "one" : n) + " of them"));

@@ -32,11 +32,11 @@ import java.util.Set;
 public record Blueprint(Vec3i size, List<Entry> entries, List<Marker> markers) {
     public record Entry(BlockPos pos, BlockState state) {}
 
-    /** A marker: "stad:storage" at a chest, "stad:work" where the worker stands... */
+    /** A marker: "stad:storage" at a chest, "stad:work" where the worker stands, "stad:shaft" the middle of a mine's shaft... */
     public record Marker(BlockPos pos, String name) {}
 
     /** what each marker means: storage counts as the town's, work is where the worker stands, sit and bed are for people */
-    public static final Set<String> MARKERS = Set.of("stad:bed", "stad:work", "stad:storage", "stad:door", "stad:sit");
+    public static final Set<String> MARKERS = Set.of("stad:bed", "stad:work", "stad:storage", "stad:door", "stad:sit", "stad:shaft");
 
     public Blueprint {
         entries = List.copyOf(entries);

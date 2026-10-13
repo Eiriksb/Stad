@@ -41,6 +41,20 @@ public final class ColonyStorage {
         return new ColonyStorage(found);
     }
 
+    /** One container on its own. */
+    public static ColonyStorage of(Box box) {
+        return new ColonyStorage(List.of(box));
+    }
+
+    /** Just the town hall: where the food goes. */
+    public static ColonyStorage townHall(ServerLevel level, Colony colony) {
+        List<Box> found = new ArrayList<>();
+        if (level.getBlockEntity(colony.center) instanceof TownHallBlockEntity hall) {
+            found.add(new Box(colony.center, hall));
+        }
+        return new ColonyStorage(found);
+    }
+
     /** The chests and barrels of finished warehouses. */
     public static ColonyStorage warehouses(ServerLevel level, Colony colony) {
         return new ColonyStorage(containersIn(level, colony, BuildingDef.WAREHOUSE));
