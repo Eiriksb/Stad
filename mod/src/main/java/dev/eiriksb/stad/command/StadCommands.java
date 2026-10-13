@@ -49,6 +49,7 @@ public final class StadCommands {
         var stad = Commands.literal("stad").then(DraftCommands.node());
         PackCommands.nodes().forEach(stad::then);
         WarCommands.nodes().forEach(stad::then);
+        stad.then(PerfCommands.node());
         d.register(stad
                 .then(Commands.literal("colony")
                         .then(Commands.literal("info").executes(StadCommands::info))
@@ -113,7 +114,7 @@ public final class StadCommands {
     }
 
     /** The colony the command is about: the one you're standing in, else the one you lead. */
-    private static Optional<Colony> here(CommandSourceStack s) {
+    static Optional<Colony> here(CommandSourceStack s) {
         ColonyManager m = ColonyManager.get(s.getServer());
         Optional<Colony> at = m.at(s.getLevel().dimension(), BlockPos.containing(s.getPosition()));
         if (at.isPresent() || s.getPlayer() == null) {

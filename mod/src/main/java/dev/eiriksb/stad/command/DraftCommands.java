@@ -176,13 +176,13 @@ final class DraftCommands {
         if (colony.isEmpty()) {
             return 0;
         }
-        if (!dev.eiriksb.theywilltalk.api.TheyWillTalkApi.get().llm().ready()) {
+        if (!dev.eiriksb.theywilltalk.api.TheyWillTalkApi.get().llm().planner().readyFor(player.getUUID())) {
             return fail(ctx.getSource(), "The language model isn't running (see They Will Talk's Models page).");
         }
         String current = Drafts.get(player.getUUID()).filter(x -> x.colony == colony.get().id).map(x -> x.design.spec().toJson()).orElse(null);
         UUID builder = Architect.nearestBuilder(player, colony.get()).map(CitizenEntity::getUUID).orElse(null);
         ctx.getSource().sendSuccess(() -> Component.literal("Drawing it up...").withStyle(ChatFormatting.GRAY), false);
-        Architect.spec(player.getGameProfile().getName(), StringArgumentType.getString(ctx, "text"), current)
+        Architect.spec(player.getUUID(), player.getGameProfile().getName(), StringArgumentType.getString(ctx, "text"), current)
                 .thenAccept(spec -> player.server.execute(() -> report(ctx, player, colony.get(),
                         Drafts.draw(player, colony.get(), builder, spec, Drafts.Where.SAME, null))))
                 .exceptionally(t -> {

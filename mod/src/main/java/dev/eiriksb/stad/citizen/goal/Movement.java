@@ -61,10 +61,16 @@ public final class Movement {
                 && level.getBlockState(at.above()).getCollisionShape(level, at.above()).isEmpty();
     }
 
-    /** Walks toward a block, taking the shortcut after {@link #PATIENCE} ticks. Call every goal tick; returns whether it's within reach. */
+    /**
+     * Walks toward a block, taking the shortcut after {@link #PATIENCE} ticks. Call every goal tick; returns whether it's
+     * within reach. A new path is worked out at most every {@link #REPATH} ticks: in a big town, many workers asking for
+     * paths every tick to somewhere they can't quite reach was most of the server's time.
+     */
     public static final class Approach {
+        static final int REPATH = 20;
         private BlockPos target;
         private int stuck;
+        private int repath;
 
         public boolean tick(CitizenEntity citizen, BlockPos pos, double reach, double speed) {
             if (near(citizen, pos, reach)) {
@@ -72,16 +78,27 @@ public final class Movement {
                 stuck = 0;
                 return true;
             }
-            if (!pos.equals(target) || citizen.getNavigation().isDone()) {
-                walkNextTo(citizen, pos, speed);
-                if (!pos.equals(target)) {
-                    stuck = 0;
-                }
+            if (!pos.equals(target)) {
+                stuck = 0;
+                repath = 0;
                 target = pos;
+            }
+            if (--repath <= 0 && citizen.getNavigation().isDone()) {
+                repath = REPATH;
+                Path path = citizen.getNavigation().createPath(Set.of(pos), 1);
+                if (path != null && path.canReach()) {
+                    citizen.getNavigation().moveTo(path, speed);
+                } else {
+                    if (path != null) {
+                        citizen.getNavigation().moveTo(path, speed); // as close as it goes
+                    }
+                    stuck += REPATH; // no way there: the shortcut comes sooner
+                }
             }
             if (++stuck > PATIENCE) {
                 teleportNear(citizen, pos);
                 stuck = 0;
+                repath = 0;
             }
             return false;
         }
@@ -89,6 +106,7 @@ public final class Movement {
         public void reset() {
             target = null;
             stuck = 0;
+            repath = 0;
         }
     }
 }

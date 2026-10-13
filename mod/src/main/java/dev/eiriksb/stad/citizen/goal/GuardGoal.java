@@ -100,7 +100,7 @@ public class GuardGoal extends Goal {
             fight(colony);
         } else if (leader() != null) {
             net.minecraft.server.level.ServerPlayer p = leader();
-            if (p.level() == citizen.level() && citizen.distanceToSqr(p) > 16 && (look % 10 == 0 || citizen.getNavigation().isDone())) {
+            if (p.level() == citizen.level() && citizen.distanceToSqr(p) > 16 && look % 10 == 0) {
                 citizen.getNavigation().moveTo(p, 0.8);
             }
         } else if (patrols()) {
@@ -116,7 +116,7 @@ public class GuardGoal extends Goal {
         citizen.getLookControl().setLookAt(target, 30, 30);
         double reach = REACH + target.getBbWidth() / 2;
         if (citizen.distanceToSqr(target) > reach * reach) {
-            if (look % 10 == 0 || citizen.getNavigation().isDone()) {
+            if (look % 10 == 0 || citizen.getNavigation().isDone() && look % 3 == 0) {
                 citizen.getNavigation().moveTo(target, 0.8);
             }
         } else {

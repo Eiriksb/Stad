@@ -120,7 +120,7 @@ public final class CitizenScreens {
         for (ChatLine l : history) {
             lines.add(new CitizenScreenPayload.Line(l.fromPlayer(), l.fromPlayer() ? player.getGameProfile().getName() : c.getName().getString(), l.text()));
         }
-        boolean canTalk = TheyWillTalkApi.get().canTalk(c) && TheyWillTalkApi.get().llm().ready();
+        boolean canTalk = TheyWillTalkApi.get().canTalk(c) && TheyWillTalkApi.get().llm().readyFor(player.getUUID());
         return new CitizenScreenPayload(c.getUUID(), c.getName().getString(), about, c.happiness(), Math.round(c.hunger()), Math.round(c.rest()),
                 actions, lines, canTalk, builder ? "Tell " + c.getName().getString().split(" ")[0] + " what you'd like built..." : "");
     }

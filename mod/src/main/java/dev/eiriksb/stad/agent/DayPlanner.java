@@ -27,35 +27,68 @@ import java.util.stream.Collectors;
 public final class DayPlanner {
     private DayPlanner() {}
 
-    /** Every few seconds: starts the day's plans once it's morning. Server thread. */
+    /** Model plans not asked for by this time of day become routine ones. */
+    static final long LATEST = 6000;
+
+    /**
+     * Every few seconds: in the morning everyone around gets a plan. Citizens near a player wait their turn for the
+     * language model ({@link ThinkBudget}); the rest, and anyone still waiting late in the morning, follow their routine.
+     * Server thread.
+     */
     public static void tick(ServerLevel level, Colony colony) {
         long day = level.getDayTime() / 24000;
         long time = level.getDayTime() % 24000;
-        if (time > 4000) {
-            return;
+        java.util.Deque<java.util.UUID> waiting = ThinkBudget.waiting(colony);
+        if (time <= 4000) {
+            for (CitizenRecord r : colony.citizens()) {
+                if (r.planDay == day || !(level.getEntity(r.uuid) instanceof CitizenEntity c)) {
+                    continue; // planned when they're next around in the morning
+                }
+                r.planDay = day;
+                r.workToday = 0;
+                r.plan = List.of();
+                r.planVisit = null;
+                r.planRest = false;
+                colony.changed();
+                if (ThinkBudget.nearPlayer(c) && TheyWillTalkApi.get().llm().ready()) {
+                    waiting.add(r.uuid);
+                } else {
+                    routine(level, colony, c, r, day);
+                }
+            }
         }
-        for (CitizenRecord r : colony.citizens()) {
-            if (r.planDay == day) {
-                continue;
+        for (int asked = 0; asked < ThinkBudget.PER_ROUND && !waiting.isEmpty() && time <= LATEST && !ThinkBudget.busy()
+                && ThinkBudget.allowed(colony, day); ) {
+            java.util.UUID id = waiting.poll();
+            Optional<CitizenRecord> r = colony.citizen(id);
+            if (r.isPresent() && r.get().planDay == day && level.getEntity(id) instanceof CitizenEntity c) {
+                ThinkBudget.spend(colony, day);
+                plan(level, colony, c, r.get(), day);
+                asked++;
             }
-            if (!(level.getEntity(r.uuid) instanceof CitizenEntity c)) {
-                continue; // planned when they're next around in the morning
+        }
+        if (!waiting.isEmpty() && (time > LATEST || !ThinkBudget.allowed(colony, day) || !TheyWillTalkApi.get().llm().ready())) {
+            while (!waiting.isEmpty()) {
+                java.util.UUID id = waiting.poll();
+                Optional<CitizenRecord> r = colony.citizen(id);
+                if (r.isPresent() && r.get().planDay == day && r.get().plan.isEmpty() && level.getEntity(id) instanceof CitizenEntity c) {
+                    routine(level, colony, c, r.get(), day);
+                }
             }
-            r.planDay = day;
-            r.workToday = 0;
-            r.plan = List.of();
-            r.planVisit = null;
-            r.planRest = false;
-            colony.changed();
-            plan(level, colony, c, r);
         }
     }
 
-    private static void plan(ServerLevel level, Colony colony, CitizenEntity c, CitizenRecord r) {
+    /** A day like any other, from what they do and how they are: no language model needed. */
+    static void routine(ServerLevel level, Colony colony, CitizenEntity c, CitizenRecord r, long day) {
+        DayPlan plan = DayPlan.routine(colony, r, c.hunger() < 8, c.happiness(), level.random);
+        r.plan = plan.intentions();
+        r.planRest = plan.rest();
+        colony.changed();
+        ThinkBudget.count(day, false);
+    }
+
+    private static void plan(ServerLevel level, Colony colony, CitizenEntity c, CitizenRecord r, long day) {
         TheyWillTalkApi twt = TheyWillTalkApi.get();
-        if (!twt.llm().ready()) {
-            return;
-        }
         Optional<VillagerProfile> profile = twt.profile(c.getUUID());
         String situation = situation(colony, c, r);
         List<String> townsfolk = colony.citizens().stream().filter(o -> !o.uuid.equals(r.uuid)).map(o -> o.name).toList();
@@ -73,6 +106,11 @@ public final class DayPlanner {
                 }))
                 .exceptionally(t -> {
                     Stad.LOGGER.debug("No day plan for {}: {}", r.name, t.toString());
+                    level.getServer().execute(() -> {
+                        if (r.plan.isEmpty()) {
+                            routine(level, colony, c, r, day);
+                        }
+                    });
                     return null;
                 });
     }

@@ -105,7 +105,7 @@ public final class Raids {
             case HARD -> 1.5;
             default -> 1.0;
         };
-        return (int) Math.max(2, Math.min(16, Math.round(n)));
+        return (int) Math.max(2, Math.min(StadConfig.MAX_RAIDERS.get(), Math.round(n)));
     }
 
     private static int days() {
@@ -262,9 +262,12 @@ public final class Raids {
             return mob.getTarget() == null && mob.blockPosition().distSqr(to) > 36;
         }
 
+        private int repath;
+
         @Override
         public void tick() {
-            if (mob.getNavigation().isDone()) {
+            if (--repath <= 0 && mob.getNavigation().isDone()) {
+                repath = 20;
                 mob.getNavigation().moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, 1.0);
             }
         }

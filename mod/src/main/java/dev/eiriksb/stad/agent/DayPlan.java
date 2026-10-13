@@ -16,6 +16,38 @@ public record DayPlan(List<String> intentions, String visit, boolean rest, Strin
     public static final List<String> KINDS = List.of("work", "rest", "socialize", "errand");
     public static final List<String> MOODS = List.of("cheerful", "content", "tired", "worried", "grumpy", "excited", "lonely");
 
+    /**
+     * The plan of a citizen nobody's near (PLAN.md §4, "level of detail"): their job, their needs, now and then an
+     * afternoon off. Written from code, in the same words a citizen would use, since it ends up in their prompts too.
+     */
+    public static DayPlan routine(dev.eiriksb.stad.colony.Colony colony, dev.eiriksb.stad.colony.CitizenRecord r, boolean hungry,
+                                  int happiness, net.minecraft.util.RandomSource random) {
+        List<String> intentions = new ArrayList<>();
+        if (hungry) {
+            intentions.add("Get something to eat");
+        }
+        String job = r.job == null ? "" : r.job;
+        intentions.add(switch (job) {
+            case dev.eiriksb.stad.colony.Jobs.BUILDER -> colony.buildings().stream().filter(b -> !b.done()).findFirst()
+                    .map(b -> "Get on with the " + b.name.toLowerCase(java.util.Locale.ROOT)).orElse("Help out around town");
+            case dev.eiriksb.stad.colony.Jobs.FARMER -> "Tend the fields";
+            case dev.eiriksb.stad.colony.Jobs.LUMBERJACK -> "Fell trees and plant new ones";
+            case dev.eiriksb.stad.colony.Jobs.COURIER -> "Carry supplies to where they're needed";
+            case dev.eiriksb.stad.colony.Jobs.GUARD -> "Keep watch over the town";
+            case "" -> "Look for something useful to do";
+            default -> "Get on with the work";
+        });
+        // tired of it all, or just a lucky day
+        boolean rest = !job.isEmpty() && (happiness < 30 ? random.nextInt(3) == 0 : random.nextInt(8) == 0);
+        if (rest) {
+            intentions.add("Take the afternoon off");
+        }
+        if (r.home == null && intentions.size() < 3) {
+            intentions.add("Find a proper bed");
+        }
+        return new DayPlan(List.copyOf(intentions), null, rest, happiness < 30 ? "grumpy" : "content");
+    }
+
     public static JsonObject schema() {
         JsonObject intention = new JsonObject();
         intention.addProperty("type", "object");

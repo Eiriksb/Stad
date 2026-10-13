@@ -23,6 +23,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -104,8 +105,7 @@ public final class Architect {
         if (!buildingTalk && scene.draftJson == null) {
             return BeforeReply.CONTINUE;
         }
-        LlmApi llm = TheyWillTalkApi.get().llm();
-        if (!llm.ready()) {
+        if (!TheyWillTalkApi.get().llm().readyFor(scene.player.getUUID())) {
             return BeforeReply.CONTINUE;
         }
         CompletableFuture<List<String>> work = classify(scene, turn.text())
@@ -196,7 +196,7 @@ public final class Architect {
         near.addProperty("maxLength", 32);
         props.add("near", near);
         JsonObject schema = object(props);
-        return TheyWillTalkApi.get().llm().json(CLASSIFY_SYSTEM, sb.toString(), schema, 40, LlmApi.Priority.CONVERSATION)
+        return TheyWillTalkApi.get().llm().forPlayer(scene.player.getUUID()).json(CLASSIFY_SYSTEM, sb.toString(), schema, 40, LlmApi.Priority.CONVERSATION)
                 .thenApply(json -> {
                     JsonObject o = JsonParser.parseString(json).getAsJsonObject();
                     Intent intent = Intent.valueOf(o.get("intent").getAsString().toUpperCase(Locale.ROOT));
@@ -229,7 +229,8 @@ public final class Architect {
             Answer with JSON only. Keep to what they asked for; pick sensible, good-looking defaults for the rest.""";
 
     /** Asks the model for a spec from what the player said (and the current draft, when revising). */
-    public static CompletableFuture<BuildSpec> spec(String playerName, String text, String currentJson) {
+    /** Draws up a building: on the planner model when the admin set one (a bigger model plans better), else the chat model. */
+    public static CompletableFuture<BuildSpec> spec(UUID player, String playerName, String text, String currentJson) {
         List<Restyle.Info> bases = BuildingPacks.all().stream().filter(d -> d.spec() == null)
                 .sorted(Comparator.comparing(BuildingDef::pack).thenComparing(BuildingDef::name)).map(Restyle::info).toList();
         List<BuildingDef> saved = BuildingPacks.all().stream().filter(d -> d.spec() != null).toList();
@@ -264,7 +265,8 @@ public final class Architect {
         }
         sb.append('\n').append(playerName).append(" says: \"").append(text).append("\"\n");
         List<String> baseKeys = bases.stream().map(b -> b.def().key().getPath()).toList();
-        return TheyWillTalkApi.get().llm().json(SPEC_SYSTEM, sb.toString(), BuildSpec.schema(baseKeys), 260, LlmApi.Priority.CONVERSATION)
+        return TheyWillTalkApi.get().llm().planner().forPlayer(player).json(SPEC_SYSTEM, sb.toString(), BuildSpec.schema(baseKeys), 260,
+                        LlmApi.Priority.CONVERSATION)
                 .thenApply(json -> {
                     Stad.LOGGER.debug("Architect spec: {}", json);
                     return BuildSpec.parse(json);
@@ -284,7 +286,7 @@ public final class Architect {
                 }
                 boolean revise = ask.intent == Intent.REVISE && scene.draftJson != null;
                 Ask placed = byPlace(scene, text, PLACE_TALK.matcher(text).find() ? ask : new Ask(ask.intent, Drafts.Where.SAME, ""));
-                yield spec(who, text, revise ? scene.draftJson : null)
+                yield spec(scene.player.getUUID(), who, text, revise ? scene.draftJson : null)
                         .thenCompose(spec -> server.submit(() -> drew(scene, spec, placed, revise)));
             }
             case APPROVE -> server.submit(() -> approved(scene, Drafts.approve(scene.player)));

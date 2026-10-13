@@ -327,6 +327,17 @@ public class CitizenEntity extends PathfinderMob {
     }
 
     @Override
+    public void tick() {
+        if (level().isClientSide) {
+            super.tick();
+            return;
+        }
+        long t = dev.eiriksb.stad.perf.Perf.start();
+        super.tick();
+        dev.eiriksb.stad.perf.Perf.end("citizens", t);
+    }
+
+    @Override
     public void aiStep() {
         if (!level().isClientSide) {
             if (isSleeping() && (!isNight() || hunger < 2)) {

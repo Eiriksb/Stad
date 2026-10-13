@@ -131,6 +131,49 @@ public final class StadConfig {
         B.pop();
     }
 
+    static {
+        B.comment("How much of the language model's time citizens get, so big towns don't keep it busy (conversations always",
+                "go first).").push("thinking");
+    }
+
+    public static final ModConfigSpec.IntValue THINK_RADIUS = B
+            .comment("Citizens this close (in blocks) to a player plan their own day each morning with the language model.",
+                    "The rest follow their routine, which costs nothing.")
+            .defineInRange("thinkRadius", 48, 0, 512);
+
+    public static final ModConfigSpec.IntValue PLANS_PER_DAY = B
+            .comment("At most this many citizens of one town plan their day with the language model each Minecraft day (0: no limit).")
+            .defineInRange("plansPerDay", 16, 0, 1000);
+
+    public static final ModConfigSpec.IntValue BUSY_QUEUE = B
+            .comment("Background thinking waits while this many requests are already waiting for the language model.")
+            .defineInRange("busyQueue", 3, 0, 100);
+
+    static {
+        B.pop();
+        B.comment("Keeping towns running.").push("performance");
+    }
+
+    public static final ModConfigSpec.EnumValue<KeepLoaded> KEEP_LOADED = B
+            .comment("Keep a town's land loaded so its citizens keep working while players are away from it.",
+                    "NEVER: towns only run while a player is near. WHILE_ONLINE: while one of the town's members is online.",
+                    "ALWAYS: all the time (costs the most).")
+            .defineEnum("keepLoaded", KeepLoaded.WHILE_ONLINE);
+
+    public static final ModConfigSpec.IntValue LOADED_RADIUS = B
+            .comment("How far from the town hall (in chunks of 16 blocks) a town's land is kept loaded.")
+            .defineInRange("loadedRadius", 3, 1, 8);
+
+    public static final ModConfigSpec.IntValue MAX_RAIDERS = B
+            .comment("The most raiders in one mob raid, however big the town.")
+            .defineInRange("maxRaiders", 16, 2, 64);
+
+    public enum KeepLoaded { NEVER, WHILE_ONLINE, ALWAYS }
+
+    static {
+        B.pop();
+    }
+
     public static final ModConfigSpec SPEC = B.build();
 
     private StadConfig() {}

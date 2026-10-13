@@ -25,6 +25,7 @@ public final class ColonyTicker {
             dev.eiriksb.stad.war.Raids.clearAll();
             dev.eiriksb.stad.war.Wars.clearAll();
             dev.eiriksb.stad.war.Envoys.clearAll();
+            dev.eiriksb.stad.agent.ThinkBudget.clear();
         });
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
             dev.eiriksb.stad.pack.Scans.forget(e.getEntity().getUUID());
@@ -33,7 +34,16 @@ public final class ColonyTicker {
     }
 
     private static void tick(ServerTickEvent.Post event) {
-        MinecraftServer server = event.getServer();
+        long t = dev.eiriksb.stad.perf.Perf.start();
+        try {
+            upkeep(event.getServer());
+        } finally {
+            dev.eiriksb.stad.perf.Perf.end("town upkeep", t);
+            dev.eiriksb.stad.perf.Perf.nextTick();
+        }
+    }
+
+    private static void upkeep(MinecraftServer server) {
         if (++ticks % 10 == 0) {
             List<Colony> all = List.copyOf(ColonyManager.get(server).all());
             for (ServerLevel level : server.getAllLevels()) {
@@ -49,6 +59,7 @@ public final class ColonyTicker {
         }
         dev.eiriksb.stad.planner.Drafts.tick(server);
         dev.eiriksb.stad.war.Envoys.tick(server);
+        ColonyChunks.update(server);
         for (Colony colony : ColonyManager.get(server).all()) {
             ServerLevel level = server.getLevel(colony.dimension);
             if (level != null) {

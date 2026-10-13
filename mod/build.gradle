@@ -45,12 +45,14 @@ neoForge {
             client()
             gameDirectory = rootProject.file('run/client')
             programArguments.addAll '--quickPlayMultiplayer', (findProperty('joinServer') ?: '127.0.0.1:25565').toString(), '--username', 'Eirik'
+            systemProperty 'theywilltalk.runtimeDir', runtimeDir // for lending the GPU (/lendgpu)
             jvmArguments.addAll '-Xmx4G'
         }
         clientJoin2 {
             client()
             gameDirectory = rootProject.file('run/client2')
             programArguments.addAll '--quickPlayMultiplayer', (findProperty('joinServer') ?: '127.0.0.1:25565').toString(), '--username', 'Tester'
+            systemProperty 'theywilltalk.runtimeDir', runtimeDir // for lending the GPU (/lendgpu)
             jvmArguments.addAll '-Xmx4G'
         }
         server {

@@ -8,7 +8,7 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M9). Found a town with a **town hall**; newcomers move in when there
+> **Status:** early development (milestone M10). Found a town with a **town hall**; newcomers move in when there
 > are free beds. Citizens sleep in their own beds, eat from the town hall, plan their day each morning (in character,
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
 > Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier** and **guard**.
@@ -132,6 +132,24 @@ come. Each town can switch this off (the town hall has a button for it and for t
 `pvpRaids` in the config: off, opt_in (the default) or forced (every town can be attacked). The warning, cooldown,
 truce, raid length, capture time, loot share and offline raids are all settings too.
 
+### Big towns and hosting
+
+Stad is tuned for towns of 50 and more. Citizens near a player (`thinkRadius`, 48 blocks) plan their day with the
+local AI each morning, one or two at a time while it isn't busy and at most `plansPerDay` (16) a town; everyone else
+follows their routine (their job, their needs, now and then an afternoon off), which costs nothing. Conversations
+always go first. On the dev machine (Ryzen 7 9800X3D) a town of 125 working citizens costs the server about 3 ms per
+tick of its 50 (`/stad perf` shows where the time goes). A town's land stays loaded while one of its members is online
+(`keepLoaded`: never, while_online or always; `loadedRadius` chunks round the town hall), so builders keep building
+while you're off mining. Crops only grow near players, as in vanilla. Mob raids are capped at `maxRaiders` (16).
+
+Hosting without a big GPU:
+* **A planner model.** Building designs can use a bigger model than the chat (*Use for planning* on They Will Talk's
+  Models page). It only runs while someone is planning, then frees the GPU again.
+* **Lent GPUs.** Players with They Will Talk on their own computer can type `/lendgpu on`: the citizens they talk to
+  then think on their GPU (only their own conversations are sent). A server with no GPU at all runs on lent ones;
+  players who don't lend get "can't talk right now" while nobody's lending to it (their towns still live and work).
+* **Your own model server.** `externalLlmUrl` in They Will Talk's config points at Ollama, LM Studio or llama.cpp elsewhere.
+
 ### Building packs
 
 A pack is part of a data pack: a manifest per building in `data/<namespace>/stad/buildings/<pack>/<building>.json`
@@ -186,11 +204,14 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad citizen voice <citizens>` | admins: how they sound (age, pitch, pace and voice description) |
 | `/stad citizen status <citizens>` | admins: what they're doing right now |
 | `/stad citizen needs <citizens> <hunger> <rest>` | admins, for testing |
+| `/stad perf` / `perf reset` | admins: milliseconds per tick for the citizens and the town upkeep, day plans, loaded towns |
+| `/stad perf crowd <count>` / `crowd clear` | admins: add test citizens (with jobs) to the town you're in; take them away again |
+| `/lendgpu [on\|off]` | players with They Will Talk installed: lend your GPU to the server (They Will Talk's client command) |
 
 ## Development
 
 Requirements: JDK 21 (Gradle downloads it if needed), and a checkout of
-[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.4 or newer, for its public
+[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.6 or newer, for its public
 API). TWT in turn needs [Sipher](https://github.com/Eiriksb/Sipher) built next to it
 (see TWT's README).
 
@@ -208,7 +229,7 @@ Point it elsewhere with `-PtwtDir=<path>`.
 ./gradlew :mod:build                 # build
 ./gradlew :mod:runGameTestServer     # in-game tests (headless)
 ./gradlew :mod:runServer             # dev server (TWT dashboard on http://127.0.0.1:8765)
-./gradlew :mod:runClientJoin         # a dev client that joins it as "Eirik"
+./gradlew :mod:runClientJoin         # a dev client that joins it as "Eirik" (lendGpu in run/client/config to test lending)
 ./gradlew :mod:runClientJoin2        # a second one as "Tester", for multiplayer
 scripts/rcon.py "list"               # talk to the dev server (enable RCON in run/server/server.properties)
 ```

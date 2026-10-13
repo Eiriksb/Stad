@@ -24,6 +24,13 @@ import java.util.List;
 
 /** The lumberjack fells the natural trees on the town's land, top down, and plants a sapling where each one stood. */
 public class LumberjackGoal extends WorkGoal {
+    /** Which tree each lumberjack is on (and since when), so they spread out instead of all crowding the nearest one. */
+    private static final java.util.Map<java.util.UUID, Claim> CLAIMS = new java.util.concurrent.ConcurrentHashMap<>();
+    /** A claim not kept up for this long (a lumberjack who died or quit) is free again. */
+    private static final long CLAIM_TICKS = 20 * 60;
+
+    private record Claim(BlockPos tree, long at) {}
+
     private BlockPos tree;
     private List<BlockPos> logs = List.of();
 
@@ -38,12 +45,25 @@ public class LumberjackGoal extends WorkGoal {
 
     @Override
     protected boolean hasWork(ServerLevel level, Colony colony) {
+        long now = level.getGameTime();
         if (tree != null && (level.getBlockState(tree).is(BlockTags.LOGS) || canReplant(level))) {
+            CLAIMS.put(citizen.getUUID(), new Claim(tree, now));
             return true;
         }
-        tree = WorkSites.trees(level, colony).stream().filter(t -> level.getBlockState(t).is(BlockTags.LOGS))
+        java.util.Set<BlockPos> taken = new java.util.HashSet<>();
+        CLAIMS.forEach((who, c) -> {
+            if (!who.equals(citizen.getUUID()) && now - c.at() < CLAIM_TICKS) {
+                taken.add(c.tree());
+            }
+        });
+        tree = WorkSites.trees(level, colony).stream().filter(t -> !taken.contains(t) && level.getBlockState(t).is(BlockTags.LOGS))
                 .min(Comparator.comparingDouble(t -> t.distSqr(citizen.blockPosition()))).orElse(null);
         logs = List.of();
+        if (tree == null) {
+            CLAIMS.remove(citizen.getUUID());
+        } else {
+            CLAIMS.put(citizen.getUUID(), new Claim(tree, now));
+        }
         return tree != null;
     }
 
@@ -117,6 +137,7 @@ public class LumberjackGoal extends WorkGoal {
         }
         if (!canReplant(level)) {
             WorkSites.invalidate(colony);
+            CLAIMS.remove(citizen.getUUID());
             tree = null;
             approach.reset();
         }

@@ -39,6 +39,7 @@ public final class Stad {
         TheyWillTalkApi.get().registerAdapter(new StadAdapter());
         TheyWillTalkApi.get().addConversationHook(new StadConversations());
         ColonyTicker.register();
+        dev.eiriksb.stad.colony.ColonyChunks.register(modBus);
         BuildingPacks.register();
         dev.eiriksb.stad.pack.Palettes.register();
         dev.eiriksb.stad.pack.SharedPacks.register(modBus);
