@@ -5,10 +5,13 @@ import dev.eiriksb.stad.block.ArchitectTableBlockEntity;
 import dev.eiriksb.stad.colony.Colony;
 import dev.eiriksb.stad.colony.ColonyManager;
 import dev.eiriksb.stad.colony.Rank;
+import dev.eiriksb.stad.net.TablePayloads;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.QuartPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestServer;
@@ -38,9 +41,11 @@ import net.minecraft.world.level.block.EnderChestBlock;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.TriState;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -95,6 +100,7 @@ public final class FreeBuild {
         final int slot;
         final ResourceKey<Level> tableDimension;
         final BlockPos table;
+        final String name;
         /** the site in the real world */
         final BoundingBox site;
         final Land land;
@@ -104,12 +110,13 @@ public final class FreeBuild {
         final Vec3 back;
         final float yRot, xRot;
 
-        Session(UUID player, int slot, ResourceKey<Level> tableDimension, BlockPos table, BoundingBox site, Land land, ListTag inventory,
-                GameType previous, ResourceKey<Level> backDimension, Vec3 back, float yRot, float xRot) {
+        Session(UUID player, int slot, ResourceKey<Level> tableDimension, BlockPos table, String name, BoundingBox site, Land land,
+                ListTag inventory, GameType previous, ResourceKey<Level> backDimension, Vec3 back, float yRot, float xRot) {
             this.player = player;
             this.slot = slot;
             this.tableDimension = tableDimension;
             this.table = table;
+            this.name = name;
             this.site = site;
             this.land = land;
             this.inventory = inventory;
@@ -156,6 +163,7 @@ public final class FreeBuild {
             t.putInt("Slot", slot);
             t.putString("TableDimension", tableDimension.location().toString());
             t.put("Table", NbtUtils.writeBlockPos(table));
+            t.putString("Name", name);
             t.putIntArray("Site", new int[]{site.minX(), site.minY(), site.minZ(), site.maxX(), site.maxY(), site.maxZ()});
             t.put("Land", land.save());
             t.put("Inventory", inventory);
@@ -172,7 +180,7 @@ public final class FreeBuild {
         static Session load(CompoundTag t) {
             int[] b = t.getIntArray("Site");
             return new Session(t.getUUID("Player"), t.getInt("Slot"), dimension(t.getString("TableDimension")),
-                    NbtUtils.readBlockPos(t, "Table").orElse(BlockPos.ZERO), new BoundingBox(b[0], b[1], b[2], b[3], b[4], b[5]),
+                    NbtUtils.readBlockPos(t, "Table").orElse(BlockPos.ZERO), t.getString("Name"), new BoundingBox(b[0], b[1], b[2], b[3], b[4], b[5]),
                     Land.load(t.getCompound("Land")), t.getList("Inventory", Tag.TAG_COMPOUND), GameType.byName(t.getString("Previous"),
                     GameType.SURVIVAL), dimension(t.getString("BackDimension")), new Vec3(t.getDouble("BackX"), t.getDouble("BackY"),
                     t.getDouble("BackZ")), t.getFloat("YRot"), t.getFloat("XRot"));
@@ -300,6 +308,9 @@ public final class FreeBuild {
         if (building(player)) {
             return "You're already building somewhere: finish that first.";
         }
+        if (!player.isAlive()) {
+            return "You can't build while you're dead.";
+        }
         ServerLevel draft = draftLevel(player.server);
         if (draft == null) {
             return "The drafting world is missing (is the mod's data pack turned off?).";
@@ -314,14 +325,14 @@ public final class FreeBuild {
         while (slotTaken(data, slot)) {
             slot++;
         }
-        Session s = new Session(player.getUUID(), slot, level.dimension(), table.immutable(), Tables.siteBox(p), Land.of(terrain, p.sx, p.sy, p.sz),
+        Session s = new Session(player.getUUID(), slot, level.dimension(), table.immutable(), p.name, Tables.siteBox(p), Land.of(terrain, p.sx, p.sy, p.sz),
                 player.getInventory().save(new ListTag()), player.gameMode.getGameModeForPlayer(), player.level().dimension(), player.position(),
                 player.getYRot(), player.getXRot());
         data.sessions.put(player.getUUID(), s);
         data.setDirty();
         level.getServer().overworld().getDataStorage().save(); // their inventory is on disk before it's emptied
         active.put(player.getUUID(), s);
-        build(draft, s, terrain, p);
+        build(draft, s, terrain, p, level);
         player.getInventory().clearContent();
         player.containerMenu.broadcastChanges();
         // in front of the door, a little above the floor, looking at the site
@@ -334,6 +345,7 @@ public final class FreeBuild {
         player.setGameMode(GameType.CREATIVE);
         player.getAbilities().flying = true;
         player.onUpdateAbilities();
+        show(player, s);
         player.sendSystemMessage(Component.literal("You're in the drafting world with a copy of the site: build it however you like. ")
                 .withStyle(ChatFormatting.GOLD).append(buttons()));
         return null;
@@ -343,8 +355,11 @@ public final class FreeBuild {
         return data.sessions.values().stream().anyMatch(s -> s.slot == slot);
     }
 
-    /** Lays out a player's stretch of the drafting world: the land round the site, the design in it, a box round it all. */
-    private static void build(ServerLevel draft, Session s, Grid terrain, Project p) {
+    /**
+     * Lays out a player's stretch of the drafting world: the land round the site, the design in it, a box round it all,
+     * and the real place's biomes (for the grass, leaves and water colours).
+     */
+    private static void build(ServerLevel draft, Session s, Grid terrain, Project p, ServerLevel level) {
         BoundingBox room = s.room();
         clear(draft, room);
         BoundingBox copy = s.copy();
@@ -377,6 +392,7 @@ public final class FreeBuild {
                 }
             }
         }
+        biomes(draft, s, level);
         // water and lava at the edge of the copy stay in it
         for (int y = copy.minY(); y <= copy.maxY(); y++) {
             for (int z = copy.minZ(); z <= copy.maxZ(); z++) {
@@ -393,6 +409,42 @@ public final class FreeBuild {
                 }
             }
         }
+    }
+
+    /** Copies the biomes of the site and the land round it into the room (the land's edge carries on out to the walls). */
+    private static void biomes(ServerLevel draft, Session s, ServerLevel level) {
+        BoundingBox room = s.room(), copy = s.copy();
+        BlockPos o = s.origin(), real = new BlockPos(s.site.minX(), s.site.minY(), s.site.minZ());
+        List<ChunkAccess> chunks = new ArrayList<>();
+        for (int cx = SectionPos.blockToSectionCoord(room.minX()); cx <= SectionPos.blockToSectionCoord(room.maxX()); cx++) {
+            for (int cz = SectionPos.blockToSectionCoord(room.minZ()); cz <= SectionPos.blockToSectionCoord(room.maxZ()); cz++) {
+                chunks.add(draft.getChunk(cx, cz));
+            }
+        }
+        for (ChunkAccess chunk : chunks) {
+            chunk.fillBiomesFromNoise((qx, qy, qz, sampler) -> {
+                int x = QuartPos.toBlock(qx), y = QuartPos.toBlock(qy), z = QuartPos.toBlock(qz);
+                if (!room.isInside(x, y, z)) {
+                    return chunk.getNoiseBiome(qx, qy, qz);
+                }
+                x = Math.max(copy.minX(), Math.min(copy.maxX(), x));
+                y = Math.max(copy.minY(), Math.min(copy.maxY(), y));
+                z = Math.max(copy.minZ(), Math.min(copy.maxZ(), z));
+                return level.getBiome(real.offset(x - o.getX(), y - o.getY(), z - o.getZ()));
+            }, draft.getChunkSource().randomState().sampler());
+            chunk.setUnsaved(true);
+        }
+        draft.getChunkSource().chunkMap.resendBiomesForChunks(chunks);
+    }
+
+    /** Tells the player's game where the site is (for the grid), or that they're done. */
+    private static void show(ServerPlayer player, Session s) {
+        if (player.connection == null || !player.connection.hasChannel(TablePayloads.Drafting.TYPE)) {
+            return;
+        }
+        BoundingBox b = s == null ? null : s.draftSite();
+        PacketDistributor.sendToPlayer(player, b == null ? TablePayloads.Drafting.NONE
+                : new TablePayloads.Drafting(s.origin(), b.getXSpan(), b.getYSpan(), b.getZSpan(), s.name));
     }
 
     /** Empties a box of the drafting world, top down, so nothing spills or hangs on what's gone. */
@@ -442,6 +494,7 @@ public final class FreeBuild {
         Data data = Data.get(player.server);
         data.sessions.remove(player.getUUID());
         data.setDirty();
+        show(player, null);
         giveBack(player, s);
         if (kept) {
             reopen.put(player.getUUID(), new Reopen(s.tableDimension, s.table, result, player.tickCount + 10));
@@ -501,7 +554,7 @@ public final class FreeBuild {
     private static boolean settled(BlockState was, BlockState now) {
         return was.is(net.minecraft.tags.BlockTags.DIRT) && now.is(net.minecraft.tags.BlockTags.DIRT)
                 || was.is(Blocks.SNOW) && now.isAir()
-                || was.getBlock() instanceof LiquidBlock && (now.isAir() || now.getBlock() instanceof LiquidBlock);
+                || was.getBlock() instanceof LiquidBlock && (now.isAir() || now.getBlock() instanceof LiquidBlock || now.is(Blocks.ICE));
     }
 
     private static void giveBack(ServerPlayer player, Session s) {
@@ -694,6 +747,7 @@ public final class FreeBuild {
         }
         Session s = active.get(p.getUUID());
         if (s != null && drafting(p.level())) {
+            show(p, s);
             p.sendSystemMessage(Component.literal("You're still designing in the drafting world. ").withStyle(ChatFormatting.GOLD).append(buttons()));
         } else if (s != null) {
             finish(p, false); // they never got there (the server stopped as they set off)
@@ -712,6 +766,11 @@ public final class FreeBuild {
         active.clear();
         reopen.clear();
         active.putAll(Data.get(e.getServer()).sessions);
+        ServerLevel draft = e.getServer().getLevel(DRAFTING);
+        if (draft != null) {
+            draft.setRainLevel(0); // it has no weather of its own, but takes whatever the overworld had when the server started
+            draft.setThunderLevel(0);
+        }
     }
 
     private static void stopping(ServerStoppingEvent e) {

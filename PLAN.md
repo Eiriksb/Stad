@@ -432,10 +432,12 @@ the site. You can save a design that doesn't meet its requirements yet; you can'
 - You can redesign a building that's already there: load its site and the existing blocks are where you start.
 
 **Free build (M13).** **Build in it** at the table takes you to the drafting world (`stad:drafting`, a void
-dimension that's always noon) in creative: flying, any block, breaking at a touch. You build in a copy of the site and
+dimension, always lit full bright like the table's view and without weather) in creative: flying, any block, breaking at a touch. You build in a copy of the site and
 the land round it, with the design already in it, as the table's view shows it; the real world is never touched. When
 you're done, what you built becomes the table's design (on top of the generated building, like hand edits), and your
 own inventory, game mode and place come back. The builders then build it with real materials.
+- The copy gets the real place's biomes, spot by spot, so grass, leaves and water match. The site is drawn as a faint
+  grid with a yellow edge, the space you can build in.
 - Each player gets their own stretch of the drafting world (1024 blocks apart), in an invisible box of barriers with
   room to stand back from the site; barriers also hold in water and lava at the edge of the copy.
 - Your inventory, game mode and position are saved to the world's data before you go. The session is saved too, and

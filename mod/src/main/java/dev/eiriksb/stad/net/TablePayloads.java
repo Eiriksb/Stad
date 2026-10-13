@@ -159,6 +159,27 @@ public final class TablePayloads {
         }
     }
 
+    /**
+     * Server to client: where the site is in the drafting world while the player designs there (its lowest corner and
+     * size), and the building's name; a size of 0 when they're done.
+     */
+    public record Drafting(BlockPos min, int sx, int sy, int sz, String name) implements CustomPacketPayload {
+        public static final Drafting NONE = new Drafting(BlockPos.ZERO, 0, 0, 0, "");
+        public static final Type<Drafting> TYPE = id("table_drafting");
+        public static final StreamCodec<FriendlyByteBuf, Drafting> CODEC = StreamCodec.of((b, p) -> {
+            b.writeBlockPos(p.min);
+            b.writeVarInt(p.sx);
+            b.writeVarInt(p.sy);
+            b.writeVarInt(p.sz);
+            b.writeUtf(p.name);
+        }, b -> new Drafting(b.readBlockPos(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readUtf()));
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     /** Client to server: everything else the screen does. */
     public record Action(BlockPos table, Kind kind, String text) implements CustomPacketPayload {
         public enum Kind { SITE, GENERATE, DESCRIBE, FLATTEN, START_OVER, RENAME, TYPE, SAVE, PLAN, CLOSE, FREE_BUILD }

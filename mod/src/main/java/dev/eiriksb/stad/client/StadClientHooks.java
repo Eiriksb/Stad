@@ -49,6 +49,10 @@ public final class StadClientHooks {
         DevUi.run(script);
     }
 
+    public static void drafting(dev.eiriksb.stad.net.TablePayloads.Drafting p) {
+        dev.eiriksb.stad.client.architect.DraftingHud.set(p);
+    }
+
     public static void draftPreview(dev.eiriksb.stad.net.DraftPreviewPayload preview) {
         GhostPreview.set(preview);
     }

@@ -165,6 +165,8 @@ public final class WorkplaceGameTests {
         helper.assertTrue(draft.getBlockState(o.offset(3, 1, 3)).is(Blocks.OAK_PLANKS) && draft.getBlockState(o.offset(1, 1, 1)).is(Blocks.CHEST),
                 "the design is there to build on, on a copy of the land");
         helper.assertTrue(draft.getBlockState(o.offset(0, -Project.MARGIN - 1, 0)).is(Blocks.BARRIER), "with a floor under it");
+        var biome = helper.getLevel().getBiome(helper.absolutePos(new BlockPos(6, G, 6))).unwrapKey().orElseThrow();
+        helper.assertTrue(draft.getBiome(o.offset(1, 1, 1)).is(biome), "in the real place's biome: " + biome.location());
         helper.assertTrue(helper.getBlockState(new BlockPos(8, G, 8)).isAir(), "the real site isn't touched");
         // they build (and break a block, and pick things up, and drop something)
         draft.setBlock(o.offset(2, 1, 2), Blocks.STONE_BRICKS.defaultBlockState(), 3);

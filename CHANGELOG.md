@@ -10,7 +10,7 @@
 - The generator draws buildings up to 32 blocks long (still 17 when talking to a builder), and a building on the site
   can be redesigned in place.
 - **Free build**: Build in it takes you to the drafting world, an empty void with a copy of the site and the land round
-  it, to build it yourself in creative. Press B and Keep it: what you build becomes the design, and you're back at the
+  it (in the real place's biomes, with a grid showing where you can build), to build it yourself in creative. Press B and Keep it: what you build becomes the design, and you're back at the
   table with your own things. The real site is never touched, nothing comes back with you, and logging out or a
   restart doesn't end it.
 - The table's screen is mostly the 3D view now: the tools along the bottom, the name and kind top left, and

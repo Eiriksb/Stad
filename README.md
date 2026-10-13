@@ -132,8 +132,10 @@ finished building on the site is redesigned in place). Officers edit; other memb
 its project.
 
 **Build in it** (top right) takes you to the drafting world to build it yourself, in creative: an empty void with a
-copy of the site, the design and the land round it, as the table shows it. Fly, take any block, break at a touch; only
-the site itself can be changed, and an invisible box keeps you near it. Press **B** (or click **Done** in chat, or
+copy of the site, the design and the land round it, as the table shows it, in the real place's biomes (so the grass,
+leaves and water are the right colour), always lit and with no weather. A grid with a yellow edge marks the site:
+that's where you can build. Fly, take any block, break at a touch; only the site itself can be changed, and an
+invisible box keeps you near it. Press **B** (or click **Done** in chat, or
 `/stad build done`) and **Keep it**: what you built becomes the table's design (on top of the generated building, like
 hand edits), you're back where you were with your own inventory and game mode, and the table opens to show it. **Throw
 away** (or **Cancel**) leaves the design as it was. The real site is never touched, and nothing comes back with you:

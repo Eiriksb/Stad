@@ -78,7 +78,7 @@ the block list). To start from a generated building, open **Generate ▾**, pick
 ![The architect's table: a generated house on a hillside site](table.png)
 
 **Build in it** takes you to the drafting world, an empty void with just a copy of the site, to build it yourself in
-creative. Press **B** when you're done and **Keep it**: what you built becomes the design, and you're back at the table
+creative; a grid marks where you can build. Press **B** when you're done and **Keep it**: what you built becomes the design, and you're back at the table
 with your own things (nothing there is real, and nothing comes back with you). The builders then build it for real.
 
 Built a house yourself? Stand in it and tell a citizen "this is your home now". The **scan wand** (an amethyst shard
