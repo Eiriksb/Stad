@@ -64,6 +64,31 @@ public final class StadNetwork {
                 dev.eiriksb.stad.client.StadClientHooks.citizenLine(p);
             }
         });
+        r.playToClient(TablePayloads.Open.TYPE, TablePayloads.Open.CODEC, (p, ctx) -> {
+            if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.openTable(p);
+            }
+        });
+        r.playToClient(TablePayloads.Update.TYPE, TablePayloads.Update.CODEC, (p, ctx) -> {
+            if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.updateTable(p);
+            }
+        });
+        r.playToServer(TablePayloads.Edit.TYPE, TablePayloads.Edit.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer player) {
+                dev.eiriksb.stad.architect.Tables.edit(player, p);
+            }
+        });
+        r.playToServer(TablePayloads.Action.TYPE, TablePayloads.Action.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer player) {
+                dev.eiriksb.stad.architect.Tables.action(player, p);
+            }
+        });
+        r.playToClient(DevUiPayload.TYPE, DevUiPayload.CODEC, (p, ctx) -> {
+            if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.devUi(p.script());
+            }
+        });
         r.playToClient(DraftPreviewPayload.TYPE, DraftPreviewPayload.CODEC, (p, ctx) -> {
             if (FMLEnvironment.dist.isClient()) {
                 dev.eiriksb.stad.client.StadClientHooks.draftPreview(p);

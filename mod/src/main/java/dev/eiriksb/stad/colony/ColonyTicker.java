@@ -22,6 +22,7 @@ public final class ColonyTicker {
         NeoForge.EVENT_BUS.addListener(ColonyTicker::tick);
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> {
             dev.eiriksb.stad.planner.Drafts.clearAll();
+            dev.eiriksb.stad.architect.Tables.clearAll();
             dev.eiriksb.stad.war.Raids.clearAll();
             dev.eiriksb.stad.war.Wars.clearAll();
             dev.eiriksb.stad.war.Envoys.clearAll();
@@ -29,6 +30,7 @@ public final class ColonyTicker {
         });
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent e) -> {
             dev.eiriksb.stad.pack.Scans.forget(e.getEntity().getUUID());
+            dev.eiriksb.stad.architect.Tables.forget(e.getEntity().getUUID());
             dev.eiriksb.stad.pack.PackEditor.forget(e.getEntity().getUUID());
         });
     }
@@ -52,6 +54,7 @@ public final class ColonyTicker {
         }
         if (ticks % 20 == 0) {
             dev.eiriksb.stad.pack.Scans.tick(server);
+            dev.eiriksb.stad.architect.Tables.tick(server);
             dev.eiriksb.stad.war.Wars.tick(server, System.currentTimeMillis());
         }
         if (ticks % EVERY != 0) {

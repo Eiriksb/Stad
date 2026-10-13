@@ -52,6 +52,16 @@ public final class StadRegistries {
 
     public static final DeferredItem<BlockItem> TOWN_HALL_ITEM = ITEMS.registerSimpleBlockItem(TOWN_HALL);
 
+    public static final DeferredBlock<dev.eiriksb.stad.block.ArchitectTableBlock> ARCHITECT_TABLE = BLOCKS.registerBlock("architect_table",
+            dev.eiriksb.stad.block.ArchitectTableBlock::new,
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<dev.eiriksb.stad.block.ArchitectTableBlockEntity>> ARCHITECT_TABLE_ENTITY =
+            BLOCK_ENTITIES.register("architect_table", () -> BlockEntityType.Builder.of(dev.eiriksb.stad.block.ArchitectTableBlockEntity::new,
+                    ARCHITECT_TABLE.get()).build(null));
+
+    public static final DeferredItem<BlockItem> ARCHITECT_TABLE_ITEM = ITEMS.registerSimpleBlockItem(ARCHITECT_TABLE);
+
     public static final DeferredItem<BuildingPlansItem> BUILDING_PLANS = ITEMS.registerItem("building_plans", BuildingPlansItem::new,
             new Item.Properties().stacksTo(1));
 
@@ -82,6 +92,7 @@ public final class StadRegistries {
             event.accept(CITIZEN_SPAWN_EGG);
         } else if (event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS) {
             event.accept(TOWN_HALL_ITEM);
+            event.accept(ARCHITECT_TABLE_ITEM);
         } else if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
             event.accept(BUILDING_PLANS);
             event.accept(SCAN_WAND);

@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "B",
+    "C"
+  ],
+  "key": {
+    "B": { "item": "stad:building_plans" },
+    "C": { "item": "minecraft:cartography_table" }
+  },
+  "result": { "id": "stad:architect_table", "count": 1 }
+}

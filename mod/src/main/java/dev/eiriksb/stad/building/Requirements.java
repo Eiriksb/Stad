@@ -54,6 +54,9 @@ public final class Requirements {
                 new Need("somewhere to cook (a furnace, smoker or campfire)", c -> c.has(Contents.Thing.COOKING), true),
                 new Need("a chest", c -> c.has(Contents.Thing.STORAGE), false),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        TYPES.put(BuildingDef.MINE, List.of( // a headframe over the shaft: walls and a roof are up to you
+                new Need("a shaft marker where the shaft goes down", c -> c.marker("stad:shaft"), true),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false)));
         type(WORKSHOP,
                 new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true),
                 new Need("a workstation (a smithing table, stonecutter, loom, anvil...)", c -> c.has(Contents.Thing.WORKSTATION), true),

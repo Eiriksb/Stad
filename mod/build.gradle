@@ -44,7 +44,7 @@ neoForge {
         clientJoin {
             client()
             gameDirectory = rootProject.file('run/client')
-            programArguments.addAll '--quickPlayMultiplayer', (findProperty('joinServer') ?: '127.0.0.1:25565').toString(), '--username', 'Eirik'
+            programArguments.addAll '--quickPlayMultiplayer', (findProperty('joinServer') ?: '127.0.0.1:25565').toString(), '--username', 'Eirik', '--width', '1280', '--height', '720'
             systemProperty 'theywilltalk.runtimeDir', runtimeDir // for lending the GPU (/lendgpu)
             jvmArguments.addAll '-Xmx4G'
         }
@@ -61,6 +61,7 @@ neoForge {
             programArgument '--nogui'
             systemProperty 'theywilltalk.dashboardNoAuth', 'true'
             systemProperty 'theywilltalk.devCommands', 'true'
+            systemProperty 'stad.devCommands', 'true'
             systemProperty 'theywilltalk.webDir', new File(twtDir, 'mod/src/main/resources/assets/theywilltalk/web').absolutePath
             systemProperty 'theywilltalk.runtimeDir', runtimeDir
             jvmArguments.addAll '-Xmx6G'

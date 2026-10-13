@@ -61,6 +61,15 @@ with flat roofs and parapets: house, storehouse, workshop). Any building can be 
 
 ![The Fjord and Oasis packs, and the Medieval kitchen and mine](packs.png)
 
+**The architect's table** (Building Plans on top of a cartography table) lets you design for one exact spot. Mark
+two corners with the scan wand and right-click the table with it. You see the site in 3D: drag to turn it, scroll to
+zoom, shift+scroll to cut it off at a layer and look inside. Choose what kind of building it is, a style, floors and a
+roof, and click **Generate**; then change it block by block (the tools are along the bottom; right-click removes,
+middle-click picks a block, R turns it, E opens the block list). The line at the bottom left says what it still needs.
+**Plan it here** hands it to the builders; **Save to pack** keeps it for anywhere.
+
+![The architect's table: a generated cherry house on a hillside site](table.png)
+
 Built a house yourself? Stand in it and tell a citizen "this is your home now". The **scan wand** (an amethyst shard
 on top of two sticks) saves your buildings into **My pack**.
 

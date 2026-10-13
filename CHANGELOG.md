@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+**The architect's table**
+- A new block (Building Plans on top of a cartography table) for designing a building for an exact site: mark it with
+  the scan wand, see it in 3D, generate a building of any kind that fits it (up to 32 by 32), change it block by block
+  with a full set of tools, ask the planner model for changes, see what it still needs, then plan it for the builders
+  or save it into My pack. Officers edit, members watch, and the table keeps its project when it's broken.
+- The generator draws buildings up to 32 blocks long (still 17 when talking to a builder), and a building on the site
+  can be redesigned in place.
+
 ## 0.1.0 (first release)
 
 Stad needs [They Will Talk](https://github.com/Eiriksb/they-will-talk) 0.3.0-alpha.6 or newer, NeoForge 21.1 on

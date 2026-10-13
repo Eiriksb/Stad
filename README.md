@@ -100,6 +100,21 @@ Data mode with `stad:storage`, `stad:work`, `stad:sit`, `stad:bed`, `stad:door` 
 as markers (with storage markers, only the chests next to them count as the town's; `stad:shaft` is the middle of a
 mine's shaft).
 
+**The architect's table** (Building Plans on top of a cartography table) is for designing a building for exactly
+this piece of land. Mark the site's corners with the scan wand and right-click the table with it (or type the
+corners into the table's screen): at most 32 by 32 blocks and 32 high, on the town's land. The table shows the site in
+3D with the land round it (drag to turn, scroll to zoom, middle-drag to pan, shift+scroll or Page Up/Down to cut the
+view off at a layer and look inside). Pick what kind of building it is (any of them: home, builder's hut, warehouse,
+barracks, watchtower, kitchen, mine, workshop), a style, floors, roof, beds and extras, and **Generate** fills the
+site with a building that fits, standing on the ground with a foundation where the land falls away. Then change it
+by hand: place, break, pick, box, walls, floor, line, replace, copy and paste, markers, mirroring and undo, with a
+searchable list of every block a survival player can place (and what the town has of each). Hand edits stay on top
+when you generate again; **Flatten** makes it all plain blocks. **Ask** has the planner model revise it from what you
+write ("add a porch and make the roof hip"). The line bottom left says what it still needs to be that kind of
+building. **Save to pack** keeps it in My pack; **Plan it here** plans it on the site for the builders (what the
+design leaves out of the site stays as it is; a finished building on the site is redesigned in place). Officers
+edit; other members can watch. Broken, the table keeps its project.
+
 **Styles.** A palette gives the roles new materials, so any pack building can be built in another style: pick one in
 the Building Plans, say it to the builder ("in the Nordic style"), or `/stad colony plan <building> <style>`. The mod
 brings seven; add your own as `data/<namespace>/stad/palettes/<id>.json`:
@@ -266,6 +281,11 @@ Point it elsewhere with `-PtwtDir=<path>`.
 ./gradlew :mod:runClientJoin2        # a second one as "Tester", for multiplayer
 scripts/rcon.py "list"               # talk to the dev server (enable RCON in run/server/server.properties)
 ```
+
+The dev server runs with `-Dstad.devCommands=true`, which adds `/stad dev table <player> <pos>` (open a table for a
+player) and `/stad dev ui <player> <script>`: clicks, drags, keys and screenshots on the player's open screen
+(`click x y [button]; drag x1 y1 x2 y2; scroll x y n; key pgdn; type text; wait ticks; shot name`, in GUI
+coordinates; screenshots land in `run/client/screenshots`), for trying screens out from the console.
 
 The dev runs share TWT's AI runtime (`../they-will-talk/runtime`), so models installed for TWT work here too. The dev
 server needs `online-mode=false` in `run/server/server.properties` for the offline dev clients to join.

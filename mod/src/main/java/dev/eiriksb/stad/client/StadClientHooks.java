@@ -31,6 +31,24 @@ public final class StadClientHooks {
         }
     }
 
+    public static void openTable(dev.eiriksb.stad.net.TablePayloads.Open p) {
+        var next = new dev.eiriksb.stad.client.architect.ArchitectScreen(p);
+        if (Minecraft.getInstance().screen instanceof dev.eiriksb.stad.client.architect.ArchitectScreen s && s.table().equals(p.table())) {
+            s.replacedBy(next);
+        }
+        Minecraft.getInstance().setScreen(next);
+    }
+
+    public static void updateTable(dev.eiriksb.stad.net.TablePayloads.Update p) {
+        if (Minecraft.getInstance().screen instanceof dev.eiriksb.stad.client.architect.ArchitectScreen s && s.table().equals(p.table())) {
+            s.update(p);
+        }
+    }
+
+    public static void devUi(String script) {
+        DevUi.run(script);
+    }
+
     public static void draftPreview(dev.eiriksb.stad.net.DraftPreviewPayload preview) {
         GhostPreview.set(preview);
     }

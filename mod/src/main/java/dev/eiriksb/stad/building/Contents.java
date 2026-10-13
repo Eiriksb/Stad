@@ -31,6 +31,8 @@ public final class Contents {
     public boolean entrance = true;
     /** how tall it is, in blocks */
     public int height;
+    /** the markers in it ("stad:shaft"...) */
+    public final java.util.Set<String> markers = new java.util.HashSet<>();
 
     public int count(Thing t) {
         return counts.getOrDefault(t, 0);
@@ -38,6 +40,10 @@ public final class Contents {
 
     public boolean has(Thing t) {
         return count(t) > 0;
+    }
+
+    public boolean marker(String name) {
+        return markers.contains(name);
     }
 
     public void add(BlockState s) {
@@ -78,6 +84,7 @@ public final class Contents {
     public static Contents of(Blueprint bp) {
         Contents c = new Contents();
         bp.entries().forEach(e -> c.add(e.state()));
+        bp.markers().forEach(m -> c.markers.add(m.name()));
         c.height = bp.size().getY();
         return c;
     }

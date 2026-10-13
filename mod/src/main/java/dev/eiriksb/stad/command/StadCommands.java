@@ -50,6 +50,9 @@ public final class StadCommands {
         PackCommands.nodes().forEach(stad::then);
         WarCommands.nodes().forEach(stad::then);
         stad.then(PerfCommands.node());
+        if (DevCommands.enabled()) {
+            stad.then(DevCommands.node());
+        }
         d.register(stad
                 .then(Commands.literal("colony")
                         .then(Commands.literal("info").executes(StadCommands::info))

@@ -24,7 +24,9 @@ public record BuildSpec(String name, String type, String base, int width, int de
     public static final List<String> ROOFS = List.of("gable", "hip", "flat");
     public static final List<String> ROOMS = List.of("bedroom", "kitchen", "living", "storage", "workshop", "library");
     public static final List<String> FEATURES = List.of("chimney", "porch", "big_windows");
-    public static final int MIN_SIZE = 5, MAX_SIZE = 17, MAX_FLOORS = 3, MAX_BEDS = 8;
+    public static final int MIN_SIZE = 5, MAX_SIZE = 32, MAX_FLOORS = 3, MAX_BEDS = 8;
+    /** the biggest a builder draws up in conversation (the architect's table fits bigger ones to its site) */
+    public static final int TALK_MAX = 17;
 
     public BuildSpec {
         rooms = List.copyOf(rooms);
@@ -63,8 +65,8 @@ public record BuildSpec(String name, String type, String base, int width, int de
         List<String> b = new ArrayList<>(bases);
         b.add("new");
         props.add("base", enumOf(b));
-        props.add("width", integer(MIN_SIZE, MAX_SIZE));
-        props.add("depth", integer(MIN_SIZE, MAX_SIZE));
+        props.add("width", integer(MIN_SIZE, TALK_MAX));
+        props.add("depth", integer(MIN_SIZE, TALK_MAX));
         props.add("floors", integer(1, MAX_FLOORS));
         props.add("roof", enumOf(ROOFS));
         props.add("walls", enumOf(Materials.names()));
