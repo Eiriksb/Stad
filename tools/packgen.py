@@ -347,6 +347,92 @@ def oasis_workshop():
     bed(b, "orange", (5, 1, 5), "north")
     return (w, h, d), b
 
+
+# ---- workplaces (M13): the same furniture in each pack's own shell -------------------------------------------------
+
+def medieval_shell(w, d, windows):
+    return house(w, d, 3, "minecraft:cobblestone", "minecraft:oak_planks", "minecraft:oak_log", "minecraft:spruce_stairs",
+                 "minecraft:spruce_planks", "minecraft:spruce_slab", w // 2, windows)
+
+def fjord_shell(w, d, windows):
+    b = laft(w, d, 3, "minecraft:spruce_log", w // 2, windows)
+    for x in range(1, w - 1):
+        for z in range(1, d - 1):
+            b[(x, 4, z)] = ("minecraft:spruce_planks", {})
+    top = gable(b, w, d, 4, "minecraft:moss_block", "minecraft:moss_block", "minecraft:spruce_planks")
+    return (w, top, d), b
+
+def oasis_shell(w, d, windows):
+    h, b = flat_house(w, d, 3, w // 2, windows)
+    return (w, h, d), b
+
+def furnish_farmhouse(b, w, d):
+    b[(1, 1, d - 2)] = ("minecraft:composter", {"level": "0"})
+    b[(2, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(w - 2, 1, d - 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def furnish_lumber_camp(b, w, d):
+    b[(1, 1, d - 2)] = ("minecraft:crafting_table", {})
+    b[(2, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(w - 2, 1, d - 2)] = ("minecraft:stonecutter", {"facing": "north"})
+    for z in range(1, d - 2):
+        b[(w - 2, 1, z)] = ("minecraft:oak_log", {"axis": "z"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def furnish_fishery(b, w, d):
+    b[(1, 1, d - 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(2, 1, d - 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(w - 2, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def furnish_barn(b, w, d):
+    b[(1, 1, d - 2)] = ("minecraft:loom", {"facing": "north"})
+    b[(2, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    for x in range(w - 3, w - 1):
+        b[(x, 1, d - 2)] = ("minecraft:hay_block", {"axis": "y"})
+    b[(w - 2, 1, d - 3)] = ("minecraft:hay_block", {"axis": "y"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def with_pen(size, b, fence, gate):
+    """A fenced pen behind the building (south), reached through a back door; the pen is 5 deep."""
+    w, h, d = size
+    door = b[(w // 2, 1, 0)][0]
+    b[(w // 2, 1, d - 1)] = (door, {"facing": "north", "half": "lower", "hinge": "left", "open": "false"})
+    b[(w // 2, 2, d - 1)] = (door, {"facing": "north", "half": "upper", "hinge": "left", "open": "false"})
+    pd = 5
+    for x in range(w):
+        for z in range(d, d + pd):
+            edge = x in (0, w - 1) or z == d + pd - 1
+            b[(x, 0, z)] = ("minecraft:grass_block", {"snowy": "false"})
+            if edge:
+                if (x, z) == (w // 2, d + pd - 1):
+                    b[(x, 1, z)] = (gate, {"facing": "south", "open": "false", "in_wall": "false", "powered": "false"})
+                else:
+                    sides = {"north": "false", "south": "false", "east": "false", "west": "false"}
+                    if x in (0, w - 1):
+                        sides["north"] = "true"
+                        if z < d + pd - 1:
+                            sides["south"] = "true"
+                    if z == d + pd - 1:
+                        if x > 0:
+                            sides["west"] = "true"
+                        if x < w - 1:
+                            sides["east"] = "true"
+                    b[(x, 1, z)] = (fence, sides)
+    return (w, h, d + pd), b
+
+def workplace(shell, furnish, w, d, windows, pen=None):
+    def make():
+        size, b = shell(w, d, windows)
+        furnish(b, w, d)
+        if pen:
+            return with_pen(size, b, *pen)
+        return size, b
+    return make
+
+SIDE_WINDOWS = lambda w, d: [(0, 2, d // 2), (w - 1, 2, d // 2)]
+
 PACKS = {
     "medieval": ({"name": "Medieval", "description": "Timber, cobblestone and hip roofs.", "author": "Stad"}, {
         "builder_hut": ("stad:builder_hut", "Builder's Hut", "Where the town's builder lives and works.", builder_hut, ["small", "workplace"]),
@@ -354,16 +440,40 @@ PACKS = {
         "warehouse": ("stad:warehouse", "Warehouse", "Chests and barrels for the town's goods.", warehouse, ["storage"]),
         "kitchen": ("stad:kitchen", "Kitchen", "A smoker and a furnace for the town's cook.", kitchen, ["small", "workplace"]),
         "mine": ("stad:mine", "Mine", "A headframe over a shaft the town's miner digs deeper, layer by layer.", mine, ["workplace"]),
+        "farmhouse": ("stad:farmhouse", "Farmhouse", "Where the farmers keep their tools and take in the harvest.",
+                      workplace(medieval_shell, furnish_farmhouse, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "lumber_camp": ("stad:lumber_camp", "Lumber Camp", "A woodcutters' hut with a log pile and a stonecutter.",
+                        workplace(medieval_shell, furnish_lumber_camp, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "fishery": ("stad:fishery", "Fishery", "Barrels for the catch; build it by the water.",
+                    workplace(medieval_shell, furnish_fishery, 7, 5, SIDE_WINDOWS(7, 5)), ["small", "workplace"]),
+        "barn": ("stad:barn", "Barn", "Hay, a loom and a fenced pen behind it for the shepherd's animals.",
+                 workplace(medieval_shell, furnish_barn, 9, 7, SIDE_WINDOWS(9, 7), ("minecraft:oak_fence", "minecraft:oak_fence_gate")), ["workplace"]),
     }),
     "fjord": ({"name": "Fjord", "description": "Laid log walls on stone footings, under turf roofs.", "author": "Stad"}, {
         "stue": ("stad:home", "Stue", "A log house with a turf roof and two beds.", fjord_stue, ["small", "home"]),
         "stabbur": ("stad:warehouse", "Stabbur", "The log storehouse, chests and barrels round its walls.", fjord_stabbur, ["storage"]),
         "smie": ("stad:builder_hut", "Builder's Smie", "The builder's workshop and bed under a turf roof.", fjord_smie, ["small", "workplace"]),
+        "gardshus": ("stad:farmhouse", "Gardshus", "The farm's log house, with a composter and the harvest chest.",
+                     workplace(fjord_shell, furnish_farmhouse, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "vedskjul": ("stad:lumber_camp", "Vedskjul", "The woodshed: a log pile, a crafting table and a stonecutter under turf.",
+                     workplace(fjord_shell, furnish_lumber_camp, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "naust": ("stad:fishery", "Naust", "The boathouse by the water, its barrels for the catch.",
+                  workplace(fjord_shell, furnish_fishery, 7, 5, SIDE_WINDOWS(7, 5)), ["small", "workplace"]),
+        "fjos": ("stad:barn", "Fjos", "The byre: hay and a loom inside, a pen behind.",
+                 workplace(fjord_shell, furnish_barn, 9, 7, SIDE_WINDOWS(9, 7), ("minecraft:spruce_fence", "minecraft:spruce_fence_gate")), ["workplace"]),
     }),
     "oasis": ({"name": "Oasis", "description": "Sandstone houses with flat roofs and parapets, palm-wood beams.", "author": "Stad"}, {
         "house": ("stad:home", "Sandstone House", "A cool sandstone house with two beds.", oasis_house, ["small", "home"]),
         "storehouse": ("stad:warehouse", "Storehouse", "Thick walls keep the town's goods cool.", oasis_storehouse, ["storage"]),
         "workshop": ("stad:builder_hut", "Builder's Workshop", "Where the builder works and sleeps.", oasis_workshop, ["small", "workplace"]),
+        "farmhouse": ("stad:farmhouse", "Oasis Farmhouse", "Cool walls for the harvest, a composter for the fields.",
+                      workplace(oasis_shell, furnish_farmhouse, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "woodyard": ("stad:lumber_camp", "Woodyard", "Where palm and acacia are cut and stacked.",
+                     workplace(oasis_shell, furnish_lumber_camp, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "fishery": ("stad:fishery", "Riverside Fishery", "Barrels for the catch, by the river.",
+                    workplace(oasis_shell, furnish_fishery, 7, 5, SIDE_WINDOWS(7, 5)), ["small", "workplace"]),
+        "stable": ("stad:barn", "Stable", "Hay and a loom in the shade, a pen behind.",
+                   workplace(oasis_shell, furnish_barn, 9, 7, SIDE_WINDOWS(9, 7), ("minecraft:jungle_fence", "minecraft:jungle_fence_gate")), ["workplace"]),
     }),
 }
 

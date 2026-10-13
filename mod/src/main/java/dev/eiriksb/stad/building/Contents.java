@@ -33,6 +33,13 @@ public final class Contents {
     public int height;
     /** the markers in it ("stad:shaft"...) */
     public final java.util.Set<String> markers = new java.util.HashSet<>();
+    /** every kind of block in it, counted */
+    private final Map<Block, Integer> blocks = new java.util.HashMap<>();
+    /**
+     * what's round it, when that was looked at ({@link Surroundings}): "farmland", "trees", "water", "pen"; null when
+     * nobody looked (then needs that depend on it count as met)
+     */
+    public java.util.Set<String> near;
 
     public int count(Thing t) {
         return counts.getOrDefault(t, 0);
@@ -46,8 +53,18 @@ public final class Contents {
         return markers.contains(name);
     }
 
+    public int count(Block b) {
+        return blocks.getOrDefault(b, 0);
+    }
+
+    /** Whether there's {@code what} round it (or nobody looked). */
+    public boolean near(String what) {
+        return near == null || near.contains(what);
+    }
+
     public void add(BlockState s) {
         Block b = s.getBlock();
+        blocks.merge(b, 1, Integer::sum);
         if (b instanceof BedBlock) {
             if (s.getValue(BedBlock.PART) == BedPart.HEAD) {
                 inc(Thing.BED);

@@ -35,7 +35,8 @@ public class MineGoal extends WorkGoal {
         if (block != null && (step ? level.getBlockState(block).canBeReplaced() : !level.getBlockState(block).isAir())) {
             return true;
         }
-        Mine.Task task = Mine.shafts(colony).stream().sorted(Comparator.comparingDouble(s -> s.distSqr(citizen.blockPosition())))
+        BlockPos from = from(colony);
+        Mine.Task task = Mine.shafts(colony).stream().sorted(Comparator.comparingDouble(s -> s.distSqr(from)))
                 .map(s -> Mine.task(level, s, citizen.blockPosition())).flatMap(Optional::stream).findFirst().orElse(null);
         block = task == null ? null : task.pos();
         step = task != null && task.step();

@@ -38,9 +38,11 @@ public final class DesignCheck {
         }
     }
 
+    /** {@code near}: what's round the site ({@link dev.eiriksb.stad.building.Surroundings}), or null when unknown. */
     public static Result check(ResourceLocation type, Grid terrain, int sx, int sy, int sz, Map<Integer, BlockState> design,
-                               Map<Integer, String> markers) {
+                               Map<Integer, String> markers, java.util.Set<String> near) {
         Contents c = contents(terrain, sx, sy, sz, design, markers);
+        c.near = near;
         List<Row> rows = new ArrayList<>();
         for (Requirements.Need n : Requirements.needs(type)) {
             rows.add(new Row(n.what(), n.met().test(c), n.required()));

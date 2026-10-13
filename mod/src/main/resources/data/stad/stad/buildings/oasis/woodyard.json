@@ -1,0 +1,10 @@
+{
+  "type": "stad:lumber_camp",
+  "name": "Woodyard",
+  "description": "Where palm and acacia are cut and stacked.",
+  "structure": "stad:oasis/woodyard",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

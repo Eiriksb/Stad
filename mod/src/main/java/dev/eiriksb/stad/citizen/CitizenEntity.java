@@ -278,9 +278,11 @@ public class CitizenEntity extends PathfinderMob {
     /** 0..100, from food, sleep, a home, work and company (and from M5, how the town is led). */
     public int happiness() {
         Optional<CitizenRecord> r = record();
-        boolean job = r.map(x -> x.job != null).orElse(false);
         boolean company = r.map(x -> level().getGameTime() - x.lastSocial < 24000).orElse(false);
-        double h = 30 * hunger / MAX_NEED + 25 * rest / MAX_NEED + (home().isPresent() ? 20 : 0) + (job ? 15 : 5) + (company ? 10 : 0);
+        // a job is worth more with somewhere to do it (PLAN.md §6.8)
+        int work = r.map(x -> x.job == null ? 5 : dev.eiriksb.stad.colony.Workplaces.kinds(x.job).isEmpty() ? 15
+                : colony().flatMap(c -> dev.eiriksb.stad.colony.Workplaces.of(c, x)).isPresent() ? 20 : 12).orElse(5);
+        double h = 30 * hunger / MAX_NEED + 25 * rest / MAX_NEED + (home().isPresent() ? 20 : 0) + work + (company ? 10 : 0);
         return (int) Math.round(Math.max(0, Math.min(100, h)));
     }
 

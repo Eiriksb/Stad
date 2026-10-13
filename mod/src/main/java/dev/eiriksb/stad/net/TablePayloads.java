@@ -64,7 +64,7 @@ public final class TablePayloads {
      */
     public record Open(BlockPos table, String colony, boolean canEdit, String editor, List<String> types, List<Style> styles,
                        BlockPos min, int sx, int sy, int sz, Grid terrain, Design design, List<String> stockItems, int[] stockCounts,
-                       String biome, List<BlockPos> corners, String message) implements CustomPacketPayload {
+                       String biome, List<BlockPos> corners, List<String> near, String message) implements CustomPacketPayload {
         public static final Type<Open> TYPE = id("table_open");
         public static final StreamCodec<FriendlyByteBuf, Open> CODEC = StreamCodec.of((b, p) -> {
             b.writeBlockPos(p.table);
@@ -86,6 +86,7 @@ public final class TablePayloads {
             b.writeVarIntArray(p.stockCounts);
             b.writeUtf(p.biome);
             b.writeCollection(p.corners, (buf, pos) -> buf.writeBlockPos(pos));
+            b.writeCollection(p.near, FriendlyByteBuf::writeUtf);
             b.writeUtf(p.message);
         }, b -> {
             BlockPos table = b.readBlockPos();
@@ -105,7 +106,8 @@ public final class TablePayloads {
                 terrain = Grid.read(b);
             }
             return new Open(table, colony, canEdit, editor, types, styles, min, sx, sy, sz, terrain, Design.read(b),
-                    b.readList(FriendlyByteBuf::readUtf), b.readVarIntArray(), b.readUtf(), b.readList(buf -> buf.readBlockPos()), b.readUtf());
+                    b.readList(FriendlyByteBuf::readUtf), b.readVarIntArray(), b.readUtf(), b.readList(buf -> buf.readBlockPos()),
+                    b.readList(FriendlyByteBuf::readUtf), b.readUtf());
         });
 
         public boolean hasSite() {
@@ -159,7 +161,7 @@ public final class TablePayloads {
 
     /** Client to server: everything else the screen does. */
     public record Action(BlockPos table, Kind kind, String text) implements CustomPacketPayload {
-        public enum Kind { SITE, GENERATE, DESCRIBE, FLATTEN, START_OVER, RENAME, TYPE, SAVE, PLAN, CLOSE }
+        public enum Kind { SITE, GENERATE, DESCRIBE, FLATTEN, START_OVER, RENAME, TYPE, SAVE, PLAN, CLOSE, FREE_BUILD }
 
         public static final Type<Action> TYPE = id("table_action");
         public static final StreamCodec<FriendlyByteBuf, Action> CODEC = StreamCodec.of((b, p) -> {

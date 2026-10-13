@@ -72,6 +72,8 @@ public final class Tables {
         final BlockPos table;
         final boolean edit;
         Grid terrain;
+        /** what's round the site ({@link dev.eiriksb.stad.building.Surroundings}) */
+        Set<String> near = Set.of();
 
         Session(UUID player, ServerLevel level, BlockPos table, boolean edit) {
             this.player = player;
@@ -132,6 +134,10 @@ public final class Tables {
         if (be.isEmpty()) {
             return;
         }
+        if (FreeBuild.building(player)) {
+            tell(player, "You're building in a site: finish (Done in chat) before using a table.", ChatFormatting.YELLOW);
+            return;
+        }
         if (colony.isEmpty()) {
             tell(player, "An architect's table works on a town's land: put it inside a town.", ChatFormatting.RED);
             return;
@@ -180,6 +186,7 @@ public final class Tables {
         Project p = be.get().project();
         if (p.hasSite()) {
             s.terrain = capture(level, p);
+            s.near = dev.eiriksb.stad.building.Surroundings.of(level, siteBox(p));
             if (p.spec != null) {
                 int sy = p.sy;
                 if (Fit.generate(p, s.terrain) == null && p.sy != sy) {
@@ -193,6 +200,10 @@ public final class Tables {
         String editor = other == null ? "" : Optional.ofNullable(player.server.getPlayerList().getPlayer(other.player))
                 .map(o -> o.getGameProfile().getName()).orElse("someone");
         PacketDistributor.sendToPlayer(player, openPayload(player, level, colony.get(), pos, p, s, editor, message));
+    }
+
+    static BoundingBox siteBox(Project p) {
+        return new BoundingBox(p.min.getX(), p.min.getY(), p.min.getZ(), p.min.getX() + p.sx - 1, p.min.getY() + p.sy - 1, p.min.getZ() + p.sz - 1);
     }
 
     private static Grid capture(ServerLevel level, Project p) {
@@ -219,7 +230,7 @@ public final class Tables {
         String biome = p.hasSite() ? level.getBiome(p.min.offset(p.sx / 2, 0, p.sz / 2)).unwrapKey().map(k -> k.location().toString())
                 .orElse("minecraft:plains") : "minecraft:plains";
         return new TablePayloads.Open(pos, colony.name(), s.edit, editor, types().stream().map(ResourceLocation::toString).toList(), styles,
-                p.min, p.sx, p.sy, p.sz, p.hasSite() ? s.terrain : null, design(p), items, counts, biome, corners, message);
+                p.min, p.sx, p.sy, p.sz, p.hasSite() ? s.terrain : null, design(p), items, counts, biome, corners, List.copyOf(s.near), message);
     }
 
     /** What the town has in its stores (the town hall, builder's huts and warehouses), by item. */
@@ -389,6 +400,14 @@ public final class Tables {
                 case PLAN -> {
                     Said said = plan(player, s, p, colony);
                     status(player, s, said.message(), said.error());
+                }
+                case FREE_BUILD -> {
+                    String problem = FreeBuild.start(player, s.level, s.table, p);
+                    if (problem != null) {
+                        player.sendSystemMessage(Component.literal(problem).withStyle(ChatFormatting.RED));
+                    } else {
+                        sessions.remove(player.getUUID());
+                    }
                 }
                 default -> {
                 }
@@ -605,7 +624,8 @@ public final class Tables {
         if (p.spec != null) {
             Fit.generate(p, s.terrain);
         }
-        DesignCheck.Result check = DesignCheck.check(p.type, s.terrain, p.sx, p.sy, p.sz, p.design(), p.markers);
+        DesignCheck.Result check = DesignCheck.check(p.type, s.terrain, p.sx, p.sy, p.sz, p.design(), p.markers,
+                dev.eiriksb.stad.building.Surroundings.of(s.level, siteBox(p)));
         if (!check.ready()) {
             return new Said("It isn't a " + Requirements.word(p.type) + " yet: it needs " + Design.join(check.missing()) + ".", true);
         }
@@ -710,7 +730,8 @@ public final class Tables {
 
     /** For tests: checks a project against its type's needs, against the world as it is. */
     public static DesignCheck.Result check(ServerLevel level, Project p) {
-        return DesignCheck.check(p.type, capture(level, p), p.sx, p.sy, p.sz, p.design(), p.markers);
+        return DesignCheck.check(p.type, capture(level, p), p.sx, p.sy, p.sz, p.design(), p.markers,
+                dev.eiriksb.stad.building.Surroundings.of(level, siteBox(p)));
     }
 
     /** Applies edits as the screen would, for tests (no rank or session checks). */

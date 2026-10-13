@@ -19,8 +19,19 @@ public final class Requirements {
 
     public static final ResourceLocation WORKSHOP = ResourceLocation.fromNamespaceAndPath("stad", "workshop");
 
-    /** Something a building needs ({@code required}) or would be nicer with. */
-    public record Need(String what, Predicate<Contents> met, boolean required) {}
+    /**
+     * Something a building needs ({@code required}) or would be nicer with; {@code furnish} is a block that meets it,
+     * which the architect's table puts in a generated building that lacks it (or null).
+     */
+    public record Need(String what, Predicate<Contents> met, boolean required, net.minecraft.world.level.block.Block furnish) {
+        public Need(String what, Predicate<Contents> met, boolean required) {
+            this(what, met, required, null);
+        }
+    }
+
+    private static Need block(String what, net.minecraft.world.level.block.Block b) {
+        return new Need(what, c -> c.count(b) > 0, true, b);
+    }
 
     private static final List<Need> SHELTER = List.of(
             new Need("walls all round", c -> c.walls, true),
@@ -51,12 +62,32 @@ public final class Requirements {
                 new Need("some height (at least 8 blocks)", c -> c.height >= 8, true),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false)));
         type(BuildingDef.KITCHEN,
-                new Need("somewhere to cook (a furnace, smoker or campfire)", c -> c.has(Contents.Thing.COOKING), true),
+                new Need("somewhere to cook (a furnace, smoker or campfire)", c -> c.has(Contents.Thing.COOKING), true,
+                        net.minecraft.world.level.block.Blocks.SMOKER),
                 new Need("a chest", c -> c.has(Contents.Thing.STORAGE), false),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
         TYPES.put(BuildingDef.MINE, List.of( // a headframe over the shaft: walls and a roof are up to you
                 new Need("a shaft marker where the shaft goes down", c -> c.marker("stad:shaft"), true),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false)));
+        type(BuildingDef.FARMHOUSE,
+                block("a composter", net.minecraft.world.level.block.Blocks.COMPOSTER),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), true, net.minecraft.world.level.block.Blocks.CHEST),
+                new Need("farmland within " + Surroundings.FARMLAND + " blocks", c -> c.near("farmland"), false),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.LUMBER_CAMP,
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), true, net.minecraft.world.level.block.Blocks.CHEST),
+                new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true, net.minecraft.world.level.block.Blocks.CRAFTING_TABLE),
+                new Need("trees within " + Surroundings.TREES + " blocks", c -> c.near("trees"), false),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.FISHERY,
+                block("a barrel", net.minecraft.world.level.block.Blocks.BARREL),
+                new Need("a pond or river within " + Surroundings.WATER + " blocks", c -> c.near("water"), false),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.BARN,
+                block("a loom", net.minecraft.world.level.block.Blocks.LOOM),
+                block("a hay bale", net.minecraft.world.level.block.Blocks.HAY_BLOCK),
+                new Need("a fenced pen beside it", c -> c.near("pen"), false),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
         type(WORKSHOP,
                 new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true),
                 new Need("a workstation (a smithing table, stonecutter, loom, anvil...)", c -> c.has(Contents.Thing.WORKSTATION), true),
@@ -118,6 +149,21 @@ public final class Requirements {
         }
         if (w.contains("warehouse") || w.contains("store") || w.contains("storage")) {
             return BuildingDef.WAREHOUSE;
+        }
+        if (w.contains("farm")) {
+            return BuildingDef.FARMHOUSE;
+        }
+        if (w.contains("lumber") || w.contains("sawmill") || w.contains("woodcutter") || w.contains("logging")) {
+            return BuildingDef.LUMBER_CAMP;
+        }
+        if (w.contains("fish") || w.contains("boathouse") || w.contains("boat house")) {
+            return BuildingDef.FISHERY;
+        }
+        if (w.contains("barn") || w.contains("stable") || w.contains("byre")) {
+            return BuildingDef.BARN;
+        }
+        if (w.contains("kitchen") || w.contains("bakery")) {
+            return BuildingDef.KITCHEN;
         }
         if (w.contains("workshop") || w.contains("smithy") || w.contains("forge")) {
             return WORKSHOP;

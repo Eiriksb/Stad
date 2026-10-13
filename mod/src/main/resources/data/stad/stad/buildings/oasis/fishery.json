@@ -1,0 +1,10 @@
+{
+  "type": "stad:fishery",
+  "name": "Riverside Fishery",
+  "description": "Barrels for the catch, by the river.",
+  "structure": "stad:oasis/fishery",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

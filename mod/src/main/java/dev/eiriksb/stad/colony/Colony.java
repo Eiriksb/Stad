@@ -143,7 +143,7 @@ public final class Colony {
         return citizens.size();
     }
 
-    CitizenRecord addCitizen(UUID uuid, String name, long time) {
+    public CitizenRecord addCitizen(UUID uuid, String name, long time) {
         CitizenRecord r = citizens.computeIfAbsent(uuid, u -> new CitizenRecord(u, name, time));
         changed();
         return r;

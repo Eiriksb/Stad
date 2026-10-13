@@ -108,7 +108,7 @@ public final class ArchitectGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "lot", batch = "architect", timeoutTicks = 100)
+    @GameTest(template = "lot", batch = "architect_fit", timeoutTicks = 100)
     public static void tableGeneratesABuildingThatFitsItsSite(GameTestHelper helper) {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();
         Colony colony = found(helper, owner);
@@ -154,7 +154,7 @@ public final class ArchitectGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "lot", batch = "architect", timeoutTicks = 100)
+    @GameTest(template = "lot", batch = "architect_plan", timeoutTicks = 100)
     public static void tablePlansAndSavesTheDesign(GameTestHelper helper) {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();
         ServerPlayer stranger = helper.makeMockServerPlayerInLevel();
@@ -201,7 +201,7 @@ public final class ArchitectGameTests {
         helper.succeed();
     }
 
-    @GameTest(template = "lot", batch = "architect", timeoutTicks = 100)
+    @GameTest(template = "lot", batch = "architect_wand", timeoutTicks = 100)
     public static void wandSetsTheSiteAndTheTableKeepsItsProject(GameTestHelper helper) {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();
         Colony colony = found(helper, owner);

@@ -178,7 +178,14 @@ public final class Leadership {
         long now = level.getGameTime();
         StadConfig.Leadership difficulty = StadConfig.LEADERSHIP.get();
         int happy = townHappiness(colony);
+        int grumbles = 0;
         for (CitizenRecord r : colony.citizens()) {
+            boolean placed = dev.eiriksb.stad.colony.Workplaces.kinds(r.job).isEmpty() || dev.eiriksb.stad.colony.Workplaces.of(colony, r).isPresent();
+            r.noWorkplaceDays = placed ? 0 : r.noWorkplaceDays + 1;
+            if (r.noWorkplaceDays >= 2 && grumbles < 2) {
+                grumbles++;
+                colony.changeLeadersStanding(-1, r.name + " has nowhere to work (they'd like " + dev.eiriksb.stad.colony.Workplaces.wanted(r.job) + ")", now);
+            }
             if (r.wentHungry) {
                 colony.changeLeadersStanding(-3, r.name + " went hungry", now);
                 TheyWillTalkApi.get().memory().remember(NewMemory.of(r.uuid, Subject.player(colony.owner()),

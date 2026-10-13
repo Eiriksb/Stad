@@ -50,6 +50,9 @@ public final class StadCommands {
         PackCommands.nodes().forEach(stad::then);
         WarCommands.nodes().forEach(stad::then);
         stad.then(PerfCommands.node());
+        stad.then(Commands.literal("build")
+                .then(Commands.literal("done").executes(c -> endBuild(c, true)))
+                .then(Commands.literal("cancel").executes(c -> endBuild(c, false))));
         if (DevCommands.enabled()) {
             stad.then(DevCommands.node());
         }
@@ -87,6 +90,8 @@ public final class StadCommands {
                                         .suggests((c, b) -> SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(Jobs.all().stream(),
                                                 java.util.stream.Stream.of("none")), b))
                                         .executes(c -> order(c, OrderKind.ASSIGN_JOB)))))
+                        .then(Commands.literal("workplace").then(Commands.argument("uuid", StringArgumentType.word())
+                                .then(Commands.argument("building", IntegerArgumentType.integer(1)).executes(StadCommands::workplace))))
                         .then(Commands.literal("talk").then(Commands.argument("uuid", StringArgumentType.word())
                                 .then(Commands.argument("text", StringArgumentType.greedyString()).executes(StadCommands::talk))))
                         .then(Commands.literal("history").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::history)))
@@ -439,6 +444,47 @@ public final class StadCommands {
             }
         }
         return n;
+    }
+
+    /** Ends free build in a table's site (keeping what was built, or not). */
+    private static int endBuild(CommandContext<CommandSourceStack> ctx, boolean keep) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        String result = dev.eiriksb.stad.architect.FreeBuild.finish(player, keep);
+        if (result == null) {
+            return fail(ctx.getSource(), "You're not building in a site.");
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(result).withStyle(ChatFormatting.GOLD), false);
+        return 1;
+    }
+
+    /** Moves a worker to another workplace of their kind (by its number in /stad colony builds). */
+    private static int workplace(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        UUID uuid;
+        try {
+            uuid = UUID.fromString(StringArgumentType.getString(ctx, "uuid"));
+        } catch (IllegalArgumentException e) {
+            return fail(ctx.getSource(), "That's not a citizen.");
+        }
+        Optional<Colony> found = ColonyManager.get(player.server).ofCitizen(uuid);
+        if (found.isEmpty()) {
+            return fail(ctx.getSource(), "That citizen isn't in a town.");
+        }
+        Colony c = found.get();
+        if (!c.rank(player.getUUID()).atLeast(OrderKind.ASSIGN_JOB.minRank)) {
+            return fail(ctx.getSource(), "Only officers of " + c.name() + " can say where people work.");
+        }
+        Optional<dev.eiriksb.stad.colony.Building> b = c.building(IntegerArgumentType.getInteger(ctx, "building"));
+        CitizenRecord r = c.citizen(uuid).orElseThrow();
+        if (b.isEmpty()) {
+            return fail(ctx.getSource(), "There's no building #" + IntegerArgumentType.getInteger(ctx, "building") + " in " + c.name() + ".");
+        }
+        String problem = dev.eiriksb.stad.colony.Workplaces.move(c, r, b.get());
+        if (problem != null) {
+            return fail(ctx.getSource(), problem);
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(r.name + " works from the " + b.get().name + " now."), false);
+        return 1;
     }
 
     private static int order(CommandContext<CommandSourceStack> ctx, OrderKind kind) throws CommandSyntaxException {

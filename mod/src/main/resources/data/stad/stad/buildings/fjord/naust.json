@@ -1,0 +1,10 @@
+{
+  "type": "stad:fishery",
+  "name": "Naust",
+  "description": "The boathouse by the water, its barrels for the catch.",
+  "structure": "stad:fjord/naust",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

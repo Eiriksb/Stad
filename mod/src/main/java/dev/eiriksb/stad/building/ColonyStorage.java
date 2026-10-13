@@ -46,6 +46,11 @@ public final class ColonyStorage {
         return new ColonyStorage(List.of(box));
     }
 
+    /** Some containers. */
+    public static ColonyStorage of(List<Box> boxes) {
+        return new ColonyStorage(List.copyOf(boxes));
+    }
+
     /** Just the town hall: where the food goes. */
     public static ColonyStorage townHall(ServerLevel level, Colony colony) {
         List<Box> found = new ArrayList<>();

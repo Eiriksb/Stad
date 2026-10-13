@@ -33,6 +33,12 @@ voice chat key while looking at them. They remember what you say and what you do
 | Shepherd | shears sheep, feeds the farm animals so they breed, butchers the extras, picks up eggs and wool | sheep, cows, pigs or chickens on the town's land |
 | Miner | digs the town's mine deeper, layer by layer, for stone, coal and ore | a **Mine** from the Medieval pack |
 
+**Workplaces.** Each job works from a building of its own: a **farmhouse** (composter and chest), **lumber camp**
+(chest and crafting table), **fishery** (barrel), **barn** (loom and hay bale), the kitchen, the mine, the builder's hut,
+the warehouse (couriers) and the barracks or a watchtower (guards). Every pack has the four new ones. Workers move into
+the nearest one with room by themselves; tell one "work at the lakeside fishery" to move them. With a workplace they
+start the day there, work the land round it, work faster and are happier; without one they grumble.
+
 Workers bring what they gather to the **warehouse** (or the town hall when there's none). Late in the afternoon they
 bring the day's work in.
 
@@ -69,6 +75,10 @@ middle-click picks a block, R turns it, E opens the block list). The line at the
 **Plan it here** hands it to the builders; **Save to pack** keeps it for anywhere.
 
 ![The architect's table: a generated cherry house on a hillside site](table.png)
+
+**Build in it** takes you into the site in creative to build it yourself. What you build becomes the design; when you
+click **Done** in chat, the site goes back as it was and you get your own things back (nothing you place or break in
+there is real, and nothing comes out with you). The builders then build it for real.
 
 Built a house yourself? Stand in it and tell a citizen "this is your home now". The **scan wand** (an amethyst shard
 on top of two sticks) saves your buildings into **My pack**.

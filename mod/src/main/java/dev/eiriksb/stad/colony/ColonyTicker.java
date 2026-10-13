@@ -67,6 +67,7 @@ public final class ColonyTicker {
             ServerLevel level = server.getLevel(colony.dimension);
             if (level != null) {
                 Homes.update(level, colony);
+                Workplaces.assign(colony);
                 Arrivals.tick(level, colony);
                 Requests.update(level, colony);
                 Leadership.checkConditions(level, colony);

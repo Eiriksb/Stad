@@ -161,6 +161,7 @@ public class ArchitectScreen extends Screen {
         typeIndex = Math.max(0, open.types().indexOf(typeId));
         if (model != null) {
             model.load(open.design());
+            model.near = java.util.Set.copyOf(open.near());
             cut = model.gh() - 1;
             door = Math.max(0, List.of(DOORS).indexOf(Direction.byName(model.door)));
             yaw = new float[]{180, 270, 0, 90}[door] + 30;
@@ -367,6 +368,13 @@ public class ArchitectScreen extends Screen {
             send(TablePayloads.Action.Kind.PLAN, "");
         }).tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
                 "Plan it on the site for the town's builders."))).bounds(px + half + 2, by, half, 18).build()));
+        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Build in it"), b -> {
+            flushName();
+            send(TablePayloads.Action.Kind.FREE_BUILD, "");
+            onClose();
+        }).tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+                "Go into the site and build it yourself, as in creative. What you build becomes the design; nothing you place or break "
+                        + "there is real, and nothing comes out with you."))).bounds(vw - 74, vh - 21, 70, 18).build()));
         editOnly.add(addRenderableWidget(Button.builder(Component.literal("Site..."), b -> {
             siteOpen = !siteOpen;
             rebuildWidgets();
@@ -857,7 +865,7 @@ public class ArchitectScreen extends Screen {
             g.drawString(font, text, 4, vh - 12, 0xFFFFFF, true);
         }
         String hint = tool.hint + (corner != null ? "  (now the other corner)" : "");
-        g.drawString(font, font.plainSubstrByWidth(hint, vw - 8), 4, vh - 24, 0xE0E0E0, true);
+        g.drawString(font, font.plainSubstrByWidth(hint, vw - 84), 4, vh - 24, 0xE0E0E0, true);
     }
 
     private void drawSitePanel(GuiGraphics g) {

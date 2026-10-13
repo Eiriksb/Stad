@@ -66,7 +66,8 @@ public class CookGoal extends WorkGoal {
 
     @Override
     protected boolean hasWork(ServerLevel level, Colony colony) {
-        stove = WorkSites.cooking(level, colony).stream().min(Comparator.comparingDouble(p -> p.distSqr(citizen.blockPosition()))).orElse(null);
+        BlockPos from = from(colony);
+        stove = WorkSites.cooking(level, colony).stream().min(Comparator.comparingDouble(p -> p.distSqr(from))).orElse(null);
         if (stove == null) {
             return false;
         }

@@ -18,7 +18,8 @@ import java.util.Deque;
  * Runs dev scripts from {@link dev.eiriksb.stad.net.DevUiPayload} against the open screen, one step a tick:
  * {@code click x y [button]}, {@code drag x1 y1 x2 y2 [button]}, {@code scroll x y amount}, {@code key name},
  * {@code type text}, {@code wait ticks}, {@code shot name} (saved in screenshots/ once the frame is drawn).
- * Coordinates are the screen's (GUI-scaled).
+ * Coordinates are the screen's (GUI-scaled). In the world: {@code hold item_id} (creative), {@code look yaw pitch},
+ * {@code use}, {@code attack}, {@code drop}.
  */
 @EventBusSubscriber(modid = Stad.MOD_ID, value = Dist.CLIENT)
 public final class DevUi {
@@ -49,13 +50,24 @@ public final class DevUi {
 
     @SubscribeEvent
     static void rendered(ScreenEvent.Render.Post event) {
+        grab(event.getScreen().getClass().getSimpleName() + " at " + event.getScreen().width + "x" + event.getScreen().height);
+    }
+
+    /** In the world, with no screen open. */
+    @SubscribeEvent
+    static void renderedHud(net.neoforged.neoforge.client.event.RenderGuiEvent.Post event) {
+        if (Minecraft.getInstance().screen == null) {
+            grab("the world");
+        }
+    }
+
+    private static void grab(String what) {
         if (shot != null) {
             Minecraft mc = Minecraft.getInstance();
             String name = shot;
             shot = null;
             Screenshot.grab(mc.gameDirectory, name + ".png", mc.getMainRenderTarget(), msg -> Stad.LOGGER.info("dev ui: {}", msg.getString()));
-            Stad.LOGGER.info("dev ui: shot {} of {} at {}x{}", name, event.getScreen().getClass().getSimpleName(), event.getScreen().width,
-                    event.getScreen().height);
+            Stad.LOGGER.info("dev ui: shot {} of {}", name, what);
         }
     }
 
@@ -114,6 +126,20 @@ public final class DevUi {
                         }
                     }
                 }
+                case "hold" -> {
+                    var item = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(a[1]));
+                    int slot = mc.player.getInventory().selected;
+                    net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(item);
+                    mc.player.getInventory().setItem(slot, stack);
+                    mc.gameMode.handleCreativeModeItemAdd(stack, 36 + slot);
+                }
+                case "look" -> {
+                    mc.player.setYRot(Float.parseFloat(a[1]));
+                    mc.player.setXRot(Float.parseFloat(a[2]));
+                }
+                case "use" -> net.minecraft.client.KeyMapping.click(mc.options.keyUse.getKey());
+                case "attack" -> net.minecraft.client.KeyMapping.click(mc.options.keyAttack.getKey());
+                case "drop" -> net.minecraft.client.KeyMapping.click(mc.options.keyDrop.getKey());
                 default -> Stad.LOGGER.warn("dev ui: what's {}?", s);
             }
         } catch (RuntimeException e) {

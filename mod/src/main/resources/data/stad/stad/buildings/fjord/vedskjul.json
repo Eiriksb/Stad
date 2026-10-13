@@ -1,0 +1,10 @@
+{
+  "type": "stad:lumber_camp",
+  "name": "Vedskjul",
+  "description": "The woodshed: a log pile, a crafting table and a stonecutter under turf.",
+  "structure": "stad:fjord/vedskjul",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

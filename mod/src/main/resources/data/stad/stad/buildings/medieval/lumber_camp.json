@@ -1,0 +1,10 @@
+{
+  "type": "stad:lumber_camp",
+  "name": "Lumber Camp",
+  "description": "A woodcutters' hut with a log pile and a stonecutter.",
+  "structure": "stad:medieval/lumber_camp",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

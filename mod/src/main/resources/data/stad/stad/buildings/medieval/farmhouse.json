@@ -1,0 +1,10 @@
+{
+  "type": "stad:farmhouse",
+  "name": "Farmhouse",
+  "description": "Where the farmers keep their tools and take in the harvest.",
+  "structure": "stad:medieval/farmhouse",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

@@ -66,6 +66,20 @@ them.) When you talk to the builder aloud, they keep it short and leave the list
 All of it happens on the town's land. Wheat only feeds anyone once a cook bakes it, and cooked food fills far more than
 raw, so a farmer and a cook keep a small town fed.
 
+**Workplaces.** Every job has a building it works from: farmers a **farmhouse** (a composter and a chest), lumberjacks a
+**lumber camp** (a chest and a crafting table), fishers a **fishery** (a barrel), shepherds a **barn** (a loom and a hay
+bale), cooks the kitchen, miners the mine, builders the builder's hut, couriers the warehouse, guards the barracks or a
+watchtower. Each pack has a farmhouse, lumber camp, fishery and barn of its own, and the architect's table can draw
+them up (it puts in the composter, barrel, loom or hay a generated one lacks, and says whether there's farmland, trees,
+water or a pen round the site). A workplace has room for one worker per work marker, or per job block (composter,
+barrel, loom, furnace, bed...), up to four. Workers are put in the nearest one of their kind with room; move them with
+"work at the lakeside fishery" (or "work here", standing in it), or `/stad citizen workplace`. A worker with a
+workplace goes there first thing in the morning, works the land round it (farmers the fields round their farmhouse,
+lumberjacks the trees round their camp, fishers the nearest shore), works a quarter faster and is happier; when the
+town has a courier they take their haul in there, and the courier carries it on to the warehouse or the town hall.
+Without one they work as before, but grumble about it after a day or two (it costs you a little standing). The town
+hall screen shows who works where.
+
 ### Talking a building through
 
 Talk to the town's builder (typing or by voice) about what you'd like built. Behind the scenes two quick calls to the
@@ -114,6 +128,15 @@ write ("add a porch and make the roof hip"). The line bottom left says what it s
 building. **Save to pack** keeps it in My pack; **Plan it here** plans it on the site for the builders (what the
 design leaves out of the site stays as it is; a finished building on the site is redesigned in place). Officers
 edit; other members can watch. Broken, the table keeps its project.
+
+**Build in it** (bottom right of the view) takes you into the site to build it yourself, in creative: fly, take any
+block, break at a touch. It's all a design: when you click **Done** in chat (or `/stad build done`), what you built
+becomes the table's design (on top of the generated building, like hand edits), the site goes back exactly as it was,
+and you get your own inventory, game mode and place back; **Cancel** throws it away. Nothing comes out of the site:
+everything to put back is saved with the world before you start (so a crash or quitting puts it all back), you can only
+place design blocks and only inside the site, nothing you break or knock loose becomes an item, you can't open
+containers or ender chests, use items that aren't blocks or touch entities, nobody else can change the site meanwhile,
+explosions leave it alone, and flying out puts you back in.
 
 **Styles.** A palette gives the roles new materials, so any pack building can be built in another style: pick one in
 the Building Plans, say it to the builder ("in the Nordic style"), or `/stad colony plan <building> <style>`. The mod
@@ -227,6 +250,8 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad colony plan <building> [style]` | officers: plan a building in front of you (what the Building Plans do) |
 | `/stad colony cancel <id>` | officers |
 | `/stad citizen job <uuid> <builder\|farmer\|lumberjack\|courier\|guard\|none>` | officers (the citizen card has buttons for it) |
+| `/stad citizen workplace <uuid> <building id>` | officers: where a worker works from (ids as in `/stad colony builds`) |
+| `/stad build done` / `cancel` | end free build in an architect's table's site, keeping what you built or not |
 | `/stad draft show` | your draft building: what it is and where (and its buttons again) |
 | `/stad draft approve` / `here` / `turn` / `save` / `cancel` | what the buttons under a draft do |
 | `/stad draft describe <text>` | draw up a building from a description without talking (asks the local model) |
@@ -285,7 +310,8 @@ scripts/rcon.py "list"               # talk to the dev server (enable RCON in ru
 The dev server runs with `-Dstad.devCommands=true`, which adds `/stad dev table <player> <pos>` (open a table for a
 player) and `/stad dev ui <player> <script>`: clicks, drags, keys and screenshots on the player's open screen
 (`click x y [button]; drag x1 y1 x2 y2; scroll x y n; key pgdn; type text; wait ticks; shot name`, in GUI
-coordinates; screenshots land in `run/client/screenshots`), for trying screens out from the console.
+coordinates; in the world `hold item; look yaw pitch; use; attack; drop`; screenshots land in `run/client/screenshots`),
+for trying things out from the console.
 
 The dev runs share TWT's AI runtime (`../they-will-talk/runtime`), so models installed for TWT work here too. The dev
 server needs `online-mode=false` in `run/server/server.properties` for the offline dev clients to join.

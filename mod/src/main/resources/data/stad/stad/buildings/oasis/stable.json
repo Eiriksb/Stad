@@ -1,0 +1,9 @@
+{
+  "type": "stad:barn",
+  "name": "Stable",
+  "description": "Hay and a loom in the shade, a pen behind.",
+  "structure": "stad:oasis/stable",
+  "tags": [
+    "workplace"
+  ]
+}

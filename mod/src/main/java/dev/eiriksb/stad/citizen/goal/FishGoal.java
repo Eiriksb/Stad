@@ -49,8 +49,9 @@ public class FishGoal extends WorkGoal {
         if (spot != null && WorkSites.waterBeside(level, spot).isPresent()) {
             return true;
         }
+        BlockPos from = from(colony);
         List<BlockPos> shore = WorkSites.shore(level, colony).stream()
-                .sorted(Comparator.comparingDouble(p -> p.distSqr(citizen.blockPosition()))).limit(4).toList();
+                .sorted(Comparator.comparingDouble(p -> p.distSqr(from))).limit(4).toList();
         // one of the nearest few, so fishers don't all crowd the same spot
         spot = shore.isEmpty() ? null : shore.get(citizen.getRandom().nextInt(shore.size()));
         bite = 0;

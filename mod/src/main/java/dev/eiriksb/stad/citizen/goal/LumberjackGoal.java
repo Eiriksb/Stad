@@ -56,7 +56,8 @@ public class LumberjackGoal extends WorkGoal {
                 taken.add(c.tree());
             }
         });
-        tree = WorkSites.trees(level, colony).stream().filter(t -> !taken.contains(t) && level.getBlockState(t).is(BlockTags.LOGS))
+        tree = nearWork(colony, WorkSites.trees(level, colony).stream().filter(t -> !taken.contains(t) && level.getBlockState(t).is(BlockTags.LOGS))
+                .toList(), 32).stream()
                 .min(Comparator.comparingDouble(t -> t.distSqr(citizen.blockPosition()))).orElse(null);
         logs = List.of();
         if (tree == null) {

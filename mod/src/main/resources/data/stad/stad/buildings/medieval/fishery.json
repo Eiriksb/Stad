@@ -1,0 +1,10 @@
+{
+  "type": "stad:fishery",
+  "name": "Fishery",
+  "description": "Barrels for the catch; build it by the water.",
+  "structure": "stad:medieval/fishery",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

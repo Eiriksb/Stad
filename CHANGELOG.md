@@ -9,6 +9,15 @@
   or save it into My pack. Officers edit, members watch, and the table keeps its project when it's broken.
 - The generator draws buildings up to 32 blocks long (still 17 when talking to a builder), and a building on the site
   can be redesigned in place.
+- **Free build**: Build in it takes you into the site in creative to build it yourself. What you build becomes the
+  design, the site goes back as it was, and you get your own things back; nothing comes out of the site (and a crash
+  or quitting puts everything back).
+
+**Workplaces**
+- Every job works from a building: new **farmhouse**, **lumber camp**, **fishery** and **barn** types (in every pack),
+  plus the kitchen, mine, builder's hut, warehouse and barracks. Workers get the nearest one with room ("work at the
+  lakeside fishery" moves them); there they start the day, work the land round it, work a quarter faster and are
+  happier, and couriers carry their haul on. Without one they grumble.
 
 ## 0.1.0 (first release)
 

@@ -21,6 +21,10 @@ public final class CitizenRecord {
     public int happiness = 50;
     /** "builder", or null for no job */
     public String job;
+    /** the building they work from ({@link Building#id}), or null */
+    public Integer workplace;
+    /** days in a row they've had a job but nowhere to do it */
+    public int noWorkplaceDays;
     /** what they've done at work today (blocks placed, crops harvested, logs chopped, items delivered) */
     public int workToday;
     /** their plan for today, written each morning (see {@link dev.eiriksb.stad.agent.DayPlanner}) */
@@ -74,6 +78,10 @@ public final class CitizenRecord {
             t.putString("Job", job);
         }
         t.putInt("WorkToday", workToday);
+        if (workplace != null) {
+            t.putInt("Workplace", workplace);
+        }
+        t.putInt("NoWorkplaceDays", noWorkplaceDays);
         net.minecraft.nbt.ListTag planTag = new net.minecraft.nbt.ListTag();
         plan.forEach(p -> planTag.add(net.minecraft.nbt.StringTag.valueOf(p)));
         t.put("Plan", planTag);
@@ -116,6 +124,8 @@ public final class CitizenRecord {
         r.happiness = t.getInt("Happiness");
         r.job = t.contains("Job") ? t.getString("Job") : null;
         r.workToday = t.getInt("WorkToday");
+        r.workplace = t.contains("Workplace") ? t.getInt("Workplace") : null;
+        r.noWorkplaceDays = t.getInt("NoWorkplaceDays");
         java.util.List<String> plan = new java.util.ArrayList<>();
         t.getList("Plan", net.minecraft.nbt.Tag.TAG_STRING).forEach(p -> plan.add(p.getAsString()));
         r.plan = java.util.List.copyOf(plan);

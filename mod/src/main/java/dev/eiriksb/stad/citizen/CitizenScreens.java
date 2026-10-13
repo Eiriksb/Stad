@@ -73,6 +73,10 @@ public final class CitizenScreens {
             about.add((job == null ? "No job" : capitalize(job)) + " of " + t.name() + " · " + who(c.isFemale(), age) + ", " + age);
             c.home().ifPresentOrElse(bed -> about.add("Sleeps in " + Homes.houseOf(t, bed).map(b -> "the " + b.name).orElse("a bed of their own")),
                     () -> about.add("Homeless: has no bed"));
+            c.record().filter(r -> !dev.eiriksb.stad.colony.Workplaces.kinds(r.job).isEmpty()).ifPresent(r -> {
+                String at = dev.eiriksb.stad.colony.Workplaces.describe(t, r);
+                about.add(at != null ? "Works from " + at : "Nowhere to work: would like " + dev.eiriksb.stad.colony.Workplaces.wanted(r.job));
+            });
             Rank rank = t.rank(player.getUUID());
             if (rank.atLeast(Rank.MEMBER)) {
                 var s = t.standing(player.getUUID());

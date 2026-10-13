@@ -45,8 +45,7 @@ public final class PackEditor {
     private PackEditor() {}
 
     /** the kinds of building a pack building can be */
-    public static final List<ResourceLocation> TYPES = List.of(BuildingDef.HOME, BuildingDef.BUILDER_HUT, BuildingDef.WAREHOUSE,
-            Requirements.WORKSHOP, BuildingDef.BARRACKS, BuildingDef.WATCHTOWER, ResourceLocation.fromNamespaceAndPath("stad", "building"));
+    public static final List<ResourceLocation> TYPES = dev.eiriksb.stad.architect.Tables.types();
 
     /**
      * A building open in the editor.

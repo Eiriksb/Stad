@@ -31,6 +31,8 @@ public final class DesignModel {
     public final Map<Integer, String> markers = new HashMap<>();
     public String name = "", type = "stad:home", spec = "", door = "north";
     public int floorY = -1;
+    /** what's round the site (farmland, trees, water, a pen) */
+    public java.util.Set<String> near = java.util.Set.of();
 
     public DesignModel(Grid terrain, BlockPos min, int sx, int sy, int sz) {
         this.terrain = terrain;
@@ -120,7 +122,7 @@ public final class DesignModel {
 
     public DesignCheck.Result check() {
         ResourceLocation t = ResourceLocation.tryParse(type);
-        return DesignCheck.check(t == null ? ResourceLocation.fromNamespaceAndPath("stad", "building") : t, terrain, sx, sy, sz, design, markers);
+        return DesignCheck.check(t == null ? ResourceLocation.fromNamespaceAndPath("stad", "building") : t, terrain, sx, sy, sz, design, markers, near);
     }
 
     public static BlockState air() {

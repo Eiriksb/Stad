@@ -1,0 +1,10 @@
+{
+  "type": "stad:farmhouse",
+  "name": "Oasis Farmhouse",
+  "description": "Cool walls for the harvest, a composter for the fields.",
+  "structure": "stad:oasis/farmhouse",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

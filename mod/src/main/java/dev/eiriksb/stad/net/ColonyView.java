@@ -37,7 +37,12 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         }
         List<String> buildings = new ArrayList<>();
         for (dev.eiriksb.stad.colony.Building b : c.buildings()) {
-            buildings.add("#" + b.id + " " + b.name + ": " + dev.eiriksb.stad.command.StadCommands.status(b));
+            String line = "#" + b.id + " " + b.name + ": " + dev.eiriksb.stad.command.StadCommands.status(b);
+            if (b.done() && dev.eiriksb.stad.colony.Workplaces.isWorkplace(b)) {
+                List<String> who = dev.eiriksb.stad.colony.Workplaces.workers(c, b).stream().map(r -> r.name.split(" ")[0]).toList();
+                line += " · " + who.size() + "/" + dev.eiriksb.stad.colony.Workplaces.slots(b) + " workers" + (who.isEmpty() ? "" : " (" + String.join(", ", who) + ")");
+            }
+            buildings.add(line);
         }
         List<String> needs = new ArrayList<>();
         for (dev.eiriksb.stad.colony.Request r : c.requests()) {

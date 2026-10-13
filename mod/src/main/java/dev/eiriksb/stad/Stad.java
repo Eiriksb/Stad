@@ -44,6 +44,7 @@ public final class Stad {
         dev.eiriksb.stad.pack.Palettes.register();
         dev.eiriksb.stad.pack.SharedPacks.register(modBus);
         dev.eiriksb.stad.item.ScanWandItem.register();
+        dev.eiriksb.stad.architect.FreeBuild.register();
         ColonyProtection.register();
         dev.eiriksb.stad.agent.Leadership.register();
         dev.eiriksb.stad.war.Raids.register();

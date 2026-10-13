@@ -1,0 +1,9 @@
+{
+  "type": "stad:barn",
+  "name": "Barn",
+  "description": "Hay, a loom and a fenced pen behind it for the shepherd's animals.",
+  "structure": "stad:medieval/barn",
+  "tags": [
+    "workplace"
+  ]
+}

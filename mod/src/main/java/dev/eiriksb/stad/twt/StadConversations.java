@@ -21,6 +21,10 @@ public final class StadConversations implements ConversationHook {
         if (envoy != null) {
             return envoy;
         }
+        dev.eiriksb.theywilltalk.api.BeforeReply moved = WorkplaceTalk.beforeReply(turn);
+        if (moved != null) {
+            return moved;
+        }
         dev.eiriksb.theywilltalk.api.BeforeReply given = AdoptionTalk.beforeReply(turn);
         return given != null ? given : dev.eiriksb.stad.planner.Architect.beforeReply(turn);
     }

@@ -84,7 +84,7 @@ public final class StadAdapter implements VillagerAdapter {
         } else if (job != null) {
             jobContext(c, t, f, job);
         } else {
-            f.context.add("You have no job yet; you'd like the leader to give you one (builder, farmer, lumberjack or courier).");
+            f.context.add("You have no job yet; you'd like the leader to give you one (builder, farmer, lumberjack, courier, cook, fisher, shepherd, miner or guard).");
         }
         c.record().ifPresent(r -> {
             if (!r.plan.isEmpty()) {
@@ -163,6 +163,15 @@ public final class StadAdapter implements VillagerAdapter {
         int done = c.record().map(r -> r.workToday).orElse(0);
         net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) c.level();
         f.context.add("You're the town's " + job + ": " + Jobs.describe(job) + ".");
+        c.record().ifPresent(r -> {
+            String at = dev.eiriksb.stad.colony.Workplaces.describe(t, r);
+            String wanted = dev.eiriksb.stad.colony.Workplaces.wanted(job);
+            if (at != null) {
+                f.context.add("You work from " + at + ".");
+            } else if (wanted != null) {
+                f.context.add("You have nowhere to work from; you'd like the leader to build " + wanted + " (you'd work faster and be happier).");
+            }
+        });
         switch (job) {
             case Jobs.FARMER -> f.context.add(WorkSites.farmland(level, t).isEmpty()
                     ? "There's no farmland on the town's land yet; you'd like the leader to make some fields (hoe the dirt, near water)."

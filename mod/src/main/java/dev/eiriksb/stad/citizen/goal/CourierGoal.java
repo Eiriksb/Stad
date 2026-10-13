@@ -13,9 +13,20 @@ import net.minecraft.world.item.ItemStack;
 
 import java.util.Optional;
 
-/** The courier takes the town's requests one by one: fetch it from a warehouse, bring it where it's needed. */
+/**
+ * The courier takes the town's requests one by one: fetch it from a warehouse, bring it where it's needed. With no
+ * requests waiting, they carry what workers left at their workplaces (a farmhouse's wheat, a fishery's fish) on to the
+ * warehouse, or the town hall when there's none.
+ */
 public class CourierGoal extends WorkGoal {
     private Request request;
+    /** a workplace chest to empty, when there's no request */
+    private ColonyStorage.Box haul;
+
+    /** the workplaces whose haul a courier carries on */
+    private static final java.util.Set<net.minecraft.resources.ResourceLocation> HAULED = java.util.Set.of(
+            dev.eiriksb.stad.building.BuildingDef.FARMHOUSE, dev.eiriksb.stad.building.BuildingDef.LUMBER_CAMP,
+            dev.eiriksb.stad.building.BuildingDef.FISHERY, dev.eiriksb.stad.building.BuildingDef.BARN, dev.eiriksb.stad.building.BuildingDef.MINE);
 
     public CourierGoal(CitizenEntity citizen) {
         super(citizen, Jobs.COURIER);
@@ -32,15 +43,36 @@ public class CourierGoal extends WorkGoal {
             return carrying() > 0 || warehouses(level, colony).count(request::matches) > 0;
         }
         ColonyStorage w = warehouses(level, colony);
-        if (w.isEmpty()) {
-            return false;
-        }
-        Optional<Request> next = colony.requests().stream()
+        Optional<Request> next = w.isEmpty() ? Optional.empty() : colony.requests().stream()
                 .filter(r -> r.courier == null || r.courier.equals(citizen.getUUID()))
                 .filter(r -> w.count(r::matches) > 0).findFirst();
         next.ifPresent(r -> r.courier = citizen.getUUID());
         request = next.orElse(null);
-        return request != null;
+        if (request == null) {
+            haul = nextHaul(level, colony);
+        }
+        return request != null || haul != null;
+    }
+
+    /** The nearest workplace chest with something in it, while they have room to carry it. */
+    private ColonyStorage.Box nextHaul(ServerLevel level, Colony colony) {
+        if (!citizen.inventory().getItem(citizen.inventory().getContainerSize() - 1).isEmpty()) { // their pockets are full
+            return null;
+        }
+        ColonyStorage.Box best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (dev.eiriksb.stad.colony.Building b : colony.buildings()) {
+            if (!b.done() || b.type() == null || !HAULED.contains(b.type())) {
+                continue;
+            }
+            for (ColonyStorage.Box box : dev.eiriksb.stad.colony.Workplaces.storage(level, b).boxes()) {
+                if (!box.container().isEmpty() && box.pos().distSqr(citizen.blockPosition()) < bestDist) {
+                    best = box;
+                    bestDist = box.pos().distSqr(citizen.blockPosition());
+                }
+            }
+        }
+        return best;
     }
 
     private static ColonyStorage warehouses(ServerLevel level, Colony colony) {
@@ -68,6 +100,25 @@ public class CourierGoal extends WorkGoal {
 
     @Override
     protected void work(ServerLevel level, Colony colony) {
+        if (request == null && haul != null) {
+            if (!approach.tick(citizen, haul.pos(), 2.8, 0.65)) {
+                return;
+            }
+            int stacks = 0;
+            for (int i = 0; i < haul.container().getContainerSize() && stacks < 4; i++) {
+                ItemStack st = haul.container().getItem(i);
+                if (!st.isEmpty()) {
+                    pocket(haul.container().removeItemNoUpdate(i));
+                    stacks++;
+                }
+            }
+            haul.container().setChanged();
+            citizen.swing(InteractionHand.MAIN_HAND);
+            citizen.didWork(stacks);
+            haul = null;
+            approach.reset();
+            return;
+        }
         if (request == null) {
             return;
         }

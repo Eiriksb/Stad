@@ -59,8 +59,10 @@ public final class Fit {
                 rooms = List.of("kitchen", "storage");
             } else if (type.equals(BuildingDef.MINE)) {
                 rooms = List.of("storage");
-            } else if (type.equals(Requirements.WORKSHOP)) {
+            } else if (type.equals(Requirements.WORKSHOP) || type.equals(BuildingDef.LUMBER_CAMP)) {
                 rooms = List.of("workshop");
+            } else if (type.equals(BuildingDef.FARMHOUSE) || type.equals(BuildingDef.FISHERY) || type.equals(BuildingDef.BARN)) {
+                rooms = List.of("storage");
             }
         }
         return new BuildSpec(s.name(), specType(type), "new", s.width(), s.depth(), s.floors(), s.roof(), s.walls(), s.frame(),
@@ -129,8 +131,70 @@ public final class Fit {
                 }
             }
         }
+        furnish(p, terrain);
         if (p.type.equals(BuildingDef.MINE) && !p.markers.containsValue("stad:shaft")) {
             p.markers.put(Project.key(ox + rs.getX() / 2, p.floorY + 1, oz + rs.getZ() / 2), "stad:shaft");
+        }
+        return null;
+    }
+
+    /**
+     * Puts what the kind of building must have and the generator didn't give it (a composter in a farmhouse, a loom
+     * and a hay bale in a barn) against an inside wall on the ground floor, away from the door.
+     */
+    static void furnish(Project p, Grid terrain) {
+        for (Requirements.Need n : Requirements.needs(p.type)) {
+            if (n.furnish() == null) {
+                continue;
+            }
+            if (n.met().test(DesignCheck.contents(terrain, p.sx, p.sy, p.sz, p.design(), p.markers))) {
+                continue;
+            }
+            Integer spot = spot(p);
+            if (spot == null) {
+                return;
+            }
+            BlockState s = n.furnish().defaultBlockState();
+            if (s.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)) {
+                s = s.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, p.door);
+            }
+            p.generated.put(spot, s);
+        }
+    }
+
+    /** A free cell on the ground floor against a wall, not by a door, in the generated building. */
+    private static Integer spot(Project p) {
+        int y = p.floorY + 1;
+        for (int z = 0; z < p.sz; z++) {
+            for (int x = 0; x < p.sx; x++) {
+                int k = Project.key(x, y, z);
+                BlockState here = p.generated.get(k), below = p.generated.get(Project.key(x, y - 1, z));
+                if (here == null || !here.isAir() || below == null || below.isAir()) {
+                    continue;
+                }
+                boolean wall = false, door = false;
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        if (x + dx < 0 || z + dz < 0 || x + dx >= p.sx || z + dz >= p.sz) {
+                            continue;
+                        }
+                        BlockState n = p.generated.get(Project.key(x + dx, y, z + dz));
+                        if (n == null) {
+                            continue;
+                        }
+                        if (n.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+                            door = true;
+                        }
+                        if (Math.abs(dx) + Math.abs(dz) == 1 && n.isSolid()) {
+                            wall = true;
+                        }
+                    }
+                }
+                BlockState above = p.generated.get(Project.key(x, y + 1, z));
+                if (wall && !door && above != null && above.isAir()) {
+                    return k;
+                }
+            }
         }
         return null;
     }

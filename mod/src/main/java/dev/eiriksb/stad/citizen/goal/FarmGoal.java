@@ -39,7 +39,7 @@ public class FarmGoal extends WorkGoal {
         if (task != null && needsWork(level, task)) {
             return true;
         }
-        task = WorkSites.farmland(level, colony).stream().filter(f -> needsWork(level, f))
+        task = nearWork(colony, WorkSites.farmland(level, colony).stream().filter(f -> needsWork(level, f)).toList(), 24).stream()
                 .min(Comparator.comparingDouble(f -> f.distSqr(citizen.blockPosition()))).orElse(null);
         return task != null;
     }
