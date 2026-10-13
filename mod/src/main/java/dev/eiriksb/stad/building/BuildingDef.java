@@ -47,4 +47,6 @@ public record BuildingDef(ResourceLocation key, String pack, ResourceLocation ty
     public static final ResourceLocation INFIRMARY = ResourceLocation.fromNamespaceAndPath("stad", "infirmary");
     public static final ResourceLocation MARKET = ResourceLocation.fromNamespaceAndPath("stad", "market");
     public static final ResourceLocation SCHOOL = ResourceLocation.fromNamespaceAndPath("stad", "school");
+    /** a field ({@link Fields}): farmers make it, builders have nothing to do there */
+    public static final ResourceLocation FIELD = ResourceLocation.fromNamespaceAndPath("stad", "field");
 }

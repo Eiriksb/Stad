@@ -123,7 +123,8 @@ public final class StadNetwork {
         if (colony.isEmpty() || def.isEmpty() || player.distanceToSqr(p.at().getCenter()) > 64 * 64) {
             return;
         }
-        Optional<dev.eiriksb.stad.pack.Palette> palette = dev.eiriksb.stad.pack.Palettes.get(p.palette());
+        Optional<dev.eiriksb.stad.pack.Palette> palette = def.get().key().equals(dev.eiriksb.stad.building.Fields.KEY) ? Optional.empty()
+                : dev.eiriksb.stad.pack.Palettes.get(p.palette());
         dev.eiriksb.stad.planner.Design styled = palette.map(pal -> dev.eiriksb.stad.planner.Design.styled(def.get(), pal)).orElse(null);
         var blueprint = styled != null ? styled.blueprint() : def.get().blueprint();
         String name = styled != null ? styled.name() : def.get().name();
@@ -131,6 +132,9 @@ public final class StadNetwork {
         if (p.preview()) {
             Outlines.preview(player, Placement.of(blueprint, origin, p.rotation()).bounds(), 100);
             String problem = Planning.problem(colony.get(), blueprint, origin, p.rotation());
+            if (problem == null) {
+                problem = Planning.ground(player.serverLevel(), blueprint, origin, p.rotation());
+            }
             player.displayClientMessage(problem == null ? Component.literal("The outline shows where the " + name + " would go.")
                     : Component.literal(problem).withStyle(ChatFormatting.RED), true);
             return;
@@ -138,9 +142,7 @@ public final class StadNetwork {
         Planning.Result result = styled != null ? Planning.plan(player, player.serverLevel(), colony.get(), styled, origin, p.rotation())
                 : Planning.plan(player, player.serverLevel(), colony.get(), def.get(), origin, p.rotation());
         player.sendSystemMessage(result.building() == null ? Component.literal(result.problem()).withStyle(ChatFormatting.RED)
-                : Component.literal("Planned the " + name + ". A builder will start on it"
-                + (colony.get().citizens().stream().anyMatch(c -> Jobs.BUILDER.equals(c.job)) ? "." : " once someone is made the builder (right-click a citizen)."))
-                .withStyle(ChatFormatting.GREEN));
+                : Component.literal(Planning.plannedMessage(player.serverLevel(), colony.get(), result.building())).withStyle(ChatFormatting.GREEN));
     }
 
     private static void action(ColonyActionPayload p, IPayloadContext ctx) {

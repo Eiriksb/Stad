@@ -231,7 +231,7 @@ public final class Architect {
     /** Asks the model for a spec from what the player said (and the current draft, when revising). */
     /** Draws up a building: on the planner model when the admin set one (a bigger model plans better), else the chat model. */
     public static CompletableFuture<BuildSpec> spec(UUID player, String playerName, String text, String currentJson) {
-        List<Restyle.Info> bases = BuildingPacks.all().stream().filter(d -> d.spec() == null)
+        List<Restyle.Info> bases = BuildingPacks.all().stream().filter(d -> d.spec() == null && !d.type().equals(BuildingDef.FIELD))
                 .sorted(Comparator.comparing(BuildingDef::pack).thenComparing(BuildingDef::name)).map(Restyle::info).toList();
         List<BuildingDef> saved = BuildingPacks.all().stream().filter(d -> d.spec() != null).toList();
         StringBuilder sb = new StringBuilder();

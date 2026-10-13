@@ -11,26 +11,43 @@
 3. Craft a **town hall**: three bookshelves on top, planks, a bell and planks in the middle, three planks below. Place
    it where your town's middle should be. Its land reaches 48 blocks round it.
 
-## Your first citizens
+## Your first hour
 
-Newcomers move in every few minutes while there's a **free bed** on the town's land, so build or adopt a house with a
-bed or two first. Everyone eats from the **town hall**: right-click it and put food in its storage.
+Right-click the town hall any time: its **Town** tab lists the next steps, ticks off the ones you've done, and says
+who can't work and why.
 
-Right-click a citizen to talk to them and give them a **job**. Type to them in the chat screen, or speak with your
-voice chat key while looking at them. They remember what you say and what you do.
+1. **Beds.** Place a bed or two anywhere on the town's land. Newcomers move in every few minutes while there's a free
+   bed (the first comes straight away).
+2. **A builder.** Right-click a citizen and pick **Builder**. Hover over any job to see what it does and needs; jobs
+   your town can't support yet are greyed out and say what's missing.
+3. **A house.** Craft **Building Plans** (two paper and a coal) and right-click the ground. Pick a building from the
+   tabs (Homes, Workplaces, Town, Fields), turn it with Door, check it with Preview, and Plan it. You're told what to put
+   in the town hall. (Or describe a house to your builder: "a small stone cottage with two bedrooms".)
+4. **Materials.** Sneak and right-click the town hall (or press Storage on its screen) and put the materials in. The
+   builder makes up the ground under the house, builds what they can, and says what's still missing.
+5. **Food.** Put some food in the town hall. Make a **farmer**: they mark out a field by their farmhouse or the town
+   hall, till it round a water hole they dig, and sow it (put wheat seeds in the town hall, or they pick seeds from
+   the grass, slowly). Make a **cook** and place a furnace: three wheat bake a loaf, and cooked food fills far more.
+6. **Grow.** More houses for more citizens, workplaces for the workers (a farmhouse, lumber camp, kitchen...), a
+   warehouse and a courier, and a guard with a sword.
+
+**When a citizen isn't working**, their card (right-click them) and the town hall's **Citizens** tab say why, and what
+would fix it: "No seeds to sow: put wheat seeds in the town hall", "Nowhere to cook: place a furnace...", "Waiting for
+23 cobblestone for the Cottage". A problem that lasts is told to you in chat, once a day. They'll tell you if you ask,
+too.
 
 ## Jobs
 
 | Job | What they do | What they need |
 |---|---|---|
-| Builder | builds what officers plan, block by block | a planned building, and its materials in the town hall |
-| Farmer | harvests and replants the crops | farmland on the town's land |
-| Lumberjack | fells natural trees, top down, and replants | trees on the town's land |
+| Builder | builds what officers plan, block by block; makes up the ground under it, and builds what it can while it waits for the rest | a planned building, and its materials in the town hall (or a warehouse) |
+| Farmer | marks out a field, levels and tills it round a water hole it digs, sows it, harvests and replants | seeds in the town hall (or picked from the grass), and flat grass or dirt |
+| Lumberjack | fells natural trees, top down, and replants; plants a grove when there are none | trees on the town's land, or saplings in the town hall |
 | Courier | carries food and materials from the warehouse to where they're needed | a warehouse |
 | Guard | patrols, fights monsters and raiders | a sword (and armour) in the town's stores |
 | Cook | bakes bread from wheat, cooks meat, fish and potatoes, and brings it to the town hall | a furnace, smoker or campfire on the town's land |
 | Fisher | fishes from the shore | a pond or river on the town's land (eight blocks of water or more) |
-| Shepherd | shears sheep, feeds the farm animals so they breed, butchers the extras, picks up eggs and wool | sheep, cows, pigs or chickens on the town's land |
+| Shepherd | brings in animals from just outside town, shears sheep, feeds the animals so they breed, butchers the extras, picks up eggs and wool | sheep, cows, pigs or chickens in or near town, and what they eat |
 | Miner | digs the town's mine deeper, layer by layer, for stone, coal and ore | a **Mine** from the Medieval pack |
 | Smith | makes the tools the workers are short of, mends worn ones, smelts ore | a **smithy** (anvil and furnace) |
 | Healer | treats the ill and the wounded | nothing; an **infirmary** gives the ill a bed |
@@ -73,7 +90,9 @@ where the shaft starts above the ground, they put the top steps in first.
 ## Building
 
 **Building Plans** (two paper and a coal): right-click the ground to choose a building and a style, see where it
-goes, and plan it. **Or talk to your builder**: "a small stone cottage with two bedrooms and a chimney". They draw it
+goes, and plan it. Builders won't build on open water; they fill in a dip, a slope or a puddle under a building.
+**Fields** are in the plans too: a 9 by 9 field round a water hole, which the farmers make (nothing for the builders).
+**Or talk to your builder**: "a small stone cottage with two bedrooms and a chimney". They draw it
 up, a ghost of it appears nearby, and you change it as you talk until you say "build it".
 
 The packs: **Medieval** (timber and cobblestone under hip roofs: cottage, builder's hut, warehouse, kitchen, mine),

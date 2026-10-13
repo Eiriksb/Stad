@@ -21,7 +21,12 @@ import java.util.UUID;
 public record CitizenScreenPayload(UUID citizen, String name, List<String> about, int happiness, int hunger, int rest,
                                    List<Action> actions, List<Line> history, boolean canTalk, String prompt) implements CustomPacketPayload {
     /** A button: runs {@code command} (a /stad command), or puts {@code text} in the text box when {@code prefill}. */
-    public record Action(String label, String command, boolean prefill, int color) {}
+    /** a button: what it says, the command it runs (or the text it puts in the box), its colour, and what hovering over it explains */
+    public record Action(String label, String command, boolean prefill, int color, String tooltip) {
+        public Action(String label, String command, boolean prefill, int color) {
+            this(label, command, prefill, color, "");
+        }
+    }
 
     public record Line(boolean fromPlayer, String speaker, String text) {}
 
@@ -49,12 +54,13 @@ public record CitizenScreenPayload(UUID citizen, String name, List<String> about
             b.writeUtf(a.command());
             b.writeBoolean(a.prefill());
             b.writeInt(a.color());
+            b.writeUtf(a.tooltip());
         });
         buf.writeCollection(p.history, CitizenScreenPayload::writeLine);
         buf.writeBoolean(p.canTalk);
         buf.writeUtf(p.prompt);
     }, buf -> new CitizenScreenPayload(UUIDUtil.STREAM_CODEC.decode(buf), buf.readUtf(), buf.readList(FriendlyByteBuf::readUtf), buf.readVarInt(),
-            buf.readVarInt(), buf.readVarInt(), buf.readList(b -> new Action(b.readUtf(), b.readUtf(), b.readBoolean(), b.readInt())),
+            buf.readVarInt(), buf.readVarInt(), buf.readList(b -> new Action(b.readUtf(), b.readUtf(), b.readBoolean(), b.readInt(), b.readUtf())),
             buf.readList(CitizenScreenPayload::readLine), buf.readBoolean(), buf.readUtf()));
 
     @Override

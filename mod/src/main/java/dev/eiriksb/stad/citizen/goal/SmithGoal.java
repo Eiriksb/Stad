@@ -167,6 +167,46 @@ public class SmithGoal extends WorkGoal {
     }
 
     @Override
+    protected String blocked(ServerLevel level, Colony colony) {
+        if (workplace(colony).isEmpty() || anvil(colony).isEmpty()) {
+            return "No smithy to work in: build one (an anvil, a furnace and a chest)";
+        }
+        for (Tools.Kind k : Tools.Kind.values()) {
+            if (Tools.shortage(level, colony, k) > 0) {
+                return "The " + Tools.jobOf(k) + "s need " + k.words + ", but there's nothing to make one from: put " + materials(k)
+                        + " in the town hall";
+            }
+        }
+        return null;
+    }
+
+    /** What a kind of tool is made from, in words. */
+    private static String materials(Tools.Kind k) {
+        return switch (k) {
+            case FISHING_ROD -> "sticks and string";
+            case SHEARS -> "iron ingots";
+            default -> "cobblestone or iron ingots, and planks";
+        };
+    }
+
+    @Override
+    protected String idle(ServerLevel level, Colony colony) {
+        return "Nothing to make or mend";
+    }
+
+    @Override
+    protected String doingNow() {
+        if (task == null) {
+            return "At the anvil";
+        }
+        return switch (task.kind()) {
+            case MAKE -> "Making " + task.target().getDescription().getString().toLowerCase(java.util.Locale.ROOT);
+            case MEND -> "Mending " + task.tool().getHoverName().getString().toLowerCase(java.util.Locale.ROOT);
+            case SMELT -> "Smelting ore";
+        };
+    }
+
+    @Override
     protected void work(ServerLevel level, Colony colony) {
         if (task == null) {
             return;

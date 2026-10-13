@@ -62,12 +62,17 @@ public class BuildGoal extends Goal {
             return false;
         }
         building = c.get().workFor(citizen.getUUID()).filter(b -> b.placement().isPresent()).orElse(null);
+        if (building == null && --whyCheck <= 0) {
+            whyCheck = 100;
+            citizen.stuck("Nothing to build: plan a building with Building Plans, or tell them what you'd like built");
+        }
         return building != null;
     }
 
     @Override
     public boolean canContinueToUse() {
         return workTime() && building != null && !building.done() && citizen.getUUID().equals(building.builder)
+                && colony().flatMap(c -> c.building(building.id)).orElse(null) == building // not cancelled
                 && Jobs.BUILDER.equals(citizen.record().map(r -> r.job).orElse(null));
     }
 
@@ -79,13 +84,21 @@ public class BuildGoal extends Goal {
     @Override
     public void start() {
         cooldown = 0;
+        current = null;
         approach.reset();
     }
 
     @Override
     public void stop() {
         citizen.getNavigation().stop();
+        current = null;
     }
+
+    /** ticks until they say again that there's nothing to build */
+    private int whyCheck;
+
+    /** the step they're on (null: work out the next one) */
+    private Placement.Step current;
 
     @Override
     public void tick() {
@@ -96,25 +109,36 @@ public class BuildGoal extends Goal {
             return;
         }
         ColonyStorage storage = null;
-        if (building.status == Building.Status.WAITING) {
-            if (citizen.tickCount % 100 != 0) {
-                return;
+        if (current == null || Construction.satisfied(level, current)) {
+            current = null;
+            if (building.status == Building.Status.WAITING && citizen.tickCount % 100 != 0) {
+                return; // waiting for materials: look again every few seconds
             }
-            storage = ColonyStorage.supply(level, colony);
-            Placement.Step next = Construction.next(level, building, placement);
-            if (next != null && next.count() > 0 && storage.count(next.item()) < next.count()) {
+            storage = ColonyStorage.forBuilding(level, colony);
+            current = Construction.doable(level, building, placement, storage);
+            if (current == null) {
+                if (Construction.next(level, building, placement) == null) {
+                    finish(level, colony);
+                    return;
+                }
+                building.status = Building.Status.WAITING;
                 building.missing = Construction.missing(level, building, placement, storage);
+                colony.changed();
+                citizen.stuck("Waiting for " + Construction.describe(building.missing, 3) + " for the " + building.name
+                        + ": put them in the town hall");
                 ask(level, colony);
                 return;
             }
-            building.status = Building.Status.BUILDING;
-            colony.changed();
+            if (building.status != Building.Status.BUILDING) {
+                building.status = Building.Status.BUILDING;
+                building.missing.clear();
+                colony.changed();
+            }
         }
-        Placement.Step step = Construction.next(level, building, placement);
-        if (step == null) {
-            finish(level, colony);
-            return;
+        if (citizen.tickCount % 40 == 0) {
+            citizen.doing("Building the " + building.name + " (" + Math.round(building.fractionDone() * 100) + "%)");
         }
+        Placement.Step step = current;
         BlockPos pos = step.pos();
         if (!approach.tick(citizen, pos, REACH, 0.6)) {
             return;
@@ -125,24 +149,20 @@ public class BuildGoal extends Goal {
         }
         cooldown = StadConfig.BUILDER_TICKS_PER_BLOCK.get() * (citizen.grudging() ? 2 : 1);
         if (storage == null) {
-            storage = ColonyStorage.supply(level, colony);
+            storage = ColonyStorage.forBuilding(level, colony);
         }
         BlockState old = level.getBlockState(pos);
-        if (old.getDestroySpeed(level, pos) < 0) {
-            building.progress++; // bedrock and the like: build around it
-            return;
-        }
         if (!step.clearing() && step.count() > 0 && !storage.take(step.item(), step.count())) {
-            building.status = Building.Status.WAITING;
-            building.missing = Construction.missing(level, building, placement, storage);
-            colony.changed();
-            ask(level, colony);
+            current = null; // someone took it: work out what's next
             return;
         }
-        salvage(level, pos, old, storage);
+        salvage(level, pos, old, ColonyStorage.supply(level, colony));
         if (step.clearing()) {
             level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
         } else {
+            if (pos.getY() == placement.origin().getY() && step.state().isCollisionShapeFullBlock(level, pos)) {
+                foundation(level, pos);
+            }
             if (citizen.getBoundingBox().intersects(new AABB(pos))) {
                 Movement.teleportNear(citizen, pos.above());
             }
@@ -151,17 +171,32 @@ public class BuildGoal extends Goal {
         }
         citizen.swing(InteractionHand.MAIN_HAND);
         citizen.didWork(1);
-        building.progress++;
-        building.status = Building.Status.BUILDING;
-        if (building.progress % 10 == 0) {
+        current = null;
+        if (++placedSince % 10 == 0) {
+            Construction.next(level, building, placement);
+            building.stepsDone = Construction.done(level, building, placement);
             colony.changed();
+        }
+    }
+
+    private int placedSince;
+
+    /** Under the bottom of the building, the ground is made up with dirt (a slope, a hollow, shallow water), a few blocks down at most. */
+    private static void foundation(ServerLevel level, BlockPos floor) {
+        for (int d = 1; d <= 8; d++) {
+            BlockPos p = floor.below(d);
+            BlockState s = level.getBlockState(p);
+            if (!s.canBeReplaced() || s.getDestroySpeed(level, p) < 0) {
+                break;
+            }
+            level.setBlock(p, Blocks.DIRT.defaultBlockState(), 3);
         }
     }
 
     /** What was in the way goes into the town's storage (and a chest's contents onto the ground). */
     private static void salvage(ServerLevel level, BlockPos pos, BlockState old, ColonyStorage storage) {
-        if (old.isAir() || old.canBeReplaced()) {
-            return;
+        if (old.isAir() || old.canBeReplaced() || old.is(net.minecraft.tags.BlockTags.LEAVES) || old.is(net.minecraft.tags.BlockTags.FLOWERS)) {
+            return; // nothing the town would want back
         }
         if (level.getBlockEntity(pos) instanceof Container c) {
             Containers.dropContents(level, pos, c);

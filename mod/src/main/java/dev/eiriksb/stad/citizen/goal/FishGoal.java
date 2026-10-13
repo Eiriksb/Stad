@@ -59,6 +59,16 @@ public class FishGoal extends WorkGoal {
     }
 
     @Override
+    protected String blocked(ServerLevel level, Colony colony) {
+        return "Nowhere to fish: they need a pond or river on the town's land (eight blocks of open water or more) with dry ground beside it";
+    }
+
+    @Override
+    protected String doingNow() {
+        return "Fishing";
+    }
+
+    @Override
     protected void work(ServerLevel level, Colony colony) {
         if (spot == null) {
             return;

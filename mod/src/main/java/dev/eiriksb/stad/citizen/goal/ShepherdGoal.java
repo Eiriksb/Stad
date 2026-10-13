@@ -38,7 +38,7 @@ public class ShepherdGoal extends WorkGoal {
     private static final Set<net.minecraft.world.item.Item> PRODUCTS = Set.of(Items.EGG, Items.FEATHER, Items.LEATHER, Items.MUTTON,
             Items.BEEF, Items.PORKCHOP, Items.CHICKEN, Items.RABBIT_HIDE);
 
-    enum Task { PICK_UP, SHEAR, BUTCHER, FEED }
+    enum Task { PICK_UP, SHEAR, BUTCHER, FEED, LEAD }
 
     private Task task;
     private Entity target;
@@ -62,7 +62,7 @@ public class ShepherdGoal extends WorkGoal {
         return s.is(Items.WHEAT) || s.is(Items.CARROT) || s.is(Items.POTATO) || s.is(Items.BEETROOT) || s.is(Items.WHEAT_SEEDS);
     }
 
-    static boolean herd(Animal a) {
+    public static boolean herd(Animal a) {
         return (a instanceof Sheep || a instanceof Cow || a instanceof Pig || a instanceof Chicken) && !(a instanceof TamableAnimal)
                 && !a.hasCustomName() && !a.isLeashed() && a.isAlive();
     }
@@ -92,7 +92,56 @@ public class ShepherdGoal extends WorkGoal {
             case SHEAR -> target instanceof Sheep s && s.readyForShearing();
             case BUTCHER -> true;
             case FEED -> target instanceof Animal a && a.canFallInLove() && a.getAge() == 0;
+            case LEAD -> target instanceof Animal a && (a.getLeashHolder() == citizen || !a.isLeashed());
         };
+    }
+
+    /** ticks until they look round outside town again for animals to bring in */
+    private int lookOutside;
+    /** whether they found any animals in town or nearby when they last looked */
+    private boolean anyAnimals = true;
+
+    @Override
+    protected String blocked(ServerLevel level, Colony colony) {
+        return anyAnimals ? null : "No farm animals on the town's land, and none nearby to bring in: lead in two sheep, cows, pigs or"
+                + " chickens (they follow wheat or carrots)";
+    }
+
+    @Override
+    protected String idle(ServerLevel level, Colony colony) {
+        return ColonyStorage.deliveries(level, colony).count(ShepherdGoal::feed) > 0 || pocketed(ShepherdGoal::feed) ? "Keeping an eye on the animals"
+                : "Keeping an eye on the animals (to breed them they need wheat, carrots, potatoes or seeds in the town hall)";
+    }
+
+    @Override
+    protected String doingNow() {
+        if (task == null) {
+            return "Looking after the animals";
+        }
+        return switch (task) {
+            case PICK_UP -> "Picking up eggs and wool";
+            case SHEAR -> "Shearing the sheep";
+            case BUTCHER -> "Butchering";
+            case FEED -> "Feeding the animals so they breed";
+            case LEAD -> "Bringing animals into town";
+        };
+    }
+
+    /** Where animals brought in are let go: their barn, or by the town hall. */
+    private BlockPos home(Colony colony) {
+        return workplace(colony).map(dev.eiriksb.stad.colony.Workplaces::spot).orElse(colony.center.offset(2, 0, 2));
+    }
+
+    /**
+     * When a kind of animal has fewer than two in town (so it can't breed), a wild one of that kind from just outside
+     * town, if there's one; kinds the town already has one of first.
+     */
+    private Animal wild(ServerLevel level, Colony colony, Map<EntityType<?>, List<Animal>> kinds) {
+        AABB around = new AABB(colony.center).inflate(colony.radius + 48, 16, colony.radius + 48);
+        List<Animal> out = level.getEntitiesOfClass(Animal.class, around, a -> herd(a) && !a.isBaby()
+                && !colony.contains(level.dimension(), a.blockPosition()) && kinds.getOrDefault(a.getType(), List.of()).size() < 2);
+        return out.stream().min(Comparator.comparingInt((Animal a) -> kinds.containsKey(a.getType()) ? 0 : 1)
+                .thenComparingDouble(a -> a.distanceToSqr(citizen))).orElse(null);
     }
 
     private void choose(ServerLevel level, Colony colony) {
@@ -106,9 +155,14 @@ public class ShepherdGoal extends WorkGoal {
             return;
         }
         List<Animal> animals = level.getEntitiesOfClass(Animal.class, land, a -> herd(a) && colony.contains(level.dimension(), a.blockPosition()));
+        Map<EntityType<?>, List<Animal>> byKind = new HashMap<>();
+        animals.forEach(a -> byKind.computeIfAbsent(a.getType(), k -> new java.util.ArrayList<>()).add(a));
         if (animals.isEmpty()) {
+            bringIn(level, colony, byKind);
+            anyAnimals = task != null;
             return;
         }
+        anyAnimals = true;
         List<Animal> woolly = animals.stream().filter(a -> a instanceof Sheep s && s.readyForShearing()).toList();
         if (!woolly.isEmpty()) {
             set(Task.SHEAR, nearest(woolly));
@@ -124,14 +178,40 @@ public class ShepherdGoal extends WorkGoal {
                 return;
             }
         }
-        boolean haveFeed = pocketed(ShepherdGoal::feed) || ColonyStorage.deliveries(level, colony).count(ShepherdGoal::feed) > 0;
+        ColonyStorage feedStore = ColonyStorage.deliveries(level, colony);
         for (List<Animal> kind : kinds.values()) {
             List<Animal> ready = kind.stream().filter(a -> !a.isBaby() && a.getAge() == 0 && a.canFallInLove()).toList();
             boolean waiting = kind.stream().anyMatch(Animal::isInLove); // one's been fed: feed it a partner
+            // what this kind eats (cows wheat, chickens seeds...), in their pockets or the stores
+            boolean haveFeed = !ready.isEmpty() && (pocketed(ready.getFirst()::isFood) || feedStore.count(ready.getFirst()::isFood) > 0);
             if (kind.size() < herdSize && (ready.size() >= 2 || waiting && !ready.isEmpty()) && haveFeed) {
                 set(Task.FEED, nearest(ready));
                 return;
             }
+        }
+        // nothing else to do: a partner for an animal on its own, or a pair when nothing in town can breed
+        if (byKind.values().stream().anyMatch(l -> l.size() == 1) || byKind.values().stream().noneMatch(l -> l.size() >= 2)) {
+            bringIn(level, colony, byKind);
+        }
+    }
+
+    /** Leads in a wild animal from just outside town, if there's one (looking every few tries). */
+    private void bringIn(ServerLevel level, Colony colony, Map<EntityType<?>, List<Animal>> byKind) {
+        if (--lookOutside > 0) {
+            return;
+        }
+        lookOutside = 10;
+        Animal wild = wild(level, colony, byKind);
+        if (wild != null) {
+            set(Task.LEAD, wild);
+        }
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        if (target instanceof Animal a && a.getLeashHolder() == citizen) {
+            a.dropLeash(true, false); // off for the night: let it go where it is
         }
     }
 
@@ -161,6 +241,10 @@ public class ShepherdGoal extends WorkGoal {
         }
         if (task == Task.FEED && !pocketed(s -> target instanceof Animal a && a.isFood(s))) {
             fetchFeed(level, colony);
+            return;
+        }
+        if (task == Task.LEAD) {
+            lead(level, colony, (Animal) target);
             return;
         }
         if (!approach.tick(citizen, target.blockPosition(), task == Task.PICK_UP ? 1.8 : 2.6, 0.6)) {
@@ -196,6 +280,33 @@ public class ShepherdGoal extends WorkGoal {
             }
         }
         citizen.swing(InteractionHand.MAIN_HAND);
+        task = null;
+        target = null;
+        approach.reset();
+    }
+
+    /** Walks out to the animal, puts it on a lead, and walks it home. */
+    private void lead(ServerLevel level, Colony colony, Animal animal) {
+        if (animal.getLeashHolder() != citizen) {
+            if (!approach.tick(citizen, animal.blockPosition(), 2.2, 0.6)) {
+                return;
+            }
+            animal.setLeashedTo(citizen, true);
+            citizen.swing(InteractionHand.MAIN_HAND);
+            approach.reset();
+            return;
+        }
+        BlockPos home = home(colony);
+        if (citizen.distanceToSqr(animal) > 36) {
+            citizen.getNavigation().stop(); // let it catch up
+            animal.getNavigation().moveTo(citizen, 1.1);
+            return;
+        }
+        if (!approach.tick(citizen, home, 3.0, 0.5)) {
+            return;
+        }
+        animal.dropLeash(true, false);
+        citizen.didWork(1);
         task = null;
         target = null;
         approach.reset();

@@ -22,13 +22,13 @@ public final class Jobs {
             HEALER, MERCHANT, TEACHER);
     private static final Map<String, String> WHAT = Map.ofEntries(Map.entry(
 BUILDER, "you build what the town's leaders plan, with materials from the town hall"),
-            Map.entry(FARMER, "you harvest and replant the crops on the town's farmland"),
-            Map.entry(LUMBERJACK, "you fell the trees on the town's land and replant them"),
+            Map.entry(FARMER, "you make the town's fields (till the ground round a water hole), sow them, and harvest and replant the crops"),
+            Map.entry(LUMBERJACK, "you fell the trees on the town's land and replant them, and plant a grove when there are none"),
             Map.entry(COURIER, "you carry what the town needs from the warehouse to the town hall and the builder"),
             Map.entry(GUARD, "you keep the town safe: you patrol by day and fight off monsters and raiders, with a sword from the town's stores"),
             Map.entry(COOK, "you cook for the town: bread from the farmers' wheat, and the meat, fish and potatoes, at a furnace, smoker or campfire"),
             Map.entry(FISHER, "you fish from the shore of the water on the town's land"),
-            Map.entry(SHEPHERD, "you look after the town's animals: you shear the sheep, feed them so they breed, and butcher the extra ones"),
+            Map.entry(SHEPHERD, "you look after the town's animals: you bring them in from nearby, shear the sheep, feed them so they breed, and butcher the extra ones"),
             Map.entry(MINER, "you dig the town's mine deeper, layer by layer, for stone, coal and ore"),
             Map.entry(SMITH, "you mend the town's worn tools at the anvil, make the tools and swords it's short of, and smelt the miner's ore"),
             Map.entry(HEALER, "you look after the sick and the wounded: you go round to them and treat them until they're well"),

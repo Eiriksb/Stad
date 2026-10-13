@@ -537,6 +537,26 @@ architect's table (which furnishes the anvil, brewing stand, bell or lectern if 
 assigned and moved like the other workplaces. Game tests for skills, tools wearing out and coming back, each job's
 work, illness, and trades moving real goods.
 
+### 6.10 Playable without knowing the code
+
+A town should get going with what a new player would do, and say what it needs when it can't.
+
+**Why, everywhere.** Each job's goal tells its citizen what they're doing or what's stopping them, with the fix ("No
+seeds to sow: put wheat seeds in the town hall"); needs (asleep, ill, hungry with no food, on strike, no job) come
+first. It's on the citizen's card, in the town hall and in their prompt (so they can say it), and a problem that lasts a
+minute is told to the leaders once a day. The town hall has tabs: the next steps in getting a town going (beds, a
+builder, a house, its materials, food, workplaces, a warehouse and courier, a guard), each citizen's status, every
+job's needs and whether the town has them, and the buildings. The card's job buttons explain themselves on hover and
+are greyed out where the town lacks what the job needs. The building plans are grouped by what buildings are for.
+
+**Jobs that set themselves up.** A farmer with no field marks one out (9 by 9, flat grass or dirt by their farmhouse or
+the town hall), levels and tills it, digs the water hole and sows it, with seeds from the stores or picked from the
+grass. A field can also be planned with the building plans, like a building, but the farmers make it, not the
+builders. Builders build ahead of a missing material (anything that doesn't hang on other blocks or fall), make up the
+ground under a building, fetch from warehouses, and refuse open water. Lumberjacks plant a grove from saplings when
+there are no trees; shepherds lead in animals from just outside town; cooks also cook what's in the town hall. A
+citizen with no job takes a first one more willingly (they came looking for work).
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).

@@ -35,6 +35,27 @@
   emeralds; every trade moves goods in and out of the town's real chests.
 - **School**: children go to school while there's a teacher, and grow up quicker to learn.
 
+**Easier to play**
+- **Every citizen says what they're doing, or what's stopping them and what would fix it** ("No seeds to sow: put wheat
+  seeds in the town hall", "Nowhere to cook: place a furnace..."), on their card, in the town hall and when you talk to
+  them. A problem that lasts a minute is told to the town's leaders, once a day.
+- **The town hall** has tabs: **Town** (next steps for getting a town going, who can't work and why, what the town
+  needs), **Citizens** (what each is doing), **Jobs** (what every job does and needs, and whether the town has it) and
+  **Buildings**.
+- Hover over a job on a citizen's card to see what it does and needs; jobs the town can't support yet are greyed out
+  and say what's missing. A citizen with no job takes their first one more willingly.
+- **Building Plans** are grouped in tabs (Homes, Workplaces, Town, Fields), say what each building is for, and the list
+  scrolls. Planning one tells you who'll build it and what to put in the town hall.
+- **Farmers make their own fields**: with no field they mark one out (9 by 9) by their farmhouse or the town hall,
+  level it, till it, dig a water hole in the middle and sow it, with seeds from the town hall or picked from the grass.
+  Or plan a **Field** where you want it with the building plans; the farmers make it.
+- **Builders** build what they can while they wait for the rest, make up the ground under a building (a slope, a dip,
+  shallow water), fetch from the warehouse themselves, and won't build on open water. Cancelling a building no longer
+  leaves its builder stuck on it.
+- **Lumberjacks** plant a grove from the town's saplings when there are no trees; **shepherds** bring in farm animals
+  from just outside town; **cooks** cook what's in the town hall too.
+- Citizens walled in by a house going up round them get out to eat and sleep.
+
 ## 0.1.0 (first release)
 
 Stad needs [They Will Talk](https://github.com/Eiriksb/they-will-talk) 0.3.0-alpha.6 or newer, NeoForge 21.1 on

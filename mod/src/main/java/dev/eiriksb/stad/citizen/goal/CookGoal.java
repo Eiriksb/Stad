@@ -92,9 +92,28 @@ public class CookGoal extends WorkGoal {
         return ingredient(s) && (!s.is(Items.WHEAT) || s.getCount() >= WHEAT_PER_BREAD);
     }
 
-    /** Where the ingredients are: the warehouses (farmers, fishers and the shepherd bring them there), else the town hall. */
+    /** Where the ingredients are: the warehouses (farmers, fishers and the shepherd bring them there) and the town hall. */
     private static ColonyStorage stores(ServerLevel level, Colony colony) {
-        return ColonyStorage.deliveries(level, colony);
+        java.util.List<ColonyStorage.Box> boxes = new java.util.ArrayList<>(ColonyStorage.deliveries(level, colony).boxes());
+        for (ColonyStorage.Box b : ColonyStorage.townHall(level, colony).boxes()) {
+            if (boxes.stream().noneMatch(x -> x.pos().equals(b.pos()))) {
+                boxes.add(b);
+            }
+        }
+        return ColonyStorage.of(boxes);
+    }
+
+    @Override
+    protected String blocked(ServerLevel level, Colony colony) {
+        if (WorkSites.cooking(level, colony).isEmpty()) {
+            return "Nowhere to cook: place a furnace, smoker or campfire on the town's land, or build a kitchen";
+        }
+        return "Nothing to cook: they cook wheat (three to a loaf), raw meat, fish and potatoes from the town hall or the warehouse";
+    }
+
+    @Override
+    protected String doingNow() {
+        return cookable() ? "Cooking" : "Fetching something to cook";
     }
 
     @Override

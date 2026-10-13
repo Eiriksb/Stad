@@ -74,14 +74,25 @@ public class CitizenChatScreen extends Screen {
                 ax = x;
                 ay -= 22;
             }
-            Button b = Button.builder(Component.literal(a.label()).withStyle(s -> s.withColor(a.color())), btn -> act(a))
-                    .bounds(ax, ay, w, 20).build();
+            Button.Builder bb = Button.builder(Component.literal(a.label()).withStyle(s -> s.withColor(a.color())), btn -> act(a))
+                    .bounds(ax, ay, w, 20);
+            if (!a.tooltip().isEmpty()) {
+                bb.tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(a.tooltip())));
+            }
+            Button b = bb.build();
             addRenderableWidget(b);
             ax += w + 4;
         }
         historyBottom = (view.actions().isEmpty() ? by : ay) - 6;
-        historyTop = 22 + 12 + view.about().size() * LINE + 8;
+        about.clear();
+        for (String a : view.about()) {
+            about.addAll(font.split(Component.literal(a), W));
+        }
+        historyTop = 22 + 12 + about.size() * LINE + 8;
     }
+
+    /** who they are and how they're doing, wrapped to the screen */
+    private final List<FormattedCharSequence> about = new ArrayList<>();
 
     private String first() {
         return view.name().split(" ")[0];
@@ -135,8 +146,8 @@ public class CitizenChatScreen extends Screen {
         int moodColor = view.happiness() >= 60 ? 0x77DD77 : view.happiness() >= 35 ? 0xDDDD77 : 0xDD7777;
         g.drawString(font, mood, x + W - font.width(mood), 10, moodColor);
         int y = 24;
-        for (String a : view.about()) {
-            g.drawString(font, font.plainSubstrByWidth(a, W), x, y, 0xAAAAAA);
+        for (FormattedCharSequence a : about) {
+            g.drawString(font, a, x, y, 0xAAAAAA);
             y += LINE;
         }
         // the conversation, newest at the bottom, wrapped

@@ -96,6 +96,15 @@ public class GuardGoal extends Goal {
         if (target != null && !target.isAlive()) {
             target = null;
         }
+        if (look % 40 == 0 && dev.eiriksb.stad.colony.Jobs.GUARD.equals(citizen.job().orElse(null))) {
+            if (target != null) {
+                citizen.doing("Fighting " + target.getName().getString());
+            } else if (Combat.unarmed(citizen)) {
+                citizen.stuck("Patrolling with no sword: put a sword (and armour) in the town hall");
+            } else {
+                citizen.doing("Patrolling");
+            }
+        }
         if (target != null) {
             fight(colony);
         } else if (leader() != null) {

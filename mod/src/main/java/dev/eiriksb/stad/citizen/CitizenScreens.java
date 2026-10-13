@@ -103,12 +103,20 @@ public final class CitizenScreens {
             if (c.grudging()) {
                 about.add("Working grudgingly today");
             }
+            Status now = c.status();
+            about.add((now.problem() ? "§c" : "§b") + "Now: " + (job == null && !c.isBaby() ? "No job yet: pick one below (hover over a job to see what"
+                    + " it does and needs)" : now.text()));
             c.record().filter(r -> !r.plan.isEmpty()).ifPresent(r -> about.add("Today: " + r.plan.getFirst()));
             dev.eiriksb.stad.war.Envoys.of(c.getUUID()).ifPresent(e -> about.add("An envoy, here to talk peace"));
             if (!c.isBaby() && rank.atLeast(OrderKind.ASSIGN_JOB.minRank)) {
                 if (job == null) {
                     for (String j : Jobs.all()) {
-                        actions.add(new CitizenScreenPayload.Action(capitalize(j), "stad citizen job " + c.getUUID() + " " + j, false, AQUA));
+                        String problem = c.level() instanceof net.minecraft.server.level.ServerLevel sl ? dev.eiriksb.stad.colony.Guide.problem(sl, t, j) : null;
+                        String wp = dev.eiriksb.stad.colony.Workplaces.wanted(j);
+                        actions.add(new CitizenScreenPayload.Action(capitalize(j), "stad citizen job " + c.getUUID() + " " + j, false,
+                                problem == null ? AQUA : 0x88AAAA, capitalize(j) + ": " + dev.eiriksb.stad.colony.Guide.does(j) + "\n\nNeeds: "
+                                + dev.eiriksb.stad.colony.Guide.needs(j) + (wp != null ? " Works faster from " + wp + "." : "")
+                                + (problem == null ? "" : "\n\nMissing here: " + problem)));
                     }
                 } else {
                     actions.add(new CitizenScreenPayload.Action("Stop working", "stad citizen job " + c.getUUID() + " none", false, YELLOW));

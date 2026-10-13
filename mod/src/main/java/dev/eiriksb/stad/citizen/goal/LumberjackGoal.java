@@ -64,8 +64,153 @@ public class LumberjackGoal extends WorkGoal {
             CLAIMS.remove(citizen.getUUID());
         } else {
             CLAIMS.put(citizen.getUUID(), new Claim(tree, now));
+            plantAt = null;
+            return true;
         }
-        return tree != null;
+        // no trees: plant some, if there are saplings
+        if (plantAt != null && plantable(level, plantAt) && (hasSapling() || saplingsInStores(level, colony))) {
+            return true;
+        }
+        plantAt = null;
+        if ((hasSapling() || saplingsInStores(level, colony)) && young(level, colony) < GROVE) {
+            plantAt = plantSpot(level, colony);
+        }
+        return plantAt != null;
+    }
+
+    /** how many saplings they keep growing at once when there are no trees */
+    private static final int GROVE = 8;
+    /** where they're going to plant a sapling (when there are no trees to fell) */
+    private BlockPos plantAt;
+
+    @Override
+    protected String blocked(ServerLevel level, Colony colony) {
+        if (young(level, colony) > 0) {
+            return null;
+        }
+        return "No trees on the town's land to fell: put saplings in the town hall and they'll plant a grove";
+    }
+
+    @Override
+    protected String idle(ServerLevel level, Colony colony) {
+        return young(level, colony) > 0 ? "Waiting for the saplings to grow" : "Nothing to do just now";
+    }
+
+    @Override
+    protected String doingNow() {
+        return plantAt != null ? "Planting saplings" : tree != null && logs.isEmpty() ? "Replanting" : "Felling a tree";
+    }
+
+    /** Where the grove goes: round their lumber camp, or round the town hall. */
+    private BlockPos groveCentre(Colony colony) {
+        return workplace(colony).map(dev.eiriksb.stad.colony.Workplaces::spot).orElse(colony.center);
+    }
+
+    private int youngCount;
+    private long youngAt = -1000;
+
+    /** Saplings growing near the grove (counted every few seconds). */
+    private int young(ServerLevel level, Colony colony) {
+        if (level.getGameTime() - youngAt < 100 && level.getGameTime() >= youngAt) {
+            return youngCount;
+        }
+        youngAt = level.getGameTime();
+        youngCount = countYoung(level, colony);
+        return youngCount;
+    }
+
+    private int countYoung(ServerLevel level, Colony colony) {
+        BlockPos c = groveCentre(colony);
+        int n = 0;
+        for (BlockPos p : BlockPos.betweenClosed(c.offset(-16, -4, -16), c.offset(16, 6, 16))) {
+            if (level.getBlockState(p).is(BlockTags.SAPLINGS)) {
+                n++;
+            }
+        }
+        return n;
+    }
+
+    private static boolean saplingsInStores(ServerLevel level, Colony colony) {
+        return ColonyStorage.deliveries(level, colony).count(st -> st.is(ItemTags.SAPLINGS)) > 0
+                || ColonyStorage.supply(level, colony).count(st -> st.is(ItemTags.SAPLINGS)) > 0;
+    }
+
+    /** Open grass with room for a tree to grow (nothing within two blocks, sky above, off the paths and buildings). */
+    private boolean plantable(ServerLevel level, BlockPos p) {
+        if (!level.getBlockState(p).isAir() && !level.getBlockState(p).canBeReplaced() || !level.getBlockState(p.below()).is(BlockTags.DIRT)
+                || !level.canSeeSky(p) || !level.getFluidState(p).isEmpty()) {
+            return false;
+        }
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-2, 0, -2), p.offset(2, 3, 2))) {
+            if (!q.equals(p) && !level.getBlockState(q).isAir() && !level.getBlockState(q).canBeReplaced()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private BlockPos plantSpot(ServerLevel level, Colony colony) {
+        BlockPos c = groveCentre(colony);
+        for (int r = 4; r <= 16; r += 2) {
+            for (int i = 0; i < r * 3; i++) {
+                double a = Math.PI * 2 * i / (r * 3);
+                BlockPos col = c.offset((int) Math.round(Math.cos(a) * r), 0, (int) Math.round(Math.sin(a) * r));
+                BlockPos top = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, col);
+                if (!colony.contains(colony.dimension, top) || top.closerThan(colony.center, 6) || insideAnything(colony, top)) {
+                    continue;
+                }
+                if (plantable(level, top)) {
+                    return top;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean insideAnything(Colony colony, BlockPos p) {
+        for (dev.eiriksb.stad.colony.Building b : colony.buildings()) {
+            if (b.placement().map(pl -> pl.bounds().inflatedBy(2).isInside(p)).orElse(false)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Plants a sapling (their own, or one from the town's stores) where the grove goes. */
+    private void plant(ServerLevel level, Colony colony) {
+        if (!approach.tick(citizen, plantAt, 3.5, 0.6)) {
+            return;
+        }
+        if (--cooldown > 0) {
+            return;
+        }
+        cooldown = pace(20);
+        if (!hasSapling()) {
+            for (ItemStack st : ColonyStorage.deliveries(level, colony).takeUpTo(x -> x.is(ItemTags.SAPLINGS), 4)) {
+                pocket(st);
+            }
+            if (!hasSapling()) {
+                for (ItemStack st : ColonyStorage.supply(level, colony).takeUpTo(x -> x.is(ItemTags.SAPLINGS), 4)) {
+                    pocket(st);
+                }
+            }
+        }
+        for (int i = 0; i < citizen.inventory().getContainerSize(); i++) {
+            ItemStack st = citizen.inventory().getItem(i);
+            if (st.is(ItemTags.SAPLINGS) && st.getItem() instanceof BlockItem bi && plantable(level, plantAt)) {
+                if (!level.getBlockState(plantAt).isAir()) {
+                    level.removeBlock(plantAt, false);
+                }
+                level.setBlock(plantAt, bi.getBlock().defaultBlockState(), 3);
+                st.shrink(1);
+                youngCount++;
+                level.playSound(null, plantAt, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.8f, 1.0f);
+                citizen.swing(InteractionHand.MAIN_HAND);
+                break;
+            }
+        }
+        plantAt = null;
+        approach.reset();
     }
 
     private boolean canReplant(ServerLevel level) {
@@ -84,6 +229,9 @@ public class LumberjackGoal extends WorkGoal {
     @Override
     protected void work(ServerLevel level, Colony colony) {
         if (tree == null) {
+            if (plantAt != null) {
+                plant(level, colony);
+            }
             return;
         }
         if (logs.isEmpty() || !level.getBlockState(logs.getLast()).is(BlockTags.LOGS)) {

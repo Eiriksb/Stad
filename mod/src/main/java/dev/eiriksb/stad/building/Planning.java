@@ -44,6 +44,27 @@ public final class Planning {
         return null;
     }
 
+    /**
+     * Why a building can't go here because of what's on the ground: open water or lava over a good part of where it
+     * stands (the builder fills in a puddle or a slope under it, not a lake). Null when it's fine.
+     */
+    public static String ground(ServerLevel level, Blueprint blueprint, BlockPos origin, Rotation rotation) {
+        BoundingBox box = Placement.of(blueprint, origin, rotation).bounds();
+        int wet = 0, columns = 0;
+        for (int x = box.minX(); x <= box.maxX(); x++) {
+            for (int z = box.minZ(); z <= box.maxZ(); z++) {
+                columns++;
+                for (int y = box.minY() - 1; y <= box.minY() + 1; y++) {
+                    if (!level.getFluidState(new BlockPos(x, y, z)).isEmpty()) {
+                        wet++;
+                        break;
+                    }
+                }
+            }
+        }
+        return wet * 5 > columns ? "That's on water. Builders need dry ground (they'll fill in a puddle or a dip, not a lake)." : null;
+    }
+
     /** A player plans a building (an order to the town's builders, so it's rank-checked and logged). */
     public static Result plan(ServerPlayer player, ServerLevel level, Colony colony, BuildingDef def, BlockPos origin, Rotation rotation) {
         return plan(player, level, colony, def.key(), def.name(), def.blueprint(), null, origin, rotation);
@@ -63,16 +84,37 @@ public final class Planning {
         if (!colony.rank(player.getUUID()).atLeast(OrderKind.PLAN_BUILDING.minRank)) {
             outcome = Order.Outcome.NOT_ALLOWED;
             reason = "Only officers of " + colony.name() + " can plan buildings.";
-        } else if ((reason = problem(colony, blueprint, origin, rotation)) != null) {
+        } else if ((reason = problem(colony, blueprint, origin, rotation)) != null
+                || (reason = ground(level, blueprint, origin, rotation)) != null) {
             outcome = Order.Outcome.INVALID;
         } else {
             outcome = Order.Outcome.ACCEPTED;
             planned = colony.addBuilding(key, name, origin, rotation, level.getGameTime(), design);
             planned.outlineUntil = level.getGameTime() + 200;
+            if (Fields.is(planned)) {
+                planned.status = Building.Status.DONE; // the farmers make it
+                colony.changed();
+            }
         }
         colony.log(new OrderRecord(level.getGameTime(), player.getUUID(), player.getGameProfile().getName(), null, name,
                 OrderKind.PLAN_BUILDING, outcome, reason));
         return new Result(planned, reason);
+    }
+
+    /** What a player is told when they've planned a building: who'll build it and what to put in the town hall. */
+    public static String plannedMessage(ServerLevel level, Colony colony, Building b) {
+        if (Fields.is(b)) {
+            boolean farmer = colony.citizens().stream().anyMatch(c -> dev.eiriksb.stad.colony.Jobs.FARMER.equals(c.job));
+            return "Planned a field. " + (farmer ? "The farmers will till it, water it and sow it" : "Make someone a farmer and they'll till it, water it and sow it")
+                    + " (with seeds from the town hall, or what they find in the grass).";
+        }
+        String builder = colony.citizens().stream().filter(c -> dev.eiriksb.stad.colony.Jobs.BUILDER.equals(c.job)).map(c -> c.name.split(" ")[0])
+                .findFirst().orElse(null);
+        String who = builder != null ? builder + " will build it" : "Make someone the builder (right-click a citizen) and they'll build it";
+        java.util.Map<net.minecraft.world.item.Item, Integer> missing = b.placement()
+                .map(p -> Construction.missing(level, b, p, ColonyStorage.forBuilding(level, colony))).orElse(java.util.Map.of());
+        return "Planned the " + b.name + ". " + who + (missing.isEmpty() ? ": the town has everything it needs."
+                : ". Put these in the town hall: " + Construction.describe(missing, 5) + ".");
     }
 
     public static boolean canPlan(Colony colony, ServerPlayer player) {

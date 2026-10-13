@@ -12,7 +12,7 @@ import java.util.EnumSet;
 public class SleepAtHomeGoal extends Goal {
     private final CitizenEntity citizen;
     private BlockPos bed;
-    private int repath;
+    private final Movement.Approach approach = new Movement.Approach();
 
     public SleepAtHomeGoal(CitizenEntity citizen) {
         this.citizen = citizen;
@@ -40,7 +40,7 @@ public class SleepAtHomeGoal extends Goal {
 
     @Override
     public void start() {
-        repath = 0;
+        approach.reset();
     }
 
     @Override
@@ -49,9 +49,8 @@ public class SleepAtHomeGoal extends Goal {
         if (citizen.blockPosition().closerToCenterThan(bed.getCenter(), 2.5)) {
             citizen.getNavigation().stop();
             citizen.startSleeping(bed);
-        } else if (--repath <= 0) {
-            repath = 40;
-            Movement.walkNextTo(citizen, bed, 0.7);
+        } else {
+            approach.tick(citizen, bed, 2.0, 0.7); // with the shortcut, if they're walled in (a house going up round them)
         }
     }
 

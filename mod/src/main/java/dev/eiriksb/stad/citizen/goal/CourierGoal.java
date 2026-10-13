@@ -113,6 +113,23 @@ public class CourierGoal extends WorkGoal {
     }
 
     @Override
+    protected String blocked(ServerLevel level, Colony colony) {
+        return warehouses(level, colony).isEmpty() && colony.buildings().stream().noneMatch(b -> b.done()
+                && dev.eiriksb.stad.colony.Workplaces.isWorkplace(b) && !b.is(dev.eiriksb.stad.building.BuildingDef.WAREHOUSE))
+                ? "Nothing to carry without a warehouse: build one, and they'll bring what's needed from it" : null;
+    }
+
+    @Override
+    protected String idle(ServerLevel level, Colony colony) {
+        return "Nothing to carry just now";
+    }
+
+    @Override
+    protected String doingNow() {
+        return request != null ? "Carrying " + request.label() + " to the " + request.destName : "Fetching from the workplaces";
+    }
+
+    @Override
     protected void work(ServerLevel level, Colony colony) {
         if (request == null && haul != null) {
             if (!approach.tick(citizen, haul.pos(), 2.8, 0.65)) {

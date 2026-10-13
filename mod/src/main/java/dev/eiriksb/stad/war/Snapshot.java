@@ -33,7 +33,7 @@ public final class Snapshot {
     public static Snapshot take(ServerLevel level, Colony colony) {
         List<Part> parts = new ArrayList<>();
         for (Building b : colony.buildings()) {
-            if (b.done() && !b.isRepair()) {
+            if (b.done() && !b.isRepair() && !dev.eiriksb.stad.building.Fields.is(b)) { // the farmers mend their own fields
                 b.placement().ifPresent(p -> parts.add(new Part(b.name, b.type(), p.bounds(), Blueprint.capture(level, p.bounds()))));
             }
         }

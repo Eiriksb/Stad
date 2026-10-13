@@ -78,7 +78,8 @@ public final class Leadership {
         }
         factors.add(new Factor(persona(c), "it's not in their nature to take orders", null));
         if (kind == OrderKind.ASSIGN_JOB && arg != null) {
-            factors.add(new Factor(-8, "they'd rather not take on new work", null));
+            // someone with no job came to town looking for work; a change of job is more to ask
+            factors.add(c.job().isEmpty() ? new Factor(10, "", null) : new Factor(-8, "they'd rather not take on new work", null));
         }
         if (kind == OrderKind.MARCH) {
             factors.add(new Factor(-6, "they don't want to fight " + arg + "'s people", null));

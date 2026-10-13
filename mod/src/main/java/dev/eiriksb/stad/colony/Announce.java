@@ -15,4 +15,13 @@ public final class Announce {
             }
         }
     }
+
+    /** Tells the officers and owner (the ones who can do something about it). */
+    public static void leaders(MinecraftServer server, Colony colony, Component message) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (colony.rank(p.getUUID()).atLeast(Rank.OFFICER)) {
+                p.sendSystemMessage(message);
+            }
+        }
+    }
 }

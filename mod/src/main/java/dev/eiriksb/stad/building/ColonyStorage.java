@@ -41,6 +41,13 @@ public final class ColonyStorage {
         return new ColonyStorage(found);
     }
 
+    /** What builders build from: the supply first, then the warehouses (they fetch from there themselves). */
+    public static ColonyStorage forBuilding(ServerLevel level, Colony colony) {
+        List<Box> found = new ArrayList<>(supply(level, colony).boxes);
+        found.addAll(warehouses(level, colony).boxes);
+        return new ColonyStorage(found);
+    }
+
     /** One container on its own. */
     public static ColonyStorage of(Box box) {
         return new ColonyStorage(List.of(box));

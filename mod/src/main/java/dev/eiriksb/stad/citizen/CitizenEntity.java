@@ -335,6 +335,47 @@ public class CitizenEntity extends PathfinderMob {
         record().ifPresent(r -> r.lastSocial = level().getGameTime());
     }
 
+    /** what they're up to at work, said by their job's goal, and when */
+    private String doing = "";
+    private long doingAt = -100_000;
+    /** what's stopping their work and what would fix it, said by their job's goal, and when */
+    private String stuck = "";
+    private long stuckAt = -100_000;
+
+    /** Their job's goal says what they're doing ("Harvesting the wheat"). */
+    public void doing(String what) {
+        doing = what;
+        doingAt = level().getGameTime();
+        stuckAt = -100_000;
+    }
+
+    /** Their job's goal says what's stopping them, and what would fix it ("No seeds: put wheat seeds in the town hall"). */
+    public void stuck(String why) {
+        stuck = why;
+        stuckAt = level().getGameTime();
+    }
+
+    public String doing() {
+        return doing;
+    }
+
+    public String stuck() {
+        return stuck;
+    }
+
+    boolean doingFresh() {
+        return level().getGameTime() - doingAt < Status.FRESH;
+    }
+
+    boolean stuckFresh() {
+        return level().getGameTime() - stuckAt < Status.FRESH;
+    }
+
+    /** What they're doing, or why they can't work, in a line for the player. */
+    public Status status() {
+        return Status.of(this);
+    }
+
     public boolean isNight() {
         long t = level().getDayTime() % 24000;
         return t >= 12500 && t < 23500;
@@ -381,6 +422,7 @@ public class CitizenEntity extends PathfinderMob {
             if (tickCount % 100 == 0) {
                 trainedAsGuard(dev.eiriksb.stad.colony.Jobs.GUARD.equals(job().orElse(null)));
                 Tools.tidy(this);
+                Status.watch(this);
             }
             if (tickCount % 100 == 0) {
                 record().ifPresent(r -> {

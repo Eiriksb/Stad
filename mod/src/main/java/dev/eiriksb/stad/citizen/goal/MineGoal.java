@@ -44,6 +44,17 @@ public class MineGoal extends WorkGoal {
     }
 
     @Override
+    protected String blocked(ServerLevel level, Colony colony) {
+        return dev.eiriksb.stad.building.Mine.shafts(colony).isEmpty() ? "No mine to dig: build a Mine (from the building plans)"
+                : "The mine is as deep as it goes";
+    }
+
+    @Override
+    protected String doingNow() {
+        return step ? "Building steps into the mine" : "Digging the mine deeper";
+    }
+
+    @Override
     protected void work(ServerLevel level, Colony colony) {
         if (block == null) {
             return;

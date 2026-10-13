@@ -27,6 +27,49 @@ public class BuildingPlansItem extends Item {
         super(props);
     }
 
+    private static final List<String> GROUPS = List.of("Homes", "Workplaces", "Town", "Fields");
+
+    private static int groupOrder(String g) {
+        return GROUPS.indexOf(g);
+    }
+
+    /** What kind of building it is, for the plans' tabs. */
+    static String group(BuildingDef d) {
+        net.minecraft.resources.ResourceLocation t = d.type();
+        if (t.equals(BuildingDef.FIELD)) {
+            return "Fields";
+        }
+        if (t.equals(BuildingDef.HOME)) {
+            return "Homes";
+        }
+        if (t.equals(BuildingDef.WAREHOUSE) || t.equals(BuildingDef.MARKET) || t.equals(BuildingDef.SCHOOL) || t.equals(BuildingDef.INFIRMARY)
+                || t.equals(BuildingDef.BARRACKS) || t.equals(BuildingDef.WATCHTOWER)) {
+            return "Town";
+        }
+        return dev.eiriksb.stad.colony.Workplaces.jobFor(t).isPresent() ? "Workplaces" : "Town";
+    }
+
+    /** What it's for, in a line: "A home with 2 beds", "Where the farmer works". */
+    static String purpose(BuildingDef d) {
+        net.minecraft.resources.ResourceLocation t = d.type();
+        long beds = d.blueprint().entries().stream().filter(e -> e.state().getBlock() instanceof net.minecraft.world.level.block.BedBlock
+                && e.state().getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.HEAD).count();
+        String sleeps = beds == 0 ? "" : " Sleeps " + beds + ".";
+        if (t.equals(BuildingDef.FIELD)) {
+            return "Where the farmers grow wheat (and whatever seeds the town has).";
+        }
+        if (t.equals(BuildingDef.HOME)) {
+            return "A home." + sleeps;
+        }
+        if (t.equals(BuildingDef.WAREHOUSE)) {
+            return "Where workers bring what they make, and couriers work from." + sleeps;
+        }
+        Optional<String> job = dev.eiriksb.stad.colony.Workplaces.jobFor(t);
+        return job.map(j -> "Where the " + j + (j.equals("guard") ? "s live and" : "") + " work" + (j.equals("guard") ? "" : "s")
+                + ": they work faster and are happier there.").orElse("A " + dev.eiriksb.stad.building.Requirements.word(t) + ".") + sleeps
+                + " " + d.pack().substring(0, 1).toUpperCase() + d.pack().substring(1) + " pack.";
+    }
+
     @Override
     public InteractionResult useOn(UseOnContext ctx) {
         if (!(ctx.getPlayer() instanceof ServerPlayer player)) {
@@ -43,11 +86,14 @@ public class BuildingPlansItem extends Item {
             return InteractionResult.CONSUME;
         }
         List<PlansPayload.Option> options = new ArrayList<>();
-        BuildingPacks.all().stream().sorted(Comparator.comparing(BuildingDef::pack).thenComparing(BuildingDef::name)).forEach(d -> {
+        BuildingPacks.all().stream().sorted(Comparator.comparing((BuildingDef d) -> groupOrder(group(d))).thenComparing(BuildingDef::pack)
+                .thenComparing(BuildingDef::name)).forEach(d -> {
             var size = d.blueprint().size();
-            String materials = Construction.describe(Placement.of(d.blueprint(), ctx.getClickedPos(), net.minecraft.world.level.block.Rotation.NONE)
+            String materials = d.type().equals(BuildingDef.FIELD) ? "Nothing: the farmers make it."
+                    : Construction.describe(Placement.of(d.blueprint(), ctx.getClickedPos(), net.minecraft.world.level.block.Rotation.NONE)
                     .materials(), 6);
-            options.add(new PlansPayload.Option(d.key().toString(), d.name(), d.description(), size.getX(), size.getY(), size.getZ(), materials));
+            options.add(new PlansPayload.Option(d.key().toString(), d.name(), d.description(), size.getX(), size.getY(), size.getZ(), materials,
+                    group(d), purpose(d)));
         });
         PacketDistributor.sendToPlayer(player, new PlansPayload(colony.get().id, ctx.getClickedPos(),
                 Placement.facingViewer(player.getDirection()), options,

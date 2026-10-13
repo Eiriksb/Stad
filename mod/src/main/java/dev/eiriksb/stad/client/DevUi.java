@@ -50,6 +50,9 @@ public final class DevUi {
 
     @SubscribeEvent
     static void rendered(ScreenEvent.Render.Post event) {
+        if (shot != null) {
+            event.getGuiGraphics().flush(); // tooltips' text is drawn at the end of the frame
+        }
         grab(event.getScreen().getClass().getSimpleName() + " at " + event.getScreen().width + "x" + event.getScreen().height);
     }
 
@@ -85,6 +88,18 @@ public final class DevUi {
                         int b = a.length > 3 ? Integer.parseInt(a[3]) : 0;
                         screen.mouseClicked(x, y, b);
                         screen.mouseReleased(x, y, b);
+                    }
+                }
+                case "hover" -> { // moves the real mouse there (for tooltips)
+                    double scale = mc.getWindow().getGuiScale();
+                    try { // the game's own idea of where the mouse is (the window needn't have focus)
+                        for (String f : new String[]{"xpos", "ypos"}) {
+                            java.lang.reflect.Field field = net.minecraft.client.MouseHandler.class.getDeclaredField(f);
+                            field.setAccessible(true);
+                            field.setDouble(mc.mouseHandler, Double.parseDouble(a[f.equals("xpos") ? 1 : 2]) * scale);
+                        }
+                    } catch (ReflectiveOperationException e) {
+                        GLFW.glfwSetCursorPos(mc.getWindow().getWindow(), Double.parseDouble(a[1]) * scale, Double.parseDouble(a[2]) * scale);
                     }
                 }
                 case "drag" -> {

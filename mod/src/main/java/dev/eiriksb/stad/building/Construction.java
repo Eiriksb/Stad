@@ -17,10 +17,57 @@ public final class Construction {
     /** Whether a step is already done in the world (same block; the details may differ, like how stairs join up). */
     public static boolean satisfied(ServerLevel level, Placement.Step step) {
         BlockState now = level.getBlockState(step.pos());
+        if (now.getDestroySpeed(level, step.pos()) < 0) {
+            return true; // bedrock and the like: build round it
+        }
         if (step.clearing()) {
-            return now.isAir() || (now.canBeReplaced() && now.getFluidState().isEmpty());
+            // water flowing in from outside comes back however often it's cleared; it stops once the walls are up
+            return now.isAir() || (now.canBeReplaced() && (now.getFluidState().isEmpty() || !now.getFluidState().isSource()));
         }
         return now.is(step.state().getBlock());
+    }
+
+    /**
+     * The step to do now: the next one in order, or, when the town hasn't got what that takes, a later one it has the
+     * materials for (but nothing that hangs on other blocks or falls, which waits its turn). Null when nothing can be
+     * done until more materials come (or the building's finished: see {@link #next}).
+     */
+    public static Placement.Step doable(ServerLevel level, Building building, Placement placement, ColonyStorage storage) {
+        Placement.Step first = next(level, building, placement);
+        if (first == null) {
+            return null;
+        }
+        Map<Item, Integer> have = new java.util.HashMap<>();
+        if (affordable(first, storage, have)) {
+            return first;
+        }
+        List<Placement.Step> steps = placement.steps();
+        for (int i = building.progress + 1; i < steps.size(); i++) {
+            Placement.Step s = steps.get(i);
+            if (s.clearing() || Placement.hangsOnOthers(s.state()) || s.state().getBlock() instanceof net.minecraft.world.level.block.FallingBlock) {
+                continue;
+            }
+            if (affordable(s, storage, have) && !satisfied(level, s)) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    private static boolean affordable(Placement.Step s, ColonyStorage storage, Map<Item, Integer> have) {
+        return s.clearing() || s.count() <= 0 || have.computeIfAbsent(s.item(), storage::count) >= s.count();
+    }
+
+    /** How many of its steps are done (for how far along it is, now that builders build what they can out of order). */
+    public static int done(ServerLevel level, Building building, Placement placement) {
+        int n = building.progress;
+        List<Placement.Step> steps = placement.steps();
+        for (int i = building.progress; i < steps.size(); i++) {
+            if (satisfied(level, steps.get(i))) {
+                n++;
+            }
+        }
+        return n;
     }
 
     /** Moves {@code building.progress} past steps that are already done; returns the next step, or null when finished. */

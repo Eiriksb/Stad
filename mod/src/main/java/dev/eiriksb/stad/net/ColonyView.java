@@ -17,10 +17,16 @@ import java.util.List;
 /** What the town hall screen shows, as sent to one player. */
 public record ColonyView(int id, String name, String owner, BlockPos center, int radius, int beds, Rank viewerRank, String standing,
                          List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> needs, List<String> recentOrders,
-                         boolean open, boolean poaching, String war) {
+                         boolean open, boolean poaching, String war, List<Step> steps, List<Job> jobs) {
     public record Member(String name, Rank rank) {}
 
-    public record Citizen(String name, String job, boolean home, int hunger, int rest, int happiness) {}
+    /** a citizen, and what they're doing (or what's stopping them: {@code problem}) */
+    public record Citizen(String name, String job, boolean home, int hunger, int rest, int happiness, String status, boolean problem) {}
+
+    public record Step(String text, boolean done) {}
+
+    /** a job: what it does and needs, what's missing for it here ("" for nothing), and who has it */
+    public record Job(String job, String does, String needs, String problem, List<String> workers) {}
 
     public static ColonyView of(Colony c, ServerLevel level, ServerPlayer viewer) {
         List<Member> members = new ArrayList<>();
@@ -28,7 +34,9 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         members.sort((a, b) -> b.rank().compareTo(a.rank()));
         List<Citizen> citizens = new ArrayList<>();
         for (CitizenRecord r : c.citizens()) {
-            citizens.add(new Citizen(r.name, r.job == null ? "" : r.job, r.home != null, r.hunger, r.rest, r.happiness));
+            dev.eiriksb.stad.citizen.Status st = level.getEntity(r.uuid) instanceof dev.eiriksb.stad.citizen.CitizenEntity e ? e.status()
+                    : new dev.eiriksb.stad.citizen.Status("Away (not near anyone)", false);
+            citizens.add(new Citizen(r.name, r.job == null ? "" : r.job, r.home != null, r.hunger, r.rest, r.happiness, st.text(), st.problem()));
         }
         List<String> orders = new ArrayList<>();
         for (OrderRecord o : c.orders().subList(0, Math.min(5, c.orders().size()))) {
@@ -62,8 +70,12 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
             wars.add((w.state == dev.eiriksb.stad.war.War.State.RAID ? "Raid with " : "At war with ") + other);
         }
         dev.eiriksb.stad.war.Raids.of(c).ifPresent(r -> wars.add("Raiders from the " + r.from.getName() + "!"));
+        List<Step> steps = dev.eiriksb.stad.colony.Guide.steps(level, c).stream().map(x -> new Step(x.text(), x.done())).toList();
+        List<Job> jobs = dev.eiriksb.stad.colony.Guide.jobs(level, c).stream()
+                .map(j -> new Job(j.job(), j.does(), j.needs(), j.problem() == null ? "" : j.problem(), j.workers())).toList();
         return new ColonyView(c.id, c.name(), c.ownerName(), c.center, c.radius, Homes.beds(level, c).size(), c.rank(viewer.getUUID()),
-                standing.toString(), members, citizens, buildings, needs, orders, c.politics.open(), c.politics.poaching, String.join("; ", wars));
+                standing.toString(), members, citizens, buildings, needs, orders, c.politics.open(), c.politics.poaching, String.join("; ", wars),
+                steps, jobs);
     }
 
     public static void send(ServerPlayer player, Colony colony, ServerLevel level) {
@@ -90,6 +102,8 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
             b.writeVarInt(c.hunger());
             b.writeVarInt(c.rest());
             b.writeVarInt(c.happiness());
+            b.writeUtf(c.status());
+            b.writeBoolean(c.problem());
         });
         buf.writeCollection(buildings, FriendlyByteBuf::writeUtf);
         buf.writeCollection(needs, FriendlyByteBuf::writeUtf);
@@ -97,6 +111,17 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         buf.writeBoolean(open);
         buf.writeBoolean(poaching);
         buf.writeUtf(war);
+        buf.writeCollection(steps, (b, x) -> {
+            b.writeUtf(x.text());
+            b.writeBoolean(x.done());
+        });
+        buf.writeCollection(jobs, (b, j) -> {
+            b.writeUtf(j.job());
+            b.writeUtf(j.does());
+            b.writeUtf(j.needs());
+            b.writeUtf(j.problem());
+            b.writeCollection(j.workers(), FriendlyByteBuf::writeUtf);
+        });
     }
 
     static ColonyView read(FriendlyByteBuf buf) {
@@ -104,10 +129,13 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
                 buf.readEnum(Rank.class),
                 buf.readUtf(),
                 buf.readList(b -> new Member(b.readUtf(), b.readEnum(Rank.class))),
-                buf.readList(b -> new Citizen(b.readUtf(), b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt())),
+                buf.readList(b -> new Citizen(b.readUtf(), b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt(),
+                        b.readUtf(), b.readBoolean())),
                 buf.readList(FriendlyByteBuf::readUtf),
                 buf.readList(FriendlyByteBuf::readUtf),
                 buf.readList(FriendlyByteBuf::readUtf),
-                buf.readBoolean(), buf.readBoolean(), buf.readUtf());
+                buf.readBoolean(), buf.readBoolean(), buf.readUtf(),
+                buf.readList(b -> new Step(b.readUtf(), b.readBoolean())),
+                buf.readList(b -> new Job(b.readUtf(), b.readUtf(), b.readUtf(), b.readUtf(), b.readList(FriendlyByteBuf::readUtf))));
     }
 }

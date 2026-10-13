@@ -45,10 +45,8 @@ public final class BuildingPacks extends SimpleJsonResourceReloadListener {
     }
 
     public static Collection<BuildingDef> all() {
-        if (saved.isEmpty() && removed.isEmpty()) {
-            return buildings.values();
-        }
         Map<ResourceLocation, BuildingDef> all = new LinkedHashMap<>(buildings);
+        all.put(Fields.KEY, Fields.DEF);
         all.putAll(saved);
         all.keySet().removeAll(removed);
         return all.values();
@@ -57,6 +55,9 @@ public final class BuildingPacks extends SimpleJsonResourceReloadListener {
     public static Optional<BuildingDef> get(ResourceLocation key) {
         if (key == null || removed.contains(key)) {
             return Optional.empty();
+        }
+        if (key.equals(Fields.KEY)) {
+            return Optional.of(Fields.DEF);
         }
         BuildingDef d = saved.get(key);
         return Optional.ofNullable(d != null ? d : buildings.get(key));

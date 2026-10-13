@@ -88,6 +88,9 @@ public class SchoolGoal extends Goal {
         if (school == null) {
             return;
         }
+        if (child.tickCount % 40 == 0) {
+            child.doing(child.blockPosition().closerThan(school, 6) ? "At school" : "Off to school");
+        }
         if (child.blockPosition().closerThan(school, 6)) {
             if (++inClass >= DAY) {
                 child.record().ifPresent(this::schoolDay);

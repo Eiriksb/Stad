@@ -30,6 +30,8 @@ public final class Building {
     public Status status = Status.PLANNED;
     /** index of the next step in {@link Placement#steps()} */
     public int progress;
+    /** steps done, counting the ones built ahead of their turn (not saved; -1: not counted yet) */
+    public int stepsDone = -1;
     /** the builder working on it, if any */
     public UUID builder;
 
@@ -103,7 +105,7 @@ public final class Building {
         if (done()) {
             return 1;
         }
-        return placement().map(p -> p.steps().isEmpty() ? 1.0 : (double) progress / p.steps().size()).orElse(0.0);
+        return placement().map(p -> p.steps().isEmpty() ? 1.0 : (double) Math.max(progress, stepsDone) / p.steps().size()).orElse(0.0);
     }
 
     CompoundTag save() {

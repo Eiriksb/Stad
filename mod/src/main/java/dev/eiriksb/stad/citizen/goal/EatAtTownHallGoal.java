@@ -18,7 +18,7 @@ public class EatAtTownHallGoal extends Goal {
     static final float HUNGRY = 8f;
     private final CitizenEntity citizen;
     private BlockPos hall;
-    private int repath;
+    private final Movement.Approach approach = new Movement.Approach();
     /** ticks until the next bite (goals don't tick every game tick, so count rather than use tickCount) */
     private int chew;
 
@@ -47,7 +47,7 @@ public class EatAtTownHallGoal extends Goal {
 
     @Override
     public void start() {
-        repath = 0;
+        approach.reset();
         chew = 20;
     }
 
@@ -71,9 +71,8 @@ public class EatAtTownHallGoal extends Goal {
                     citizen.eat(props.nutrition());
                 }
             }
-        } else if (--repath <= 0) {
-            repath = 40;
-            Movement.walkNextTo(citizen, hall, 0.65);
+        } else {
+            approach.tick(citizen, hall, 2.0, 0.65); // with the shortcut, if they're walled in (a house going up round them)
         }
     }
 

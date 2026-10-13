@@ -173,6 +173,9 @@ public final class StadAdapter implements VillagerAdapter {
         int done = c.record().map(r -> r.workToday).orElse(0);
         net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) c.level();
         f.context.add("You're the town's " + job + ": " + Jobs.describe(job) + ".");
+        dev.eiriksb.stad.citizen.Status now = c.status();
+        f.context.add(now.problem() ? "Right now you can't get on with your work: " + now.text() + ". If they ask how you are or what you need, tell them."
+                : "Right now: " + now.text() + ".");
         c.record().ifPresent(r -> {
             f.context.add("You're " + dev.eiriksb.stad.citizen.Skills.describe(r) + ".");
             if (dev.eiriksb.stad.citizen.Tools.lacking(c)) {
@@ -190,7 +193,7 @@ public final class StadAdapter implements VillagerAdapter {
         });
         switch (job) {
             case Jobs.FARMER -> f.context.add(WorkSites.farmland(level, t).isEmpty()
-                    ? "There's no farmland on the town's land yet; you'd like the leader to make some fields (hoe the dirt, near water)."
+                    ? "You make the town's fields yourself: you till the ground round a water hole you dig, and sow it."
                     : "Today you've harvested " + done + " crops.");
             case Jobs.LUMBERJACK -> f.context.add(WorkSites.trees(level, t).isEmpty() && done == 0
                     ? "There are no trees left on the town's land to fell."

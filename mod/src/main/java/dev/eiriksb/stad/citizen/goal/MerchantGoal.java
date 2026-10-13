@@ -26,6 +26,11 @@ public class MerchantGoal extends WorkGoal {
     }
 
     @Override
+    protected String doingNow() {
+        return "Minding the market (sneak and right-click to trade)";
+    }
+
+    @Override
     protected void work(ServerLevel level, Colony colony) {
         BlockPos stand = workplace(colony).map(dev.eiriksb.stad.colony.Workplaces::spot).orElse(colony.center.south(3));
         if (!approach.tick(citizen, stand, 2.0, 0.6)) {

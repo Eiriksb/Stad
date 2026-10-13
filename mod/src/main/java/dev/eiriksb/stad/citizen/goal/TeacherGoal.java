@@ -35,6 +35,21 @@ public class TeacherGoal extends WorkGoal {
     }
 
     @Override
+    protected String blocked(ServerLevel level, Colony colony) {
+        return "No school to teach in: build one (it needs a lectern)";
+    }
+
+    @Override
+    protected String doingNow() {
+        return level().getEntitiesOfClass(CitizenEntity.class, citizen.getBoundingBox().inflate(8), CitizenEntity::isBaby).isEmpty()
+                ? "Waiting at the school for children" : "Teaching";
+    }
+
+    private net.minecraft.world.level.Level level() {
+        return citizen.level();
+    }
+
+    @Override
     protected void work(ServerLevel level, Colony colony) {
         BlockPos spot = workplace(colony).map(Workplaces::spot).orElse(null);
         if (spot == null || !approach.tick(citizen, spot, 2.0, 0.6)) {

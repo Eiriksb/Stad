@@ -58,6 +58,11 @@ public final class CitizenRecord {
     public dev.eiriksb.stad.citizen.Genes genes;
     /** how much they've practised each job they've done ({@link dev.eiriksb.stad.citizen.Skills}) */
     public java.util.Map<String, Integer> skills = new java.util.HashMap<>();
+    /** the problem stopping their work, since when, and the last one the leaders were told of, on which day (not saved) */
+    public String problem;
+    public long problemSince;
+    public String told;
+    public long toldDay = -1;
     /** days at school as a child (at most {@link dev.eiriksb.stad.citizen.Skills#MAX_SCHOOLING}) */
     public int schooling;
     /** the day they last had a day at school counted */

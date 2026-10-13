@@ -288,6 +288,9 @@ public final class StadCommands {
     }
 
     public static String status(Building b) {
+        if (dev.eiriksb.stad.building.Fields.is(b)) {
+            return "a field, for the farmers";
+        }
         return switch (b.status) {
             case PLANNED -> "planned";
             case BUILDING -> "being built, " + Math.round(b.fractionDone() * 100) + "%";
@@ -365,11 +368,22 @@ public final class StadCommands {
         for (var e : EntityArgument.getEntities(ctx, "citizens")) {
             if (e instanceof CitizenEntity c) {
                 ctx.getSource().sendSuccess(() -> Component.literal(c.getName().getString() + " at " + c.blockPosition().toShortString() + ": "
-                        + c.activity()), false);
+                        + c.activity() + "; says: " + c.status().text() + ", carries " + carried(c)), false);
                 n++;
             }
         }
         return n;
+    }
+
+    private static String carried(CitizenEntity c) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (int i = 0; i < c.inventory().getContainerSize(); i++) {
+            var s = c.inventory().getItem(i);
+            if (!s.isEmpty()) {
+                out.add(s.getCount() + " " + s.getItem().getDescription().getString());
+            }
+        }
+        return out.isEmpty() ? "nothing" : String.join(", ", out);
     }
 
     /** Sets citizens' hunger and rest (admins, testing). */

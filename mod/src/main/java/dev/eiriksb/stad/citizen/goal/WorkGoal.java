@@ -46,6 +46,27 @@ abstract class WorkGoal extends Goal {
     /** One goal tick of the job's own work. */
     protected abstract void work(ServerLevel level, Colony colony);
 
+    /**
+     * When there's no work: what's stopping it and what would fix it, for the player ("No trees on the town's land:
+     * plant saplings..."), or null when there's simply nothing to do just now (see {@link #idle}).
+     */
+    protected String blocked(ServerLevel level, Colony colony) {
+        return null;
+    }
+
+    /** What they say they're doing when there's nothing to do but nothing's wrong ("Waiting for the crops to grow"). */
+    protected String idle(ServerLevel level, Colony colony) {
+        return "Nothing to do just now";
+    }
+
+    /** What they're doing while they work ("Felling a tree"). */
+    protected String doingNow() {
+        return "Working";
+    }
+
+    /** ticks until they work out again why there's no work */
+    private int whyCheck;
+
     /** What their job's tool is like (a fishing rod, a pickaxe), for what it gets them; nothing for jobs without one. */
     protected ItemStack tool() {
         return ItemStack.EMPTY;
@@ -152,12 +173,32 @@ abstract class WorkGoal extends Goal {
             return false;
         }
         Colony colony = citizen.colony().orElse(null);
-        return colony != null && (hasWork((ServerLevel) citizen.level(), colony) || somethingToDeliver());
+        if (colony == null) {
+            return false;
+        }
+        ServerLevel level = (ServerLevel) citizen.level();
+        if (hasWork(level, colony) || somethingToDeliver()) {
+            return true;
+        }
+        if (--whyCheck <= 0) {
+            whyCheck = 100;
+            String why = blocked(level, colony);
+            if (why != null) {
+                citizen.stuck(why);
+            } else {
+                citizen.doing(idle(level, colony));
+            }
+        }
+        return false;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return canUse();
+        if (!onDuty()) {
+            return false;
+        }
+        Colony colony = citizen.colony().orElse(null);
+        return colony != null && (hasWork((ServerLevel) citizen.level(), colony) || somethingToDeliver());
     }
 
     @Override
@@ -170,6 +211,7 @@ abstract class WorkGoal extends Goal {
         approach.reset();
         cooldown = 0;
         delivering = false;
+        whyCheck = 0;
         citizen.colony().ifPresent(c -> dev.eiriksb.stad.citizen.Tools.equip(citizen, (ServerLevel) citizen.level(), c));
     }
 
@@ -194,6 +236,10 @@ abstract class WorkGoal extends Goal {
             if (dev.eiriksb.stad.citizen.Tools.lacking(citizen)) {
                 dev.eiriksb.stad.citizen.Tools.equip(citizen, level, colony);
             }
+        }
+        if (citizen.tickCount % 40 == 0) {
+            citizen.doing(delivering ? "Taking what they've gathered to the " + (deliverTo(level, colony).boxes().stream()
+                    .anyMatch(b -> b.pos().equals(colony.center)) ? "town hall" : "stores") : doingNow());
         }
         if (delivering) {
             deliver(level, colony);

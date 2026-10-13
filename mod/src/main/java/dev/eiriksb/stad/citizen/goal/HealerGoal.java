@@ -67,6 +67,16 @@ public class HealerGoal extends WorkGoal {
     }
 
     @Override
+    protected String idle(ServerLevel level, Colony colony) {
+        return "Nobody is ill or hurt";
+    }
+
+    @Override
+    protected String doingNow() {
+        return "Looking after a patient";
+    }
+
+    @Override
     protected void work(ServerLevel level, Colony colony) {
         if (patient == null) {
             return;

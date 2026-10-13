@@ -53,21 +53,24 @@ them.) When you talk to the builder aloud, they keep it short and leave the list
 
 | Job | Works | Needs |
 |---|---|---|
-| Builder | builds what officers plan | the materials in the town hall |
-| Farmer | harvests and replants | farmland |
-| Lumberjack | fells natural trees and replants | trees |
+| Builder | builds what officers plan, what it can while waiting for the rest; makes up the ground under it | the materials in the town hall (or a warehouse) |
+| Farmer | makes fields (marks one out, levels and tills it round a water hole it digs), sows, harvests and replants | seeds in the town hall (or picked from the grass), flat grass or dirt |
+| Lumberjack | fells natural trees and replants; plants a grove when there are none | trees, or saplings in the town hall |
 | Courier | carries food and materials to the town hall and the builder | a warehouse |
 | Guard | patrols and fights, trained (30 health, harder blows) | a sword from the town's stores |
 | Cook | bread from wheat; cooked meat, fish and potatoes, to the town hall | a furnace, smoker or campfire |
 | Fisher | fishes from the shore (the game's fishing loot) | a pond or river |
-| Shepherd | shears, breeds up to `herdSize` of each kind, butchers the extras | farm animals (named or leashed ones are pets) |
+| Shepherd | brings in animals from just outside town, shears, breeds up to `herdSize` of each kind, butchers the extras | farm animals in or near town (named or leashed ones are pets) |
 | Miner | digs a 5x5 shaft deeper, layer by layer, down a spiral of steps; walls off water and lava | a Mine (Medieval pack) |
 | Smith | makes the tools the workers are short of (and swords), mends worn tools, smelts ore | a smithy (an anvil and a furnace) |
 | Healer | goes round treating the ill and the wounded | nothing (an infirmary gives the ill a bed) |
 | Merchant | keeps the market: players trade with the town through them, for emeralds | nothing (a market to stand at) |
 | Teacher | teaches the town's children at the school | a school (a lectern) |
 
-All of it happens on the town's land. Wheat only feeds anyone once a cook bakes it, and cooked food fills far more than
+All of it happens on the town's land. **Every citizen says what they're doing, or what's stopping them and what would
+fix it**, on their card and in the town hall's Citizens tab; the Jobs tab says what each job needs and whether the town
+has it, and the Town tab lists the next steps in getting a town going. Hover over a job on a citizen's card for the
+same. A problem that lasts is told to the town's leaders in chat, once a day. Wheat only feeds anyone once a cook bakes it, and cooked food fills far more than
 raw, so a farmer and a cook keep a small town fed.
 
 **Workplaces.** Every job has a building it works from: farmers a **farmhouse** (a composter and a chest), lumberjacks a

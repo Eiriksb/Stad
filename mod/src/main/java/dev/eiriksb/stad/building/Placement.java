@@ -116,7 +116,7 @@ public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Ste
     }
 
     /** Blocks that need others to stand on or hang from go last in their layer. */
-    static boolean hangsOnOthers(BlockState state) {
+    public static boolean hangsOnOthers(BlockState state) {
         Block b = state.getBlock();
         return b instanceof DoorBlock || b instanceof BedBlock || b instanceof TorchBlock || b instanceof LanternBlock
                 || b instanceof CarpetBlock || b instanceof BushBlock || b instanceof LadderBlock || b instanceof ButtonBlock
