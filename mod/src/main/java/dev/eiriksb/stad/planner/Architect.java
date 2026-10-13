@@ -53,9 +53,13 @@ public final class Architect {
 
     record Ask(Intent intent, Drafts.Where where, String near) {}
 
-    /** What the hook needs to know, read on the server thread. */
+    /**
+     * What the hook needs to know, read on the server thread.
+     *
+     * @param spoken said aloud: the builder answers briefly, without lists and numbers (the ghost and its panel show those)
+     */
     private record Scene(CitizenEntity citizen, ServerPlayer player, Colony colony, boolean builder, String otherBuilder,
-                         String draftJson, String draftText, Rank rank, Building asking) {}
+                         String draftJson, String draftText, Rank rank, Building asking, boolean spoken) {}
 
     /** Called from the conversation hook (a background thread). */
     public static BeforeReply beforeReply(TurnInfo turn) {
@@ -146,7 +150,7 @@ public final class Architect {
         Building asking = !builder ? null : colony.buildings().stream()
                 .filter(b -> b.offer != null && !b.done() && (b.builder == null || b.builder.equals(c.getUUID()))).findFirst().orElse(null);
         return new Scene(citizen, player, colony, builder, other, d == null ? null : d.design.spec().toJson(),
-                d == null ? null : d.design.describe(), colony.rank(player.getUUID()), asking);
+                d == null ? null : d.design.describe(), colony.rank(player.getUUID()), asking, "voice".equals(turn.channel()));
     }
 
     // ---- what do they want? -------------------------------------------------------------------------------------
@@ -322,8 +326,13 @@ public final class Architect {
                 + d.design.describe() + ".");
         lines.addAll(placeLines(scene, null));
         lines.addAll(d.design.notes());
-        lines.add(Drafts.materialsSentence(d, scene.player.serverLevel(), scene.colony));
-        lines.add("Describe it in a sentence or two, in your own words, then ask whether they'd like changes or want you to build it.");
+        if (scene.spoken) {
+            lines.add("You're talking aloud: describe it in one or two short sentences, with no numbers or lists (the materials are on their"
+                    + " screen), then ask whether they'd like changes or want you to build it.");
+        } else {
+            lines.add(Drafts.materialsSentence(d, scene.player.serverLevel(), scene.colony));
+            lines.add("Describe it in a sentence or two, in your own words, then ask whether they'd like changes or want you to build it.");
+        }
         return lines;
     }
 
@@ -361,6 +370,9 @@ public final class Architect {
         var storage = dev.eiriksb.stad.building.ColonyStorage.supply(scene.player.serverLevel(), scene.colony);
         var missing = b.placement().map(p -> dev.eiriksb.stad.building.Construction.missing(scene.player.serverLevel(), b, p, storage))
                 .orElse(java.util.Map.of());
+        if (scene.spoken && !missing.isEmpty()) {
+            return "Mention, briefly, that the town is still short of some materials for it (they're listed at the town hall).";
+        }
         return missing.isEmpty() ? "The town has everything it needs for it."
                 : "Mention the town still needs " + dev.eiriksb.stad.building.Construction.describe(missing, 4) + " for it (in the town hall).";
     }
@@ -427,7 +439,7 @@ public final class Architect {
         if (c == null || colony.isEmpty() || c.distanceTo(player) > 24) {
             return;
         }
-        Scene scene = new Scene(c, player, colony.get(), true, null, null, null, colony.get().rank(player.getUUID()), null);
+        Scene scene = new Scene(c, player, colony.get(), true, null, null, null, colony.get().rank(player.getUUID()), null, false);
         TheyWillTalkApi.get().speak(c, player, "(" + String.join(" ", approved(scene, a)) + ")");
     }
 

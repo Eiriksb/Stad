@@ -83,6 +83,11 @@ public final class StadCommands {
                                         .suggests((c, b) -> SharedSuggestionProvider.suggest(java.util.stream.Stream.concat(Jobs.all().stream(),
                                                 java.util.stream.Stream.of("none")), b))
                                         .executes(c -> order(c, OrderKind.ASSIGN_JOB)))))
+                        .then(Commands.literal("talk").then(Commands.argument("uuid", StringArgumentType.word())
+                                .then(Commands.argument("text", StringArgumentType.greedyString()).executes(StadCommands::talk))))
+                        .then(Commands.literal("history").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::history)))
+                        .then(Commands.literal("voice").requires(s -> s.hasPermission(2))
+                                .then(Commands.argument("citizens", EntityArgument.entities()).executes(StadCommands::voice)))
                         .then(Commands.literal("status").requires(s -> s.hasPermission(2))
                                 .then(Commands.argument("citizens", EntityArgument.entities()).executes(StadCommands::status)))
                         .then(Commands.literal("needs").requires(s -> s.hasPermission(2))
@@ -371,6 +376,64 @@ public final class StadCommands {
         }
         int count = n;
         ctx.getSource().sendSuccess(() -> Component.literal("Set the needs of " + count + " citizens."), true);
+        return n;
+    }
+
+    private static CitizenEntity near(CommandContext<CommandSourceStack> ctx, ServerPlayer player) {
+        try {
+            return player.serverLevel().getEntity(UUID.fromString(StringArgumentType.getString(ctx, "uuid"))) instanceof CitizenEntity c
+                    && c.distanceTo(player) <= dev.eiriksb.stad.citizen.CitizenScreens.REACH ? c : null;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** Says something to a citizen (what the chat screen does, as a command). */
+    private static int talk(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        CitizenEntity c = near(ctx, player);
+        if (c == null) {
+            return fail(ctx.getSource(), "That citizen isn't nearby.");
+        }
+        return dev.eiriksb.theywilltalk.api.TheyWillTalkApi.get().talk(c, player, StringArgumentType.getString(ctx, "text")) ? 1
+                : fail(ctx.getSource(), c.getName().getString() + " can't talk right now.");
+    }
+
+    /** The last things a citizen and you said to each other. */
+    private static int history(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        CitizenEntity c = near(ctx, player);
+        if (c == null) {
+            return fail(ctx.getSource(), "That citizen isn't nearby.");
+        }
+        java.util.List<dev.eiriksb.theywilltalk.api.ChatLine> lines;
+        try {
+            lines = dev.eiriksb.theywilltalk.api.TheyWillTalkApi.get().history(c.getUUID(), player.getUUID(), 10).get(2, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            return fail(ctx.getSource(), "Couldn't read the conversation: " + e.getMessage());
+        }
+        if (lines.isEmpty()) {
+            ctx.getSource().sendSuccess(() -> Component.literal("You haven't talked yet."), false);
+        }
+        for (var l : lines) {
+            ctx.getSource().sendSuccess(() -> Component.literal(l.speaker() + ": ").withStyle(l.fromPlayer() ? ChatFormatting.AQUA : ChatFormatting.GOLD)
+                    .append(Component.literal(l.text()).withStyle(ChatFormatting.WHITE)), false);
+        }
+        return 1;
+    }
+
+    /** Admins: how citizens sound (their voice description, pitch and pace). */
+    private static int voice(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        int n = 0;
+        for (var e : EntityArgument.getEntities(ctx, "citizens")) {
+            if (e instanceof CitizenEntity c) {
+                n++;
+                ctx.getSource().sendSuccess(() -> Component.literal(c.getName().getString() + String.format(" (%d, pitch %.2f, pace %.2f): ",
+                        dev.eiriksb.stad.citizen.CitizenVoice.age(c), dev.eiriksb.stad.citizen.CitizenVoice.pitch(c),
+                        dev.eiriksb.stad.citizen.CitizenVoice.pace(c))).withStyle(ChatFormatting.GOLD)
+                        .append(Component.literal(dev.eiriksb.stad.citizen.CitizenVoice.design(c)).withStyle(ChatFormatting.GRAY)), false);
+            }
+        }
         return n;
     }
 

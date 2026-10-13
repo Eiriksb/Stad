@@ -112,6 +112,7 @@ public final class ColonyManager extends SavedData {
     public void join(Colony colony, CitizenEntity citizen) {
         ofCitizen(citizen.getUUID()).ifPresent(old -> old.removeCitizen(citizen.getUUID()));
         colony.addCitizen(citizen.getUUID(), citizen.getName().getString(), citizen.level().getGameTime());
+        colony.citizen(citizen.getUUID()).ifPresent(r -> r.genes = citizen.genes());
         citizen.joinedColony(colony);
     }
 

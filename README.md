@@ -8,7 +8,7 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
-> **Status:** early development (milestone M8). Found a town with a **town hall**; newcomers move in when there
+> **Status:** early development (milestone M9). Found a town with a **town hall**; newcomers move in when there
 > are free beds. Citizens sleep in their own beds, eat from the town hall, plan their day each morning (in character,
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
 > Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier** and **guard**.
@@ -30,6 +30,20 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 > resented one hears "no", with a reason, or "only once I've eaten". Miserable citizens leave, and an unhappy town
 > goes on strike. Players have ranks, and every order is checked and logged. The design and roadmap are in
 > [PLAN.md](PLAN.md).
+
+### Talking to citizens
+
+Right-click a citizen to talk to them face to face: the chat screen shows who they are (job, town, age, home), how
+they're doing, what they think of you, and what you've said to each other. Type to them there, or speak with your
+voice chat key while looking at them (spoken lines and their replies show up in the screen too). It also has buttons
+for the orders you may give (a job, the house you're standing in, inviting them, asking them to leave) and, for the
+builder, a shortcut to plan a building.
+
+Every citizen has their **own voice**, from their genes and age: a pitch, a pace, a timbre and a family way of speaking,
+passed on to their children, so families sound alike. A child's voice changes as they grow up; otherwise it stays the
+same, whatever their job or town. (With They Will Talk's designed voices, each is described in words, like "A young
+woman in her twenties with a medium-pitched, crisp voice and a gentle sing-song cadence"; `/stad citizen voice` shows
+them.) When you talk to the builder aloud, they keep it short and leave the lists to the screen.
 
 ### Talking a building through
 
@@ -168,6 +182,8 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad war peace <town>` / `envoy <uuid>` | officers: offer peace, or send a citizen to argue for it |
 | `/stad raid start [seconds]` / `stop` | admins: raiders attack the town you're in (after a warning) |
 | `/stad colony found` / `list` | admins |
+| `/stad citizen talk <uuid> <text>` / `history <uuid>` | say something to a citizen nearby; what you've said to each other |
+| `/stad citizen voice <citizens>` | admins: how they sound (age, pitch, pace and voice description) |
 | `/stad citizen status <citizens>` | admins: what they're doing right now |
 | `/stad citizen needs <citizens> <hunger> <rest>` | admins, for testing |
 

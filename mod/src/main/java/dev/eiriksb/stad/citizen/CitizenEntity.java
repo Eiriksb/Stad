@@ -27,6 +27,7 @@ import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -57,6 +58,8 @@ public class CitizenEntity extends PathfinderMob {
     public static final float MAX_NEED = 20f;
 
     /** Where they come from (server side only; They Will Talk tells it in conversation). */
+    private Genes genes;
+    private int ageYears;
     private String backstory = "";
     /** Their colony's id, 0 for none (the colony's citizen list is the truth; this is a quick lookup). */
     private int colonyId;
@@ -123,7 +126,34 @@ public class CitizenEntity extends PathfinderMob {
             setCustomName(Component.literal(CitizenNames.random(female, random)));
         }
         backstory = CitizenStories.random(random);
+        genes = Genes.random(random);
+        // most newcomers are working age; a few young ones and a few old hands
+        ageYears = 18 + (int) Math.round(Math.abs(random.nextGaussian()) * 18 + random.nextInt(8));
         return super.finalizeSpawn(level, difficulty, reason, data);
+    }
+
+    /** What they were born with (their voice, for now); made up from their id for citizens from before genes. */
+    public Genes genes() {
+        if (genes == null) {
+            genes = Genes.random(RandomSource.create(getUUID().getLeastSignificantBits()));
+        }
+        return genes;
+    }
+
+    public void setGenes(Genes g) {
+        genes = g;
+    }
+
+    /** Their age in years once grown up (children: see {@link CitizenVoice#age}). */
+    public int ageYears() {
+        if (ageYears <= 0) {
+            ageYears = 20 + (int) Math.floorMod(getUUID().getMostSignificantBits(), 35L);
+        }
+        return ageYears;
+    }
+
+    public void setAgeYears(int years) {
+        ageYears = years;
     }
 
     public boolean isFemale() {
@@ -149,9 +179,12 @@ public class CitizenEntity extends PathfinderMob {
 
     /** Children are half size and don't work; they grow up after a few days ({@link dev.eiriksb.stad.agent.Social}). */
     public void setChild(boolean child) {
+        boolean was = entityData.get(CHILD);
         entityData.set(CHILD, child);
         if (child) {
             born = level().getGameTime();
+        } else if (was) {
+            ageYears = 18; // just grown up
         }
         refreshDimensions();
     }
@@ -355,6 +388,8 @@ public class CitizenEntity extends PathfinderMob {
         tag.put("Inventory", inventory.createTag(registryAccess()));
         tag.putBoolean("Child", isBaby());
         tag.putLong("Born", born);
+        tag.put("Genes", genes().save());
+        tag.putInt("Age", ageYears());
     }
 
     @Override
@@ -369,6 +404,8 @@ public class CitizenEntity extends PathfinderMob {
         inventory.fromTag(tag.getList("Inventory", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
         entityData.set(CHILD, tag.getBoolean("Child"));
         born = tag.getLong("Born");
+        genes = Genes.load(tag.getCompound("Genes"));
+        ageYears = tag.getInt("Age");
     }
 
     @Override

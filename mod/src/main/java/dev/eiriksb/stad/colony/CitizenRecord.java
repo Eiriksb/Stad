@@ -50,6 +50,8 @@ public final class CitizenRecord {
     public java.util.List<java.util.UUID> parents = java.util.List.of();
     /** the day they last had a child */
     public long lastChildDay = -100;
+    /** what they were born with (kept here so children inherit it while a parent isn't loaded) */
+    public dev.eiriksb.stad.citizen.Genes genes;
 
     public CitizenRecord(UUID uuid, String name, long joined) {
         this.uuid = uuid;
@@ -100,6 +102,9 @@ public final class CitizenRecord {
         parents.forEach(p -> ps.add(net.minecraft.nbt.NbtUtils.createUUID(p)));
         t.put("Parents", ps);
         t.putLong("LastChildDay", lastChildDay);
+        if (genes != null) {
+            t.put("Genes", genes.save());
+        }
         return t;
     }
 
@@ -129,6 +134,7 @@ public final class CitizenRecord {
         t.getList("Parents", net.minecraft.nbt.Tag.TAG_INT_ARRAY).forEach(p -> parents.add(net.minecraft.nbt.NbtUtils.loadUUID(p)));
         r.parents = java.util.List.copyOf(parents);
         r.lastChildDay = t.contains("LastChildDay") ? t.getLong("LastChildDay") : -100;
+        r.genes = dev.eiriksb.stad.citizen.Genes.load(t.getCompound("Genes"));
         return r;
     }
 }

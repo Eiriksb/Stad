@@ -14,11 +14,18 @@ import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Optional;
 
-/** Right-clicking a citizen: who they are and how they're doing, with buttons for the orders the player may give. */
+/**
+ * Right-clicking a citizen: the chat screen ({@link CitizenScreens}), or for players without Stad on their client, a card in
+ * chat with who they are, how they're doing and buttons for the orders the player may give.
+ */
 final class CitizenInteraction {
     private CitizenInteraction() {}
 
     static void show(ServerPlayer player, CitizenEntity citizen) {
+        if (CitizenScreens.canShow(player)) {
+            CitizenScreens.open(player, citizen);
+            return;
+        }
         ColonyManager colonies = ColonyManager.get(player.server);
         Optional<Colony> home = citizen.colony();
         MutableComponent card = Component.literal(citizen.getName().getString()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);

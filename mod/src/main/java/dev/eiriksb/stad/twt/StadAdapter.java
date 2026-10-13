@@ -49,7 +49,13 @@ public final class StadAdapter implements VillagerAdapter {
             f.name = c.getCustomName().getString();
         }
         f.gender = c.isFemale() ? "f" : "m";
-        f.ageGroup = c.isBaby() ? "child" : "adult";
+        int age = dev.eiriksb.stad.citizen.CitizenVoice.age(c);
+        f.ageGroup = dev.eiriksb.stad.citizen.CitizenVoice.ageGroup(age);
+        f.extra.put("age", age + " years");
+        // their own voice, from their genes and age (stable from turn to turn: a new description is a new voice)
+        f.voiceDesign = dev.eiriksb.stad.citizen.CitizenVoice.design(c);
+        f.voicePitch = dev.eiriksb.stad.citizen.CitizenVoice.pitch(c);
+        f.voiceSpeed = dev.eiriksb.stad.citizen.CitizenVoice.pace(c);
         f.biomeType = c.level().getBiome(c.blockPosition()).unwrapKey().map(k -> k.location().getPath()).orElse("plains");
         f.sleeping = c.isSleeping();
         f.backstory = c.backstory().isEmpty() ? null : c.backstory();

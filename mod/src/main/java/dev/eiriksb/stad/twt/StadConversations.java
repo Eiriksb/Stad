@@ -31,6 +31,7 @@ public final class StadConversations implements ConversationHook {
         if (server == null || turn.kind() != dev.eiriksb.stad.Stad.CITIZEN) {
             return;
         }
+        dev.eiriksb.stad.citizen.CitizenScreens.reply(server, turn, reply);
         server.execute(() -> {
             for (ServerLevel level : server.getAllLevels()) {
                 if (level.getEntity(turn.villager()) instanceof CitizenEntity c) {

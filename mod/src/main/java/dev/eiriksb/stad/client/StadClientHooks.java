@@ -20,6 +20,17 @@ public final class StadClientHooks {
         Minecraft.getInstance().setScreen(new PackEditorScreen(editor));
     }
 
+    public static void openCitizen(dev.eiriksb.stad.net.CitizenScreenPayload p) {
+        Minecraft.getInstance().setScreen(new CitizenChatScreen(p));
+    }
+
+    /** A new line for the citizen chat screen, if it's open for that citizen. */
+    public static void citizenLine(dev.eiriksb.stad.net.CitizenLinePayload p) {
+        if (Minecraft.getInstance().screen instanceof CitizenChatScreen s && s.citizen().equals(p.citizen())) {
+            s.add(new dev.eiriksb.stad.net.CitizenScreenPayload.Line(p.fromPlayer(), p.speaker(), p.text()));
+        }
+    }
+
     public static void draftPreview(dev.eiriksb.stad.net.DraftPreviewPayload preview) {
         GhostPreview.set(preview);
     }

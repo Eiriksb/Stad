@@ -52,6 +52,18 @@ public final class StadNetwork {
             }
         });
         r.playToServer(EditorSavePayload.TYPE, EditorSavePayload.CODEC, StadNetwork::editorSave);
+        r.playToClient(CitizenScreenPayload.TYPE, CitizenScreenPayload.CODEC, (p, ctx) -> {
+            if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.openCitizen(p);
+            }
+        });
+        r.playBidirectional(CitizenLinePayload.TYPE, CitizenLinePayload.CODEC, (p, ctx) -> {
+            if (ctx.player() instanceof ServerPlayer player) {
+                dev.eiriksb.stad.citizen.CitizenScreens.say(player, p);
+            } else if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.citizenLine(p);
+            }
+        });
         r.playToClient(DraftPreviewPayload.TYPE, DraftPreviewPayload.CODEC, (p, ctx) -> {
             if (FMLEnvironment.dist.isClient()) {
                 dev.eiriksb.stad.client.StadClientHooks.draftPreview(p);
