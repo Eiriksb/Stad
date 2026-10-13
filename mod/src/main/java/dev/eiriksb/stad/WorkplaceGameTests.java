@@ -21,6 +21,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -143,7 +144,7 @@ public final class WorkplaceGameTests {
     }
 
     @GameTest(template = "lot", batch = "free_build", timeoutTicks = 100)
-    public static void freeBuildKeepsTheDesignAndNothingElse(GameTestHelper helper) {
+    public static void freeBuildHappensInTheDraftingWorld(GameTestHelper helper) {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();
         owner.setGameMode(GameType.SURVIVAL);
         owner.getInventory().add(new ItemStack(Items.DIAMOND, 3));
@@ -152,44 +153,46 @@ public final class WorkplaceGameTests {
         Colony colony = found(helper, owner);
         helper.setBlock(TABLE, StadRegistries.ARCHITECT_TABLE.get());
         helper.setBlock(new BlockPos(6, G, 6), Blocks.CHEST);
-        var chest = (net.minecraft.world.level.block.entity.ChestBlockEntity) helper.getBlockEntity(new BlockPos(6, G, 6));
-        chest.setItem(0, new ItemStack(Items.BREAD, 5));
         Project p = Tables.project(helper.getLevel(), helper.absolutePos(TABLE)).orElseThrow();
         p.setSite(helper.absolutePos(new BlockPos(5, G - 1, 5)), helper.absolutePos(new BlockPos(12, G + 4, 12)));
         p.edits.put(Project.key(3, 1, 3), Blocks.OAK_PLANKS.defaultBlockState()); // in the design before they start
         String problem = FreeBuild.start(owner, helper.getLevel(), helper.absolutePos(TABLE), p);
         helper.assertTrue(problem == null, "started: " + problem);
+        ServerLevel draft = FreeBuild.draftLevel(owner.server);
+        BlockPos o = FreeBuild.origin(owner);
+        helper.assertTrue(draft != null && owner.level() == draft, "in the drafting world: " + owner.level().dimension());
         helper.assertTrue(owner.gameMode.getGameModeForPlayer() == GameType.CREATIVE && owner.getInventory().countItem(Items.DIAMOND) == 0, "creative, with an empty inventory");
-        helper.assertTrue(helper.getBlockState(new BlockPos(8, G, 8)).is(Blocks.OAK_PLANKS), "the design is there to build on");
-        helper.assertTrue(FreeBuild.sites().stream().anyMatch(b -> b.isInside(owner.blockPosition())), "in the site");
-        // they build (and empty the chest into their pockets, and break a block, and drop something)
-        helper.setBlock(new BlockPos(7, G, 7), Blocks.STONE_BRICKS);
-        helper.setBlock(new BlockPos(8, G, 8), Blocks.AIR);
-        owner.getInventory().add(chest.removeItemNoUpdate(0));
+        helper.assertTrue(draft.getBlockState(o.offset(3, 1, 3)).is(Blocks.OAK_PLANKS) && draft.getBlockState(o.offset(1, 1, 1)).is(Blocks.CHEST),
+                "the design is there to build on, on a copy of the land");
+        helper.assertTrue(draft.getBlockState(o.offset(0, -Project.MARGIN - 1, 0)).is(Blocks.BARRIER), "with a floor under it");
+        helper.assertTrue(helper.getBlockState(new BlockPos(8, G, 8)).isAir(), "the real site isn't touched");
+        // they build (and break a block, and pick things up, and drop something)
+        draft.setBlock(o.offset(2, 1, 2), Blocks.STONE_BRICKS.defaultBlockState(), 3);
+        draft.setBlock(o.offset(3, 1, 3), Blocks.AIR.defaultBlockState(), 3);
         owner.getInventory().add(new ItemStack(Items.NETHERITE_INGOT, 64));
-        ItemEntity drop = new ItemEntity(helper.getLevel(), helper.absolutePos(new BlockPos(9, G, 9)).getX(), helper.absolutePos(new BlockPos(9, G, 9)).getY(),
-                helper.absolutePos(new BlockPos(9, G, 9)).getZ(), new ItemStack(Items.DIAMOND_BLOCK, 64));
-        helper.assertTrue(!helper.getLevel().addFreshEntity(drop), "nothing becomes an item in the site");
+        ItemEntity drop = new ItemEntity(draft, o.getX() + 4, o.getY() + 2, o.getZ() + 4, new ItemStack(Items.DIAMOND_BLOCK, 64));
+        helper.assertTrue(!draft.addFreshEntity(drop), "nothing becomes an item in the drafting world");
         String done = FreeBuild.finish(owner, true);
         helper.assertTrue(done != null && done.contains("Kept"), "kept: " + done);
         helper.assertTrue(p.edits.get(Project.key(2, 1, 2)).is(Blocks.STONE_BRICKS) && p.at(Project.key(3, 1, 3)) == null,
                 "what they built is the design (the planks they took away are gone from it): " + p.edits);
-        helper.assertTrue(helper.getBlockState(new BlockPos(7, G, 7)).isAir() && helper.getBlockState(new BlockPos(6, G, 6)).is(Blocks.CHEST),
-                "the site is as it was");
-        chest = (net.minecraft.world.level.block.entity.ChestBlockEntity) helper.getBlockEntity(new BlockPos(6, G, 6));
-        helper.assertTrue(chest.getItem(0).is(Items.BREAD) && chest.getItem(0).getCount() == 5, "the chest has its bread back: " + chest.getItem(0));
-        helper.assertTrue(owner.gameMode.getGameModeForPlayer() == GameType.SURVIVAL && owner.getInventory().countItem(Items.DIAMOND) == 3 && owner.getInventory().countItem(Items.NETHERITE_INGOT) == 0
-                && owner.getInventory().countItem(Items.BREAD) == 0, "their own things back, nothing from the site: creative " + owner.isCreative()
-                + ", diamonds " + owner.getInventory().countItem(Items.DIAMOND) + ", netherite " + owner.getInventory().countItem(Items.NETHERITE_INGOT)
-                + ", bread " + owner.getInventory().countItem(Items.BREAD) + ", mode " + owner.gameMode.getGameModeForPlayer() + " (the mock player always says it's creative)");
-        helper.assertTrue(owner.blockPosition().equals(stand), "back where they were: " + owner.blockPosition());
-        // the server stops mid-build: the site and their things come back
+        helper.assertTrue(draft.getBlockState(o.offset(2, 1, 2)).isAir() && draft.getBlockState(o.offset(1, 1, 1)).isAir(), "their stretch of the drafting world is cleared");
+        helper.assertTrue(owner.level() == helper.getLevel() && owner.blockPosition().equals(stand), "back where they were: " + owner.blockPosition());
+        helper.assertTrue(owner.gameMode.getGameModeForPlayer() == GameType.SURVIVAL && owner.getInventory().countItem(Items.DIAMOND) == 3
+                && owner.getInventory().countItem(Items.NETHERITE_INGOT) == 0, "their own things back, nothing from the drafting world: diamonds "
+                + owner.getInventory().countItem(Items.DIAMOND) + ", netherite " + owner.getInventory().countItem(Items.NETHERITE_INGOT)
+                + ", mode " + owner.gameMode.getGameModeForPlayer());
+        helper.assertTrue(helper.getBlockState(new BlockPos(7, G, 7)).isAir(), "still nothing built for real");
+        // the server stops mid-build: they carry on where they were, and can still throw it away
         helper.assertTrue(FreeBuild.start(owner, helper.getLevel(), helper.absolutePos(TABLE), p) == null, "again");
-        helper.setBlock(new BlockPos(10, G, 10), Blocks.GOLD_BLOCK);
-        owner.getInventory().add(new ItemStack(Items.GOLD_BLOCK, 64));
+        BlockPos o2 = FreeBuild.origin(owner);
+        draft.setBlock(o2.offset(4, 1, 4), Blocks.GOLD_BLOCK.defaultBlockState(), 3);
         FreeBuild.restartForTest(owner);
-        helper.assertTrue(helper.getBlockState(new BlockPos(10, G, 10)).isAir() && helper.getBlockState(new BlockPos(8, G, 8)).isAir(), "the site put back");
-        helper.assertTrue(owner.gameMode.getGameModeForPlayer() == GameType.SURVIVAL && owner.getInventory().countItem(Items.GOLD_BLOCK) == 0 && owner.getInventory().countItem(Items.DIAMOND) == 3,
+        helper.assertTrue(FreeBuild.building(owner) && owner.level() == draft && draft.getBlockState(o2.offset(4, 1, 4)).is(Blocks.GOLD_BLOCK),
+                "still designing after the restart");
+        String cancelled = FreeBuild.finish(owner, false);
+        helper.assertTrue(cancelled != null && p.at(Project.key(4, 1, 4)) == null, "thrown away: " + cancelled);
+        helper.assertTrue(owner.gameMode.getGameModeForPlayer() == GameType.SURVIVAL && owner.getInventory().countItem(Items.DIAMOND) == 3,
                 "their things back");
         helper.assertTrue(FreeBuild.sites().isEmpty(), "nobody building");
         cleanUp(helper, colony, owner);

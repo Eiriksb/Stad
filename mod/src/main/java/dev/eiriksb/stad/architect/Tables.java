@@ -206,7 +206,7 @@ public final class Tables {
         return new BoundingBox(p.min.getX(), p.min.getY(), p.min.getZ(), p.min.getX() + p.sx - 1, p.min.getY() + p.sy - 1, p.min.getZ() + p.sz - 1);
     }
 
-    private static Grid capture(ServerLevel level, Project p) {
+    static Grid capture(ServerLevel level, Project p) {
         int m = Project.MARGIN;
         return Grid.capture(level, p.min.offset(-m, -m, -m), p.sx + 2 * m, p.sy + 2 * m, p.sz + 2 * m);
     }

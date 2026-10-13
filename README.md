@@ -118,25 +118,27 @@ mine's shaft).
 this piece of land. Mark the site's corners with the scan wand and right-click the table with it (or type the
 corners into the table's screen): at most 32 by 32 blocks and 32 high, on the town's land. The table shows the site in
 3D with the land round it (drag to turn, scroll to zoom, middle-drag to pan, shift+scroll or Page Up/Down to cut the
-view off at a layer and look inside). Pick what kind of building it is (any of them: home, builder's hut, warehouse,
-barracks, watchtower, kitchen, mine, workshop), a style, floors, roof, beds and extras, and **Generate** fills the
-site with a building that fits, standing on the ground with a foundation where the land falls away. Then change it
-by hand: place, break, pick, box, walls, floor, line, replace, copy and paste, markers, mirroring and undo, with a
-searchable list of every block a survival player can place (and what the town has of each). Hand edits stay on top
-when you generate again; **Flatten** makes it all plain blocks. **Ask** has the planner model revise it from what you
-write ("add a porch and make the roof hip"). The line bottom left says what it still needs to be that kind of
-building. **Save to pack** keeps it in My pack; **Plan it here** plans it on the site for the builders (what the
-design leaves out of the site stays as it is; a finished building on the site is redesigned in place). Officers
-edit; other members can watch. Broken, the table keeps its project.
+view off at a layer and look inside). The view takes up the screen: the building's name and kind (any of them: home,
+builder's hut, warehouse, barracks, watchtower, kitchen, mine, workshop and the workplaces) are top left, and the
+tools are along the bottom: place, break, pick, box, walls, floor, line, replace, copy and paste, markers, mirroring
+and undo, with a searchable list of every block a survival player can place (and what the town has of each). The line
+bottom left says what it still needs to be that kind of building. **Generate ▾** opens a drawer to start from a
+generated building: a style, floors, roof, door, beds and extras, and **Generate** fills the site with one that fits,
+standing on the ground with a foundation where the land falls away. Your own changes stay on top when you generate
+again; **Flatten** makes it all plain blocks, and **Ask** has the planner model revise it from what you write ("add a
+porch and make the roof hip"). The drawer also has **Change site** and **Reset**. **Save** keeps the design in My pack;
+**Plan it here** plans it on the site for the builders (what the design leaves out of the site stays as it is; a
+finished building on the site is redesigned in place). Officers edit; other members can watch. Broken, the table keeps
+its project.
 
-**Build in it** (bottom right of the view) takes you into the site to build it yourself, in creative: fly, take any
-block, break at a touch. It's all a design: when you click **Done** in chat (or `/stad build done`), what you built
-becomes the table's design (on top of the generated building, like hand edits), the site goes back exactly as it was,
-and you get your own inventory, game mode and place back; **Cancel** throws it away. Nothing comes out of the site:
-everything to put back is saved with the world before you start (so a crash or quitting puts it all back), you can only
-place design blocks and only inside the site, nothing you break or knock loose becomes an item, you can't open
-containers or ender chests, use items that aren't blocks or touch entities, nobody else can change the site meanwhile,
-explosions leave it alone, and flying out puts you back in.
+**Build in it** (top right) takes you to the drafting world to build it yourself, in creative: an empty void with a
+copy of the site, the design and the land round it, as the table shows it. Fly, take any block, break at a touch; only
+the site itself can be changed, and an invisible box keeps you near it. Press **B** (or click **Done** in chat, or
+`/stad build done`) and **Keep it**: what you built becomes the table's design (on top of the generated building, like
+hand edits), you're back where you were with your own inventory and game mode, and the table opens to show it. **Throw
+away** (or **Cancel**) leaves the design as it was. The real site is never touched, and nothing comes back with you:
+your inventory is saved with the world before you go, and you can't open containers or ender chests, use items that
+aren't blocks or touch entities there. The drafting world keeps your copy, so logging out or a restart doesn't end it.
 
 **Styles.** A palette gives the roles new materials, so any pack building can be built in another style: pick one in
 the Building Plans, say it to the builder ("in the Nordic style"), or `/stad colony plan <building> <style>`. The mod
@@ -251,7 +253,7 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad colony cancel <id>` | officers |
 | `/stad citizen job <uuid> <builder\|farmer\|lumberjack\|courier\|guard\|none>` | officers (the citizen card has buttons for it) |
 | `/stad citizen workplace <uuid> <building id>` | officers: where a worker works from (ids as in `/stad colony builds`) |
-| `/stad build done` / `cancel` | end free build in an architect's table's site, keeping what you built or not |
+| `/stad build done` / `cancel` | end free build in the drafting world, keeping what you built as the design or not |
 | `/stad draft show` | your draft building: what it is and where (and its buttons again) |
 | `/stad draft approve` / `here` / `turn` / `save` / `cancel` | what the buttons under a draft do |
 | `/stad draft describe <text>` | draw up a building from a description without talking (asks the local model) |

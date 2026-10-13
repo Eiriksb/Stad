@@ -19,7 +19,7 @@ import java.util.Deque;
  * {@code click x y [button]}, {@code drag x1 y1 x2 y2 [button]}, {@code scroll x y amount}, {@code key name},
  * {@code type text}, {@code wait ticks}, {@code shot name} (saved in screenshots/ once the frame is drawn).
  * Coordinates are the screen's (GUI-scaled). In the world: {@code hold item_id} (creative), {@code look yaw pitch},
- * {@code use}, {@code attack}, {@code drop}.
+ * {@code use}, {@code attack}, {@code drop}, {@code press letter} (whatever key binding is on that key).
  */
 @EventBusSubscriber(modid = Stad.MOD_ID, value = Dist.CLIENT)
 public final class DevUi {
@@ -140,6 +140,7 @@ public final class DevUi {
                 case "use" -> net.minecraft.client.KeyMapping.click(mc.options.keyUse.getKey());
                 case "attack" -> net.minecraft.client.KeyMapping.click(mc.options.keyAttack.getKey());
                 case "drop" -> net.minecraft.client.KeyMapping.click(mc.options.keyDrop.getKey());
+                case "press" -> net.minecraft.client.KeyMapping.click(com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(a[1].toUpperCase().charAt(0)));
                 default -> Stad.LOGGER.warn("dev ui: what's {}?", s);
             }
         } catch (RuntimeException e) {

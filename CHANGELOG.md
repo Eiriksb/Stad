@@ -9,9 +9,12 @@
   or save it into My pack. Officers edit, members watch, and the table keeps its project when it's broken.
 - The generator draws buildings up to 32 blocks long (still 17 when talking to a builder), and a building on the site
   can be redesigned in place.
-- **Free build**: Build in it takes you into the site in creative to build it yourself. What you build becomes the
-  design, the site goes back as it was, and you get your own things back; nothing comes out of the site (and a crash
-  or quitting puts everything back).
+- **Free build**: Build in it takes you to the drafting world, an empty void with a copy of the site and the land round
+  it, to build it yourself in creative. Press B and Keep it: what you build becomes the design, and you're back at the
+  table with your own things. The real site is never touched, nothing comes back with you, and logging out or a
+  restart doesn't end it.
+- The table's screen is mostly the 3D view now: the tools along the bottom, the name and kind top left, and
+  generating and asking for changes in a drawer (Generate ▾).
 
 **Workplaces**
 - Every job works from a building: new **farmhouse**, **lumber camp**, **fishery** and **barn** types (in every pack),

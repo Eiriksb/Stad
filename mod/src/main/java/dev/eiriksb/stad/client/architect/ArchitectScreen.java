@@ -20,6 +20,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -63,7 +64,8 @@ import java.util.Set;
  * the view off at a layer. Click to use the tool, right-click to remove, middle-click to pick a block.
  */
 public class ArchitectScreen extends Screen {
-    private static final int PANEL = 160;
+    /** the top bar's height, and the drawer's width */
+    private static final int TOP = 22, DRAWER = 150;
     private static final int SLOT = 18;
     private static final List<String> MARKERS = List.of("stad:work", "stad:sit", "stad:bed", "stad:storage", "stad:door", "stad:shaft");
     private static final Direction[] DOORS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
@@ -143,7 +145,10 @@ public class ArchitectScreen extends Screen {
     private Button typeButton, styleButton, floorsButton, roofButton, doorButton, bedsButton, startOverButton, mirrorXButton, mirrorZButton;
     private final List<Button> featureButtons = new ArrayList<>();
     private final List<Button> editOnly = new ArrayList<>();
-    private int vw, vh, toolsTop, hotbarY, listTop;
+    private int vw, vh, toolsTop, hotbarY, drawerInfoY;
+    private boolean drawer;
+    private final long openedAt = System.currentTimeMillis();
+    private long toolAt;
 
     private int dragButton = -1;
     private double dragX, dragY;
@@ -223,75 +228,66 @@ public class ArchitectScreen extends Screen {
         toolButtons.clear();
         featureButtons.clear();
         editOnly.clear();
-        vw = width - PANEL;
-        // the tool buttons flow along under the view
-        List<int[]> spots = new ArrayList<>();
-        List<String> labels = new ArrayList<>();
+        styleButton = floorsButton = roofButton = doorButton = bedsButton = startOverButton = null;
+        describeBox = null;
+        vw = width;
+        // the bottom: the tools on one row, the hotbar and the editing buttons on the next
+        List<String> tools = new ArrayList<>();
         for (Tool t : Tool.values()) {
-            labels.add(t == Tool.MARK ? "Mark" : t.label);
+            tools.add(t == Tool.MARK ? "Mark" : t.label);
         }
-        labels.addAll(List.of("Mirror X", "Mirror Z", "Undo", "Redo"));
-        int x = 4, rows = 1;
-        for (String l : labels) {
-            int w = font.width(l) + 10;
-            if (x + w > vw - 4) {
-                x = 4;
-                rows++;
-            }
-            spots.add(new int[]{x, rows - 1, w});
-            x += w + 2;
-        }
-        int bottom = rows * 18 + SLOT + 10;
-        vh = height - bottom;
-        toolsTop = vh + 3;
-        hotbarY = toolsTop + rows * 18 + 2;
-        for (int i = 0; i < labels.size(); i++) {
-            int[] s = spots.get(i);
-            int bx = s[0], by = toolsTop + s[1] * 18;
-            if (i < Tool.values().length) {
-                Tool t = Tool.values()[i];
-                Button b = addRenderableWidget(Button.builder(Component.literal(t.label), btn -> chooseTool(t)).bounds(bx, by, s[2], 16)
-                        .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(t.hint))).build());
-                toolButtons.add(b);
-                editOnly.add(b);
-            } else {
-                String l = labels.get(i);
-                Button b = addRenderableWidget(Button.builder(Component.literal(l), btn -> {
-                    switch (l) {
-                        case "Mirror X" -> mirrorX = !mirrorX;
-                        case "Mirror Z" -> mirrorZ = !mirrorZ;
-                        case "Undo" -> undo();
-                        default -> redo();
-                    }
-                    refreshLabels();
-                }).bounds(bx, by, s[2], 16).build());
-                editOnly.add(b);
-                if (l.equals("Mirror X")) {
-                    mirrorXButton = b;
-                } else if (l.equals("Mirror Z")) {
-                    mirrorZButton = b;
-                }
-            }
-        }
+        List<int[]> toolSpots = flow(tools, 4, 4);
+        int toolRows = toolSpots.get(toolSpots.size() - 1)[1] + 1;
         int hx = 4 + 9 * SLOT + 6;
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Blocks..."), b -> setPicking(!picking))
-                .bounds(hx, hotbarY + 1, 56, 16).build()));
-        // the layer controls, top right of the view
-        if (model != null && !picking) {
-            addRenderableWidget(Button.builder(Component.literal("▲"), b -> setCut(cut + 1)).bounds(vw - 22, 4, 18, 16).build());
-            addRenderableWidget(Button.builder(Component.literal("▼"), b -> setCut(cut - 1)).bounds(vw - 22, 34, 18, 16).build());
+        List<String> edits = List.of("Blocks...", "Undo", "Redo", "Mirror X", "Mirror Z");
+        List<int[]> editSpots = flow(edits, hx, hx);
+        int editRows = editSpots.get(editSpots.size() - 1)[1] + 1;
+        vh = height - toolRows * 18 - Math.max(SLOT, editRows * 18) - 8;
+        toolsTop = vh + 3;
+        hotbarY = toolsTop + toolRows * 18 + 1;
+        for (int i = 0; i < tools.size(); i++) {
+            Tool t = Tool.values()[i];
+            int[] s = toolSpots.get(i);
+            Button b = addRenderableWidget(Button.builder(Component.literal(t.label), btn -> chooseTool(t)).bounds(s[0], toolsTop + s[1] * 18, s[2], 16)
+                    .tooltip(Tooltip.create(Component.literal(t.hint))).build());
+            toolButtons.add(b);
+            editOnly.add(b);
         }
-        // the panel
-        int px = vw + 4, pw = PANEL - 8, y = 16;
-        nameBox = new EditBox(font, px, y, pw, 16, Component.literal("Name"));
+        for (int i = 0; i < edits.size(); i++) {
+            String l = edits.get(i);
+            int[] s = editSpots.get(i);
+            Button b = addRenderableWidget(Button.builder(Component.literal(l), btn -> {
+                switch (l) {
+                    case "Blocks..." -> setPicking(!picking);
+                    case "Mirror X" -> mirrorX = !mirrorX;
+                    case "Mirror Z" -> mirrorZ = !mirrorZ;
+                    case "Undo" -> undo();
+                    default -> redo();
+                }
+                refreshLabels();
+            }).bounds(s[0], hotbarY + 1 + s[1] * 18, s[2], 16).tooltip(Tooltip.create(Component.literal(switch (l) {
+                case "Blocks..." -> "All the blocks, to put in your hand (E). Right-click a slot for this too.";
+                case "Undo" -> "Undo (Ctrl+Z)";
+                case "Redo" -> "Redo (Ctrl+Y)";
+                default -> "Build mirrored across the middle of the site, " + (l.endsWith("X") ? "east to west" : "north to south") + ".";
+            }))).build());
+            editOnly.add(b);
+            if (l.equals("Mirror X")) {
+                mirrorXButton = b;
+            } else if (l.equals("Mirror Z")) {
+                mirrorZButton = b;
+            }
+        }
+        // the top bar: what it is on the left, what to do with it on the right
+        nameBox = new EditBox(font, 4, 3, 80, 16, Component.literal("Name"));
         nameBox.setMaxLength(40);
         nameBox.setValue(name);
         if (sentName == null) {
             sentName = name;
         }
         nameBox.setResponder(v -> name = v);
+        nameBox.setTooltip(Tooltip.create(Component.literal("The building's name")));
         addRenderableWidget(nameBox);
-        y += 20;
         typeButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
             typeIndex = (typeIndex + (hasShiftDown() ? open.types().size() - 1 : 1)) % open.types().size();
             send(TablePayloads.Action.Kind.TYPE, open.types().get(typeIndex));
@@ -300,88 +296,39 @@ public class ArchitectScreen extends Screen {
             }
             dirtyCheck = true;
             refreshLabels();
-        }).bounds(px, y, pw, 18).build());
-        y += 22;
-        styleButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
-            if (!open.styles().isEmpty()) {
-                style = (style + 1) % open.styles().size();
-                defaultHotbar();
-            }
-            refreshLabels();
-        }).bounds(px, y, pw, 18).build());
-        y += 20;
-        int half = (pw - 2) / 2;
-        floorsButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
-            floors = floors % BuildSpec.MAX_FLOORS + 1;
-            refreshLabels();
-        }).bounds(px, y, half, 18).build());
-        roofButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
-            roof = (roof + 1) % BuildSpec.ROOFS.size();
-            refreshLabels();
-        }).bounds(px + half + 2, y, half, 18).build());
-        y += 20;
-        doorButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
-            door = (door + 1) % 4;
-            refreshLabels();
-        }).bounds(px, y, half, 18).build());
-        bedsButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
-            beds = (beds + 1) % (BuildSpec.MAX_BEDS + 1);
-            refreshLabels();
-        }).bounds(px + half + 2, y, half, 18).build());
-        y += 20;
-        int third = (pw - 4) / 3;
-        for (int i = 0; i < BuildSpec.FEATURES.size(); i++) {
-            String f = BuildSpec.FEATURES.get(i);
-            featureButtons.add(addRenderableWidget(Button.builder(Component.empty(), b -> {
-                if (!features.remove(f)) {
-                    features.add(f);
-                }
-                refreshLabels();
-            }).bounds(px + i * (third + 2), y, third, 18).build()));
-        }
-        y += 22;
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Generate"), b -> generate())
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
-                        "Fill the site with a building from these settings. Your hand edits stay on top."))).bounds(px, y, third, 18).build()));
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Flatten"), b -> send(TablePayloads.Action.Kind.FLATTEN, ""))
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
-                        "Make the generated building plain blocks, so generating again starts afresh."))).bounds(px + third + 2, y, third, 18).build()));
-        startOverButton = addRenderableWidget(Button.builder(Component.literal("Reset"), b -> startOver())
-                .bounds(px + 2 * (third + 2), y, third, 18).build());
-        editOnly.add(startOverButton);
-        y += 22;
-        describeBox = new EditBox(font, px, y, pw - 30, 16, Component.literal("Describe a change"));
-        describeBox.setMaxLength(300);
-        describeBox.setHint(Component.literal("Describe a change...").withStyle(ChatFormatting.DARK_GRAY));
-        describeBox.setValue(describeText);
-        describeBox.setResponder(v -> describeText = v);
-        addRenderableWidget(describeBox);
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Ask"), b -> describe()).bounds(px + pw - 28, y - 1, 28, 18).build()));
-        listTop = y + 22;
-        int by = height - 22;
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Save to pack"), b -> {
-            send(TablePayloads.Action.Kind.SAVE, nameBox.getValue());
-        }).tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
-                "Keep the design in My pack, to build again anywhere."))).bounds(px, by, half, 18).build()));
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Plan it here"), b -> {
-            flushName();
-            send(TablePayloads.Action.Kind.PLAN, "");
-        }).tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
-                "Plan it on the site for the town's builders."))).bounds(px + half + 2, by, half, 18).build()));
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Build in it"), b -> {
+        }).bounds(88, 3, 80, 16).tooltip(Tooltip.create(Component.literal("What kind of building it is: click for the next kind, shift-click for the one before."))).build());
+        int rx = width - 4;
+        rx = topButton(rx, "Build in it", "Build it yourself, in creative, in the drafting world: a copy of the site with nothing else round it. "
+                + "What you build becomes the design. The real site isn't touched, and nothing comes back with you.", b -> {
             flushName();
             send(TablePayloads.Action.Kind.FREE_BUILD, "");
             onClose();
-        }).tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
-                "Go into the site and build it yourself, as in creative. What you build becomes the design; nothing you place or break "
-                        + "there is real, and nothing comes out with you."))).bounds(vw - 74, vh - 21, 70, 18).build()));
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Site..."), b -> {
-            siteOpen = !siteOpen;
+        });
+        editOnly.get(editOnly.size() - 1).setMessage(Component.literal("Build in it").withStyle(ChatFormatting.GREEN));
+        rx = topButton(rx, "Plan it here", "Plan it on the site for the town's builders.", b -> {
+            flushName();
+            send(TablePayloads.Action.Kind.PLAN, "");
+        });
+        rx = topButton(rx, "Save", "Keep the design in My pack, to build again anywhere.", b -> send(TablePayloads.Action.Kind.SAVE, nameBox.getValue()));
+        Button more = addRenderableWidget(Button.builder(Component.literal(drawer ? "Generate ▴" : "Generate ▾"), b -> {
+            drawer = !drawer;
             rebuildWidgets();
-        }).bounds(width - 50, 2, 46, 12).build()));
+        }).tooltip(Tooltip.create(Component.literal("Generate a building to start from, change the site, or start over."))).bounds(rx - 64, 3, 62, 16).build());
+        more.active = model != null;
+        // the layer controls, top right of the view
+        int lx = viewRight() - 22;
+        if (model != null && !picking) {
+            addRenderableWidget(Button.builder(Component.literal("▲"), b -> setCut(cut + 1)).bounds(lx, TOP + 4, 18, 16)
+                    .tooltip(Tooltip.create(Component.literal("Show a layer more (Shift+scroll, Page Up)"))).build());
+            addRenderableWidget(Button.builder(Component.literal("▼"), b -> setCut(cut - 1)).bounds(lx, TOP + 34, 18, 16)
+                    .tooltip(Tooltip.create(Component.literal("Show a layer less, to see inside (Shift+scroll, Page Down)"))).build());
+        }
+        if (drawer) {
+            initDrawer();
+        }
         // a new site: two corners
         if (siteOpen && open.canEdit()) {
-            int cx = vw / 2 - 100, cy = Math.max(40, vh / 2 - 20);
+            int cx = viewRight() / 2 - 100, cy = Math.max(TOP + 40, vh / 2 - 20);
             cornerA = new EditBox(font, cx, cy, 98, 16, Component.literal("First corner"));
             cornerB = new EditBox(font, cx + 102, cy, 98, 16, Component.literal("Opposite corner"));
             List<BlockPos> c = open.corners();
@@ -408,17 +355,113 @@ public class ArchitectScreen extends Screen {
             filterPicks();
         }
         for (Button b : editOnly) {
-            b.active = open.canEdit() && (model != null || b.getMessage().getString().equals("Site..."));
+            b.active = open.canEdit() && (model != null || b.getMessage().getString().equals("Change site"));
         }
+        typeButton.active = open.canEdit();
+        nameBox.setEditable(open.canEdit());
+        refreshLabels();
+    }
+
+    /** The drawer on the right: generating a building to start from, asking for a change, the site. */
+    private void initDrawer() {
+        int px = viewRight() + 4, pw = DRAWER - 8, y = TOP + 4;
+        int half = (pw - 2) / 2, third = (pw - 4) / 3;
+        styleButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+            if (!open.styles().isEmpty()) {
+                style = (style + 1) % open.styles().size();
+                defaultHotbar();
+            }
+            refreshLabels();
+        }).bounds(px, y, pw, 18).build());
+        y += 20;
+        floorsButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+            floors = floors % BuildSpec.MAX_FLOORS + 1;
+            refreshLabels();
+        }).bounds(px, y, half, 18).build());
+        roofButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+            roof = (roof + 1) % BuildSpec.ROOFS.size();
+            refreshLabels();
+        }).bounds(px + half + 2, y, half, 18).build());
+        y += 20;
+        doorButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+            door = (door + 1) % 4;
+            refreshLabels();
+        }).bounds(px, y, half, 18).build());
+        bedsButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+            beds = (beds + 1) % (BuildSpec.MAX_BEDS + 1);
+            refreshLabels();
+        }).bounds(px + half + 2, y, half, 18).build());
+        y += 20;
+        for (int i = 0; i < BuildSpec.FEATURES.size(); i++) {
+            String f = BuildSpec.FEATURES.get(i);
+            featureButtons.add(addRenderableWidget(Button.builder(Component.empty(), b -> {
+                if (!features.remove(f)) {
+                    features.add(f);
+                }
+                refreshLabels();
+            }).bounds(px + i * (third + 2), y, third, 18).build()));
+        }
+        y += 20;
+        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Generate"), b -> generate())
+                .tooltip(Tooltip.create(Component.literal("Fill the site with a building from these settings. Your own changes stay on top.")))
+                .bounds(px, y, half, 18).build()));
+        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Flatten"), b -> send(TablePayloads.Action.Kind.FLATTEN, ""))
+                .tooltip(Tooltip.create(Component.literal("Make the generated building plain blocks, so generating again starts afresh.")))
+                .bounds(px + half + 2, y, half, 18).build()));
+        y += 22;
+        describeBox = new EditBox(font, px, y, pw - 30, 16, Component.literal("Ask for a change"));
+        describeBox.setMaxLength(300);
+        describeBox.setHint(Component.literal("Ask for a change...").withStyle(ChatFormatting.DARK_GRAY));
+        describeBox.setTooltip(Tooltip.create(Component.literal("Say what to change (\"two floors, a stone porch\") and the town's architect redraws the generated building.")));
+        describeBox.setValue(describeText);
+        describeBox.setResponder(v -> describeText = v);
+        addRenderableWidget(describeBox);
+        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Ask"), b -> describe()).bounds(px + pw - 28, y - 1, 28, 18).build()));
+        y += 20;
+        drawerInfoY = y + 2;
+        int by = Math.max(y + 24, vh - 21);
+        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Change site"), b -> {
+            siteOpen = !siteOpen;
+            rebuildWidgets();
+        }).bounds(px, by, half, 18).build()));
+        startOverButton = addRenderableWidget(Button.builder(Component.literal("Reset"), b -> startOver())
+                .tooltip(Tooltip.create(Component.literal("Clear the whole design: the site goes back to how it stands."))).bounds(px + half + 2, by, half, 18).build());
+        editOnly.add(startOverButton);
         boolean gen = open.canEdit() && model != null;
         for (Button b : List.of(styleButton, floorsButton, roofButton, doorButton, bedsButton)) {
             b.active = gen;
         }
         featureButtons.forEach(b -> b.active = gen);
-        typeButton.active = open.canEdit();
-        nameBox.setEditable(open.canEdit());
         describeBox.setEditable(gen);
-        refreshLabels();
+    }
+
+    /** A button in the top bar, right to left: returns where the next one ends. */
+    private int topButton(int right, String label, String tip, Button.OnPress press) {
+        int w = font.width(label) + 12;
+        editOnly.add(addRenderableWidget(Button.builder(Component.literal(label), press).tooltip(Tooltip.create(Component.literal(tip)))
+                .bounds(right - w, 3, w, 16).build()));
+        return right - w - 2;
+    }
+
+    /** Lays labelled buttons out in rows from {@code x}, wrapping back to {@code wrapX}: x, row and width of each. */
+    private List<int[]> flow(List<String> labels, int x, int wrapX) {
+        List<int[]> out = new ArrayList<>();
+        int row = 0;
+        for (String l : labels) {
+            int w = font.width(l) + 10;
+            if (x + w > width - 4 && x > wrapX) {
+                x = wrapX;
+                row++;
+            }
+            out.add(new int[]{x, row, w});
+            x += w + 2;
+        }
+        return out;
+    }
+
+    /** Where the view's open part ends on the right (the drawer covers the rest). */
+    private int viewRight() {
+        return drawer ? vw - DRAWER : vw;
     }
 
     private void refreshLabels() {
@@ -431,11 +474,13 @@ public class ArchitectScreen extends Screen {
             mirrorXButton.setMessage(Component.literal("Mirror X").withStyle(mirrorX ? ChatFormatting.YELLOW : ChatFormatting.WHITE));
             mirrorZButton.setMessage(Component.literal("Mirror Z").withStyle(mirrorZ ? ChatFormatting.YELLOW : ChatFormatting.WHITE));
         }
-        if (typeButton == null) {
+        if (typeButton != null) {
+            String type = open.types().isEmpty() ? "stad:building" : open.types().get(typeIndex);
+            typeButton.setMessage(Component.literal(capital(word(type))));
+        }
+        if (styleButton == null) {
             return;
         }
-        String type = open.types().isEmpty() ? "stad:building" : open.types().get(typeIndex);
-        typeButton.setMessage(Component.literal("Kind: " + capital(word(type))));
         styleButton.setMessage(Component.literal("Style: " + currentStyle().name()));
         floorsButton.setMessage(Component.literal(floors + (floors == 1 ? " floor" : " floors")));
         roofButton.setMessage(Component.literal(capital(BuildSpec.ROOFS.get(roof)) + " roof"));
@@ -722,9 +767,8 @@ public class ArchitectScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.fillGradient(0, 0, vw, vh, 0xFF7FA7D0, 0xFFC9DCEC);
-        g.fill(vw, 0, width, height, 0xF0181818);
-        g.fill(0, vh, vw, height, 0xF0202020);
-        hover = dragButton < 0 && !picking ? pick(mouseX, mouseY) : null;
+        g.fill(0, vh, width, height, 0xF0202020);
+        hover = dragButton < 0 && !picking && inView(mouseX, mouseY) ? pick(mouseX, mouseY) : null;
         if (model != null) {
             try {
                 render3D(g);
@@ -733,11 +777,17 @@ public class ArchitectScreen extends Screen {
                 setStatus("The 3D view failed to draw: " + e.getMessage(), true);
             }
         }
+        g.fillGradient(0, 0, vw, TOP, 0x90000000, 0x00000000);
+        if (drawer) {
+            g.fill(viewRight(), TOP, vw, vh, 0xE0181818);
+        }
         if (siteOpen) {
             drawSitePanel(g);
         }
         super.render(g, mouseX, mouseY, partialTick);
-        drawPanel(g);
+        if (drawer) {
+            drawDrawer(g);
+        }
         drawHotbar(g, mouseX, mouseY);
         if (model != null && !picking) {
             drawViewText(g);
@@ -846,13 +896,17 @@ public class ArchitectScreen extends Screen {
     }
 
     private void drawViewText(GuiGraphics g) {
-        if (status.isEmpty() || System.currentTimeMillis() - statusAt > (statusError ? 14000 : 8000)) {
-            g.drawString(font, font.plainSubstrByWidth("Drag: turn · Scroll: zoom · Middle-drag: pan · Shift+scroll: layers", vw - 60), 4, 4, 0xFFFFFF, true);
+        long now = System.currentTimeMillis();
+        boolean statusShown = !status.isEmpty() && now - statusAt <= (statusError ? 14000 : 8000);
+        if (!statusShown && now - openedAt < 12000) {
+            g.drawString(font, font.plainSubstrByWidth("Drag: turn · Scroll: zoom · Middle-drag: pan · Shift+scroll: layers", viewRight() - 60),
+                    4, TOP + 4, 0xFFFFFF, true);
         }
+        int lx = viewRight() - 13;
         String layer = cut >= model.gh() - 1 ? "All" : String.valueOf(cut - DesignModel.M);
-        g.drawCenteredString(font, layer, vw - 13, 22, 0xFFFFFF);
+        g.drawCenteredString(font, layer, lx, TOP + 22, 0xFFFFFF);
         // compass: which way north is on screen
-        int cx = vw - 40, cy = 26;
+        int cx = lx - 34, cy = TOP + 26;
         double r = Math.toRadians(yaw);
         int nx = (int) Math.round(-Math.sin(r) * 10), ny = (int) Math.round(-Math.cos(r) * 10 * Math.sin(Math.toRadians(Math.max(20, pitch))));
         g.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFFFFFFFF);
@@ -862,10 +916,18 @@ public class ArchitectScreen extends Screen {
             BlockState s = model.at(c.getX(), c.getY(), c.getZ());
             BlockPos world = model.min.offset(c.getX() - DesignModel.M, c.getY() - DesignModel.M, c.getZ() - DesignModel.M);
             String text = s.getBlock().getName().getString() + "  " + world.getX() + " " + world.getY() + " " + world.getZ();
-            g.drawString(font, text, 4, vh - 12, 0xFFFFFF, true);
+            g.drawString(font, font.plainSubstrByWidth(text, viewRight() / 2 - 8), 4, vh - 12, 0xFFFFFF, true);
         }
-        String hint = tool.hint + (corner != null ? "  (now the other corner)" : "");
-        g.drawString(font, font.plainSubstrByWidth(hint, vw - 84), 4, vh - 24, 0xE0E0E0, true);
+        // what's in hand, bottom right
+        BlockState sel = hotbar[slot];
+        int have = stock.getOrDefault(BuiltInRegistries.ITEM.getKey(sel.getBlock().asItem()).toString(), 0);
+        String info = sel.getBlock().getName().getString() + (turns % 4 != 0 ? ", turned " + (turns % 4 * 90) + "°" : "") + " · town has " + have;
+        info = font.plainSubstrByWidth(info, viewRight() / 2 - 8);
+        g.drawString(font, info, viewRight() - font.width(info) - 4, vh - 12, 0xE0E0E0, true);
+        if (corner != null || now - toolAt < 5000) {
+            String hint = tool.hint + (corner != null ? "  (now the other corner)" : "");
+            g.drawString(font, font.plainSubstrByWidth(hint, viewRight() - 8), 4, vh - 36, 0xE0E0E0, true);
+        }
     }
 
     private void drawSitePanel(GuiGraphics g) {
@@ -881,23 +943,29 @@ public class ArchitectScreen extends Screen {
         }
     }
 
-    private void drawPanel(GuiGraphics g) {
-        int px = vw + 4, pw = PANEL - 8;
-        g.drawString(font, font.plainSubstrByWidth(open.colony(), pw - 50), px, 4, 0xFFD27F);
-        int y = listTop;
+    /** The site and what the design takes, under the drawer's buttons. */
+    private void drawDrawer(GuiGraphics g) {
+        int px = viewRight() + 4, y = drawerInfoY;
         if (model != null) {
             g.drawString(font, "Site " + model.sx + " × " + model.sz + ", " + model.sy + " high", px, y, 0xA0A0A0);
-            y += 12;
+            y += 11;
         }
         if (check != null) {
-            int total = materials.values().stream().mapToInt(Integer::intValue).sum();
-            int shortBy = 0;
-            for (Map.Entry<Item, Integer> e : materials.entrySet()) {
-                shortBy += Math.max(0, e.getValue() - stock.getOrDefault(BuiltInRegistries.ITEM.getKey(e.getKey()).toString(), 0));
-            }
-            String m = total + " items" + (total == 0 ? "" : shortBy == 0 ? ", all in store" : ", " + shortBy + " short");
-            g.drawString(font, m, px, y, shortBy == 0 ? 0xA0A0A0 : 0xFFB060);
+            g.drawString(font, materialsLine(), px, y, shortBy() == 0 ? 0xA0A0A0 : 0xFFB060);
         }
+    }
+
+    private int shortBy() {
+        int n = 0;
+        for (Map.Entry<Item, Integer> e : materials.entrySet()) {
+            n += Math.max(0, e.getValue() - stock.getOrDefault(BuiltInRegistries.ITEM.getKey(e.getKey()).toString(), 0));
+        }
+        return n;
+    }
+
+    private String materialsLine() {
+        int total = materials.values().stream().mapToInt(Integer::intValue).sum(), shortBy = shortBy();
+        return total + " items to build" + (total == 0 ? "" : shortBy == 0 ? ", all in store" : ", " + shortBy + " short");
     }
 
     /** What the design still needs to be its kind of building: one line bottom left of the view, the whole list on hover. */
@@ -908,8 +976,8 @@ public class ArchitectScreen extends Screen {
         String type = open.types().isEmpty() ? "building" : word(open.types().get(typeIndex));
         List<String> missing = check.missing();
         String line = check.ready() ? "✔ Ready to be a " + type : "✘ A " + type + " needs " + dev.eiriksb.stad.planner.Design.join(missing);
-        line = font.plainSubstrByWidth(line, vw - 12);
-        int y = vh - 36, w = font.width(line);
+        line = font.plainSubstrByWidth(line, viewRight() - 12);
+        int y = vh - 24, w = font.width(line);
         g.fill(2, y - 2, w + 8, y + 10, 0x90000000);
         g.drawString(font, line, 5, y, check.ready() ? 0x7FFF7F : 0xFF9F7F);
         if (mouseX >= 2 && mouseX < w + 8 && mouseY >= y - 2 && mouseY < y + 10) {
@@ -919,6 +987,7 @@ public class ArchitectScreen extends Screen {
                 rows.add(Component.literal((r.met() ? "✔ " : r.required() ? "✘ " : "· ") + r.what())
                         .withStyle(r.met() ? ChatFormatting.GREEN : r.required() ? ChatFormatting.RED : ChatFormatting.GRAY));
             }
+            rows.add(Component.literal(materialsLine()).withStyle(shortBy() == 0 ? ChatFormatting.GRAY : ChatFormatting.GOLD));
             g.renderComponentTooltip(font, rows, mouseX, mouseY);
         }
     }
@@ -928,10 +997,10 @@ public class ArchitectScreen extends Screen {
         if (status.isEmpty() || picking || System.currentTimeMillis() - statusAt > (statusError ? 14000 : 8000)) {
             return;
         }
-        int w = Math.min(vw - 70, 320);
+        int w = Math.min(viewRight() - 70, 320);
         List<FormattedCharSequence> lines = font.split(Component.literal(status), w);
         int n = Math.min(3, lines.size());
-        int x = (vw - 26 - w) / 2, y = 5;
+        int x = (viewRight() - w) / 2, y = TOP + 4;
         g.fill(x - 4, y - 3, x + w + 4, y + n * 10 + 2, 0xC0000000);
         for (int i = 0; i < n; i++) {
             g.drawCenteredString(font, lines.get(i), x + w / 2, y + i * 10, statusError ? 0xFF8080 : 0x9FE0FF);
@@ -945,11 +1014,6 @@ public class ArchitectScreen extends Screen {
             g.fill(x + 1, y + 1, x + SLOT - 2, y + SLOT - 2, 0xFF202020);
             g.renderItem(new ItemStack(hotbar[i].getBlock().asItem()), x + 1, y + 1);
         }
-        BlockState sel = hotbar[slot];
-        int have = stock.getOrDefault(BuiltInRegistries.ITEM.getKey(sel.getBlock().asItem()).toString(), 0);
-        String info = sel.getBlock().getName().getString() + "  (town has " + have + ")" + (turns % 4 != 0 ? "  turned " + (turns % 4 * 90) + "°" : "");
-        int ix = 4 + 9 * SLOT + 66;
-        g.drawString(font, font.plainSubstrByWidth(info, Math.max(10, vw - ix - 4)), ix, hotbarY + 5, 0xD0D0D0);
         int hovered = slotAt(mouseX, mouseY);
         if (hovered >= 0) {
             g.renderTooltip(font, hotbar[hovered].getBlock().getName(), mouseX, mouseY);
@@ -1070,7 +1134,7 @@ public class ArchitectScreen extends Screen {
     // ---- input --------------------------------------------------------------------------------------------------
 
     private boolean inView(double mx, double my) {
-        return mx >= 0 && my >= 0 && mx < vw && my < vh;
+        return mx >= 0 && my >= 0 && mx < (picking ? vw : viewRight()) && my < vh && (picking || my >= TOP);
     }
 
     @Override
@@ -1232,6 +1296,7 @@ public class ArchitectScreen extends Screen {
         }
         tool = t;
         corner = null;
+        toolAt = System.currentTimeMillis();
         refreshLabels();
     }
 

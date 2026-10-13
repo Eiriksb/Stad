@@ -2,15 +2,16 @@ package dev.eiriksb.stad.architect;
 
 import dev.eiriksb.stad.Stad;
 import dev.eiriksb.stad.block.ArchitectTableBlockEntity;
-import dev.eiriksb.stad.colony.Building;
 import dev.eiriksb.stad.colony.Colony;
 import dev.eiriksb.stad.colony.ColonyManager;
 import dev.eiriksb.stad.colony.Rank;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.gametest.framework.GameTestServer;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
@@ -24,17 +25,18 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Clearable;
-import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.item.FallingBlockEntity;
-import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.EnderChestBlock;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -63,128 +65,141 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Free build in an architect's table's site (PLAN.md §6.8): the player builds in creative, but only as a design. What
- * they build becomes the table's design and the site goes back to how it was; their inventory, game mode and place
- * come back. Nothing leaves the site: drops and falling blocks in it are cancelled, containers and entities can't be
- * used, only design blocks can be placed and only inside it, and nobody else can change it meanwhile. Everything needed
- * to put things back is saved with the world before anything changes, so a crash or a logout undoes it. Server thread.
+ * Free build for an architect's table's site (PLAN.md §6.8): the player builds in creative, but in the drafting world,
+ * an empty void with a copy of the site and the land round it (as the table's 3D view shows it). The real world is
+ * never touched. What they build becomes the table's design; their inventory, game mode and place come back when they
+ * leave. Each player gets their own stretch of the drafting world, in an invisible box of barriers. The session is
+ * saved with the world, so it carries on after a logout or a restart. Server thread.
  */
 public final class FreeBuild {
     private FreeBuild() {}
 
-    /** blocks free build won't place, besides what a design can't have: they move blocks or items out of the site */
-    private static final Set<Block> MOVERS = Set.of(Blocks.PISTON, Blocks.STICKY_PISTON, Blocks.HOPPER, Blocks.DROPPER, Blocks.DISPENSER,
-            Blocks.CRAFTER, Blocks.TNT, Blocks.SCULK_CATALYST);
+    /** the drafting world: void, always noon */
+    public static final ResourceKey<Level> DRAFTING = ResourceKey.create(Registries.DIMENSION,
+            ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "drafting"));
 
-    /** A player building freely in a site, and what to put back. */
+    /** how far apart the players' stretches of the drafting world are, and the height a copied site starts at */
+    static final int SPACING = 1024, BASE_Y = 64;
+    /** room to move round the copied land, inside the box */
+    static final int ROOM = 12;
+
+    /** blocks free build won't place, besides what a design can't have */
+    private static final Set<Block> REFUSED = Set.of(Blocks.TNT);
+
+    /** setBlock flags: tell clients, don't update shapes round it, never drop anything */
+    static final int QUIET = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
+
+    /** A player building a table's design in the drafting world, and what to give back. */
     static final class Session {
         final UUID player;
-        final ResourceKey<Level> dimension;
+        final int slot;
+        final ResourceKey<Level> tableDimension;
         final BlockPos table;
+        /** the site in the real world */
         final BoundingBox site;
-        final Snapshot snapshot;
+        final Land land;
         final ListTag inventory;
         final GameType previous;
+        final ResourceKey<Level> backDimension;
         final Vec3 back;
         final float yRot, xRot;
-        /** set once the site is put back (after a crash, before the player comes back for their things) */
-        boolean siteRestored;
 
-        Session(UUID player, ResourceKey<Level> dimension, BlockPos table, BoundingBox site, Snapshot snapshot, ListTag inventory,
-                GameType previous, Vec3 back, float yRot, float xRot) {
+        Session(UUID player, int slot, ResourceKey<Level> tableDimension, BlockPos table, BoundingBox site, Land land, ListTag inventory,
+                GameType previous, ResourceKey<Level> backDimension, Vec3 back, float yRot, float xRot) {
             this.player = player;
-            this.dimension = dimension;
+            this.slot = slot;
+            this.tableDimension = tableDimension;
             this.table = table;
             this.site = site;
-            this.snapshot = snapshot;
+            this.land = land;
             this.inventory = inventory;
             this.previous = previous;
+            this.backDimension = backDimension;
             this.back = back;
             this.yRot = yRot;
             this.xRot = xRot;
         }
 
-        boolean inside(BlockPos p) {
-            return site.isInside(p);
+        /** Where the site's lowest corner is in the drafting world. */
+        BlockPos origin() {
+            return new BlockPos(slot * SPACING, BASE_Y + Project.MARGIN, 0);
+        }
+
+        /** The site, in the drafting world. */
+        BoundingBox draftSite() {
+            BlockPos o = origin();
+            return new BoundingBox(o.getX(), o.getY(), o.getZ(), o.getX() + site.getXSpan() - 1, o.getY() + site.getYSpan() - 1,
+                    o.getZ() + site.getZSpan() - 1);
+        }
+
+        /** The site and the land copied round it. */
+        BoundingBox copy() {
+            return draftSite().inflatedBy(Project.MARGIN);
+        }
+
+        /** Half the width of the room's square. */
+        int half() {
+            BoundingBox c = copy();
+            return Math.max(c.getXSpan(), c.getZSpan()) / 2 + ROOM;
+        }
+
+        /** Everything that's theirs, with the invisible box round it on its faces: the floor, the walls and the ceiling. */
+        BoundingBox room() {
+            BoundingBox c = copy();
+            int cx = (c.minX() + c.maxX()) / 2, cz = (c.minZ() + c.maxZ()) / 2, h = half();
+            return new BoundingBox(cx - h, c.minY() - 1, cz - h, cx + h, c.maxY() + 24, cz + h);
         }
 
         CompoundTag save() {
             CompoundTag t = new CompoundTag();
             t.putUUID("Player", player);
-            t.putString("Dimension", dimension.location().toString());
+            t.putInt("Slot", slot);
+            t.putString("TableDimension", tableDimension.location().toString());
             t.put("Table", NbtUtils.writeBlockPos(table));
             t.putIntArray("Site", new int[]{site.minX(), site.minY(), site.minZ(), site.maxX(), site.maxY(), site.maxZ()});
-            t.put("Snapshot", snapshot.save());
+            t.put("Land", land.save());
             t.put("Inventory", inventory);
             t.putString("Previous", previous.getName());
+            t.putString("BackDimension", backDimension.location().toString());
             t.putDouble("BackX", back.x);
             t.putDouble("BackY", back.y);
             t.putDouble("BackZ", back.z);
             t.putFloat("YRot", yRot);
             t.putFloat("XRot", xRot);
-            t.putBoolean("SiteRestored", siteRestored);
             return t;
         }
 
         static Session load(CompoundTag t) {
             int[] b = t.getIntArray("Site");
-            Session s = new Session(t.getUUID("Player"), ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(t.getString("Dimension"))),
+            return new Session(t.getUUID("Player"), t.getInt("Slot"), dimension(t.getString("TableDimension")),
                     NbtUtils.readBlockPos(t, "Table").orElse(BlockPos.ZERO), new BoundingBox(b[0], b[1], b[2], b[3], b[4], b[5]),
-                    Snapshot.load(t.getCompound("Snapshot")), t.getList("Inventory", Tag.TAG_COMPOUND), GameType.byName(t.getString("Previous"),
-                    GameType.SURVIVAL), new Vec3(t.getDouble("BackX"), t.getDouble("BackY"), t.getDouble("BackZ")), t.getFloat("YRot"), t.getFloat("XRot"));
-            s.siteRestored = t.getBoolean("SiteRestored");
-            return s;
+                    Land.load(t.getCompound("Land")), t.getList("Inventory", Tag.TAG_COMPOUND), GameType.byName(t.getString("Previous"),
+                    GameType.SURVIVAL), dimension(t.getString("BackDimension")), new Vec3(t.getDouble("BackX"), t.getDouble("BackY"),
+                    t.getDouble("BackZ")), t.getFloat("YRot"), t.getFloat("XRot"));
+        }
+
+        private static ResourceKey<Level> dimension(String id) {
+            return ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(id));
         }
     }
 
-    /** The site's blocks, with what's in its block entities. */
-    record Snapshot(int sx, int sy, int sz, BlockState[] states, Map<Integer, CompoundTag> entities) {
-        static Snapshot capture(ServerLevel level, BoundingBox box) {
-            int sx = box.getXSpan(), sy = box.getYSpan(), sz = box.getZSpan();
+    /** The site's land as it was when they started: what a design is laid over. */
+    record Land(int sx, int sy, int sz, BlockState[] states) {
+        static Land of(Grid terrain, int sx, int sy, int sz) {
             BlockState[] states = new BlockState[sx * sy * sz];
-            Map<Integer, CompoundTag> entities = new HashMap<>();
-            HolderLookup.Provider reg = level.registryAccess();
+            int m = Project.MARGIN;
             for (int y = 0; y < sy; y++) {
                 for (int z = 0; z < sz; z++) {
                     for (int x = 0; x < sx; x++) {
-                        BlockPos p = new BlockPos(box.minX() + x, box.minY() + y, box.minZ() + z);
-                        int i = (y * sz + z) * sx + x;
-                        states[i] = level.getBlockState(p);
-                        BlockEntity be = level.getBlockEntity(p);
-                        if (be != null) {
-                            entities.put(i, be.saveWithFullMetadata(reg));
-                        }
+                        states[(y * sz + z) * sx + x] = terrain.get(x + m, y + m, z + m);
                     }
                 }
             }
-            return new Snapshot(sx, sy, sz, states, entities);
+            return new Land(sx, sy, sz, states);
         }
 
         BlockState at(int x, int y, int z) {
             return states[(y * sz + z) * sx + x];
-        }
-
-        /** Puts the site back as it was (top down, so nothing hangs on what's gone), block entities and all. */
-        void restore(ServerLevel level, BoundingBox box) {
-            HolderLookup.Provider reg = level.registryAccess();
-            for (int y = sy - 1; y >= 0; y--) {
-                for (int z = 0; z < sz; z++) {
-                    for (int x = 0; x < sx; x++) {
-                        BlockPos p = new BlockPos(box.minX() + x, box.minY() + y, box.minZ() + z);
-                        empty(level, p);
-                        level.setBlock(p, states[(y * sz + z) * sx + x], QUIET);
-                    }
-                }
-            }
-            for (Map.Entry<Integer, CompoundTag> e : entities.entrySet()) {
-                int i = e.getKey();
-                BlockPos p = new BlockPos(box.minX() + i % sx, box.minY() + i / (sx * sz), box.minZ() + (i / sx) % sz);
-                BlockEntity be = level.getBlockEntity(p);
-                if (be != null) {
-                    be.loadWithComponents(e.getValue(), reg);
-                    be.setChanged();
-                }
-            }
         }
 
         CompoundTag save() {
@@ -203,18 +218,10 @@ public final class FreeBuild {
             palette.forEach(s -> p.add(NbtUtils.writeBlockState(s)));
             t.put("Palette", p);
             t.putIntArray("Cells", cells);
-            ListTag es = new ListTag();
-            entities.forEach((i, tag) -> {
-                CompoundTag e = new CompoundTag();
-                e.putInt("Cell", i);
-                e.put("Data", tag);
-                es.add(e);
-            });
-            t.put("Entities", es);
             return t;
         }
 
-        static Snapshot load(CompoundTag t) {
+        static Land load(CompoundTag t) {
             int[] s = t.getIntArray("Size");
             ListTag p = t.getList("Palette", Tag.TAG_COMPOUND);
             List<BlockState> palette = new ArrayList<>();
@@ -226,21 +233,8 @@ public final class FreeBuild {
             for (int i = 0; i < states.length; i++) {
                 states[i] = i < cells.length && cells[i] < palette.size() ? palette.get(cells[i]) : Blocks.AIR.defaultBlockState();
             }
-            Map<Integer, CompoundTag> entities = new HashMap<>();
-            for (Tag tag : t.getList("Entities", Tag.TAG_COMPOUND)) {
-                CompoundTag e = (CompoundTag) tag;
-                entities.put(e.getInt("Cell"), e.getCompound("Data"));
-            }
-            return new Snapshot(s[0], s[1], s[2], states, entities);
+            return new Land(s[0], s[1], s[2], states);
         }
-    }
-
-    /** setBlock flags: tell clients, don't update shapes round it, never drop anything */
-    static final int QUIET = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
-
-    /** Empties a container before it's replaced, so its contents don't spill (they're in the snapshot). */
-    private static void empty(ServerLevel level, BlockPos p) {
-        Clearable.tryClear(level.getBlockEntity(p));
     }
 
     // ---- what's saved with the world ----------------------------------------------------------------------------
@@ -275,35 +269,30 @@ public final class FreeBuild {
         }
     }
 
-    /** the sessions going on now (players who are online in them), by player */
+    /** the sessions going on now (online or not), by player */
     private static final Map<UUID, Session> active = new HashMap<>();
+    /** players just back from building, to open the table for in a moment (ticks to wait, and what to say) */
+    private static final Map<UUID, Reopen> reopen = new HashMap<>();
 
-    public static boolean building(ServerPlayer player) {
+    private record Reopen(ResourceKey<Level> dimension, BlockPos table, String message, int at) {}
+
+    public static boolean building(Player player) {
         return active.containsKey(player.getUUID());
     }
 
-    private static Optional<Session> siteAt(Level level, BlockPos pos) {
-        for (Session s : active.values()) {
-            if (s.dimension.equals(level.dimension()) && s.inside(pos)) {
-                return Optional.of(s);
-            }
-        }
-        return Optional.empty();
+    private static boolean drafting(Level level) {
+        return level.dimension().equals(DRAFTING) || level.getServer() instanceof GameTestServer && level.dimension().equals(Level.NETHER);
     }
 
-    private static Optional<Session> near(Level level, Vec3 pos) {
-        BlockPos p = BlockPos.containing(pos);
-        for (Session s : active.values()) {
-            if (s.dimension.equals(level.dimension()) && s.site.inflatedBy(1).isInside(p)) {
-                return Optional.of(s);
-            }
-        }
-        return Optional.empty();
+    /** The drafting world (the game test server doesn't load data pack worlds, so its tests draft in the nether). */
+    public static ServerLevel draftLevel(MinecraftServer server) {
+        ServerLevel l = server.getLevel(DRAFTING);
+        return l == null && server instanceof GameTestServer ? server.getLevel(Level.NETHER) : l;
     }
 
     // ---- starting and finishing ---------------------------------------------------------------------------------
 
-    /** Starts free build in a table's site; returns why not, or null. */
+    /** Starts free build for a table's site; returns why not, or null. */
     public static String start(ServerPlayer player, ServerLevel level, BlockPos table, Project p) {
         if (!p.hasSite()) {
             return "Choose a site first.";
@@ -311,49 +300,115 @@ public final class FreeBuild {
         if (building(player)) {
             return "You're already building somewhere: finish that first.";
         }
-        BoundingBox site = Tables.siteBox(p);
-        for (Session s : active.values()) {
-            if (s.dimension.equals(level.dimension()) && s.site.intersects(site)) {
-                return "Someone is building in that site already.";
-            }
+        ServerLevel draft = draftLevel(player.server);
+        if (draft == null) {
+            return "The drafting world is missing (is the mod's data pack turned off?).";
         }
         Optional<Colony> colony = ColonyManager.get(level.getServer()).at(level.dimension(), table);
         if (colony.isEmpty() || !colony.get().rank(player.getUUID()).atLeast(Rank.OFFICER)) {
-            return "Only officers can build in the site.";
+            return "Only officers can build the design.";
         }
-        for (Building b : colony.get().buildings()) {
-            if (!b.done() && b.placement().map(pl -> pl.bounds().intersects(site)).orElse(false)) {
-                return "The builders have the " + b.name + " planned there: cancel it or let them finish first.";
-            }
-        }
-        if (!level.getPlayers(o -> o != player && site.inflatedBy(1).isInside(o.blockPosition())).isEmpty()) {
-            return "Someone is standing in the site.";
-        }
-        Session s = new Session(player.getUUID(), level.dimension(), table.immutable(), site, Snapshot.capture(level, site),
-                player.getInventory().save(new ListTag()), player.gameMode.getGameModeForPlayer(), player.position(), player.getYRot(), player.getXRot());
+        Grid terrain = Tables.capture(level, p);
         Data data = Data.get(level.getServer());
+        int slot = 0;
+        while (slotTaken(data, slot)) {
+            slot++;
+        }
+        Session s = new Session(player.getUUID(), slot, level.dimension(), table.immutable(), Tables.siteBox(p), Land.of(terrain, p.sx, p.sy, p.sz),
+                player.getInventory().save(new ListTag()), player.gameMode.getGameModeForPlayer(), player.level().dimension(), player.position(),
+                player.getYRot(), player.getXRot());
         data.sessions.put(player.getUUID(), s);
         data.setDirty();
-        level.getServer().overworld().getDataStorage().save(); // on disk before anything changes
+        level.getServer().overworld().getDataStorage().save(); // their inventory is on disk before it's emptied
         active.put(player.getUUID(), s);
-        // the design, built for real in the site
-        for (Map.Entry<Integer, BlockState> e : p.design().entrySet()) {
-            if (!p.inside(e.getKey())) {
-                continue;
-            }
-            BlockPos at = p.min.offset(Project.kx(e.getKey()), Project.ky(e.getKey()), Project.kz(e.getKey()));
-            empty(level, at);
-            level.setBlock(at, e.getValue(), QUIET);
-        }
+        build(draft, s, terrain, p);
         player.getInventory().clearContent();
+        player.containerMenu.broadcastChanges();
+        // in front of the door, a little above the floor, looking at the site
+        BoundingBox site = s.draftSite();
+        Direction door = p.door == null ? Direction.NORTH : p.door;
+        double reach = (door.getAxis() == Direction.Axis.X ? site.getXSpan() : site.getZSpan()) / 2.0 + 6;
+        double x = (site.minX() + site.maxX() + 1) / 2.0 + door.getStepX() * reach, z = (site.minZ() + site.maxZ() + 1) / 2.0 + door.getStepZ() * reach;
+        double y = site.minY() + Math.max(0, p.floorY) + 5;
+        player.teleportTo(draft, x, y, z, door.getOpposite().toYRot(), 25f);
         player.setGameMode(GameType.CREATIVE);
         player.getAbilities().flying = true;
         player.onUpdateAbilities();
-        // up at the top of the site, at its north edge, looking down over it
-        player.teleportTo(level, site.minX() + site.getXSpan() / 2.0, site.maxY() - 1, site.minZ() + 1.0, 0f, 40f);
-        player.sendSystemMessage(Component.literal("Building in the site: anything you can place, it's all yours to design. Nothing leaves it. ")
+        player.sendSystemMessage(Component.literal("You're in the drafting world with a copy of the site: build it however you like. ")
                 .withStyle(ChatFormatting.GOLD).append(buttons()));
         return null;
+    }
+
+    private static boolean slotTaken(Data data, int slot) {
+        return data.sessions.values().stream().anyMatch(s -> s.slot == slot);
+    }
+
+    /** Lays out a player's stretch of the drafting world: the land round the site, the design in it, a box round it all. */
+    private static void build(ServerLevel draft, Session s, Grid terrain, Project p) {
+        BoundingBox room = s.room();
+        clear(draft, room);
+        BoundingBox copy = s.copy();
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
+        for (int y = 0; y < terrain.sy; y++) {
+            for (int z = 0; z < terrain.sz; z++) {
+                for (int x = 0; x < terrain.sx; x++) {
+                    BlockState st = terrain.get(x, y, z);
+                    if (!st.isAir()) {
+                        draft.setBlock(at.set(copy.minX() + x, copy.minY() + y, copy.minZ() + z), st, QUIET);
+                    }
+                }
+            }
+        }
+        BlockPos o = s.origin();
+        for (Map.Entry<Integer, BlockState> e : p.design().entrySet()) {
+            if (p.inside(e.getKey())) {
+                draft.setBlock(o.offset(Project.kx(e.getKey()), Project.ky(e.getKey()), Project.kz(e.getKey())), e.getValue(), QUIET);
+            }
+        }
+        // an invisible box round it all, to stand on and to keep them in
+        BlockState barrier = Blocks.BARRIER.defaultBlockState();
+        for (int y = room.minY(); y <= room.maxY(); y++) {
+            boolean flat = y == room.minY() || y == room.maxY();
+            for (int x = room.minX(); x <= room.maxX(); x++) {
+                for (int z = room.minZ(); z <= room.maxZ(); z++) {
+                    if (flat || x == room.minX() || x == room.maxX() || z == room.minZ() || z == room.maxZ()) {
+                        draft.setBlock(at.set(x, y, z), barrier, QUIET);
+                    }
+                }
+            }
+        }
+        // water and lava at the edge of the copy stay in it
+        for (int y = copy.minY(); y <= copy.maxY(); y++) {
+            for (int z = copy.minZ(); z <= copy.maxZ(); z++) {
+                for (int x = copy.minX(); x <= copy.maxX(); x++) {
+                    if (draft.getFluidState(at.set(x, y, z)).isEmpty()) {
+                        continue;
+                    }
+                    for (Direction d : Direction.Plane.HORIZONTAL) {
+                        BlockPos n = at.relative(d);
+                        if (!copy.isInside(n)) {
+                            draft.setBlock(n, barrier, QUIET);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Empties a box of the drafting world, top down, so nothing spills or hangs on what's gone. */
+    private static void clear(ServerLevel draft, BoundingBox box) {
+        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
+        BlockState air = Blocks.AIR.defaultBlockState();
+        for (int y = box.maxY() + 1; y >= box.minY() - 1; y--) {
+            for (int z = box.minZ() - 1; z <= box.maxZ() + 1; z++) {
+                for (int x = box.minX() - 1; x <= box.maxX() + 1; x++) {
+                    if (!draft.getBlockState(at.set(x, y, z)).isAir()) {
+                        Clearable.tryClear(draft.getBlockEntity(at));
+                        draft.setBlock(at, air, QUIET);
+                    }
+                }
+            }
+        }
     }
 
     private static Component buttons() {
@@ -366,54 +421,59 @@ public final class FreeBuild {
     }
 
     /**
-     * Ends a player's free build: {@code keep} makes what they built the table's design. The site is put back and so
-     * are they. Returns what happened, or null when they weren't building.
+     * Ends a player's free build: {@code keep} makes what they built the table's design. They go back to where they
+     * were, with their own things. Returns what happened, or null when they weren't building.
      */
     public static String finish(ServerPlayer player, boolean keep) {
         Session s = active.remove(player.getUUID());
         if (s == null) {
             return null;
         }
-        ServerLevel level = player.server.getLevel(s.dimension);
-        String result = "Put the site back as it was.";
-        if (level != null) {
+        ServerLevel draft = draftLevel(player.server);
+        String result = "Threw away what you built: the design is as it was.";
+        boolean kept = false;
+        if (draft != null) {
             if (keep) {
-                result = keep(level, s);
+                result = keep(player.server, draft, s);
+                kept = result.startsWith("Kept");
             }
-            s.snapshot.restore(level, s.site);
+            clear(draft, s.room());
         }
-        giveBack(player, s, level);
         Data data = Data.get(player.server);
         data.sessions.remove(player.getUUID());
         data.setDirty();
+        giveBack(player, s);
+        if (kept) {
+            reopen.put(player.getUUID(), new Reopen(s.tableDimension, s.table, result, player.tickCount + 10));
+        }
         return result;
     }
 
     /** What they built, as the table's design (on top of the generated building). */
-    private static String keep(ServerLevel level, Session s) {
-        if (!(level.getBlockEntity(s.table) instanceof ArchitectTableBlockEntity be) || !be.project().hasSite()
+    private static String keep(MinecraftServer server, ServerLevel draft, Session s) {
+        ServerLevel level = server.getLevel(s.tableDimension);
+        if (level == null || !(level.getBlockEntity(s.table) instanceof ArchitectTableBlockEntity be) || !be.project().hasSite()
                 || !Tables.siteBox(be.project()).equals(s.site)) {
             return "The table is gone (or has another site now), so what you built wasn't kept.";
         }
         Project p = be.project();
+        BlockPos o = s.origin();
         int changed = 0;
-        for (int y = 0; y < s.snapshot.sy; y++) {
-            for (int z = 0; z < s.snapshot.sz; z++) {
-                for (int x = 0; x < s.snapshot.sx; x++) {
+        for (int y = 0; y < s.land.sy; y++) {
+            for (int z = 0; z < s.land.sz; z++) {
+                for (int x = 0; x < s.land.sx; x++) {
                     int k = Project.key(x, y, z);
-                    BlockState now = level.getBlockState(p.min.offset(x, y, z));
-                    BlockState was = s.snapshot.at(x, y, z);
-                    if (p.at(k) == null && settled(was, now)) {
-                        now = was; // grass under a floor turning to dirt isn't something they built
+                    BlockState was = s.land.at(x, y, z);
+                    BlockState before = p.at(k) != null ? p.at(k) : was;
+                    BlockState now = shut(draft.getBlockState(o.offset(x, y, z))); // a door they walked through stays shut
+                    if (p.at(k) == null && settled(was, now) || !now.isAir() && !Tables.allowed(now)) {
+                        now = before; // the land changing by itself, or water running in, isn't something they built
                     }
-                    now = shut(now); // a door they walked through stays shut in the design
-                    BlockState generated = p.generated.get(k);
-                    BlockState base = generated != null ? generated : s.snapshot.at(x, y, z);
-                    BlockState before = p.at(k) != null ? p.at(k) : s.snapshot.at(x, y, z);
                     if (!now.equals(before)) {
                         changed++;
                     }
-                    if (now.equals(base) || !Tables.allowed(now) && !now.isAir()) {
+                    BlockState generated = p.generated.get(k);
+                    if (now.equals(generated != null ? generated : was)) {
                         p.edits.remove(k);
                     } else {
                         p.edits.put(k, now);
@@ -423,7 +483,7 @@ public final class FreeBuild {
         }
         be.setChanged();
         return changed == 0 ? "You didn't change anything." : "Kept what you built in the design (" + changed
-                + (changed == 1 ? " block" : " blocks") + " changed). Open the table to see it, save it or plan it.";
+                + (changed == 1 ? " block" : " blocks") + " changed).";
     }
 
     /** Doors, gates and trapdoors closed and unpowered (what a design keeps). */
@@ -437,13 +497,14 @@ public final class FreeBuild {
         return s;
     }
 
-    /** The land changing by itself: grass going to dirt under something, snow melting. */
+    /** The land changing by itself: grass going to dirt under something, snow melting, water settling. */
     private static boolean settled(BlockState was, BlockState now) {
         return was.is(net.minecraft.tags.BlockTags.DIRT) && now.is(net.minecraft.tags.BlockTags.DIRT)
-                || was.is(Blocks.SNOW) && now.isAir();
+                || was.is(Blocks.SNOW) && now.isAir()
+                || was.getBlock() instanceof LiquidBlock && (now.isAir() || now.getBlock() instanceof LiquidBlock);
     }
 
-    private static void giveBack(ServerPlayer player, Session s, ServerLevel level) {
+    private static void giveBack(ServerPlayer player, Session s) {
         player.getInventory().clearContent();
         player.getInventory().load(s.inventory);
         player.setGameMode(s.previous);
@@ -453,12 +514,15 @@ public final class FreeBuild {
             player.onUpdateAbilities();
         }
         player.containerMenu.broadcastChanges();
-        ServerLevel to = level != null ? level : player.serverLevel();
+        ServerLevel to = player.server.getLevel(s.backDimension);
+        if (to == null) {
+            to = player.server.overworld();
+        }
         player.teleportTo(to, s.back.x, s.back.y, s.back.z, s.yRot, s.xRot);
         player.fallDistance = 0;
     }
 
-    // ---- keeping everything in the site -------------------------------------------------------------------------
+    // ---- the rules in the drafting world ------------------------------------------------------------------------
 
     public static void register() {
         var bus = NeoForge.EVENT_BUS;
@@ -475,7 +539,6 @@ public final class FreeBuild {
         bus.addListener(FreeBuild::died);
         bus.addListener(FreeBuild::tick);
         bus.addListener(FreeBuild::loggedIn);
-        bus.addListener(FreeBuild::loggedOut);
         bus.addListener(FreeBuild::started);
         bus.addListener(FreeBuild::stopping);
     }
@@ -484,48 +547,41 @@ public final class FreeBuild {
         p.displayClientMessage(Component.literal(why).withStyle(ChatFormatting.RED), true);
     }
 
+    /** The player's session, when they're in the drafting world. */
+    private static Session here(Level level, Player player) {
+        return player == null || !drafting(level) ? null : active.get(player.getUUID());
+    }
+
     private static void broke(BlockEvent.BreakEvent e) {
-        if (!(e.getLevel() instanceof Level level)) {
+        if (!(e.getLevel() instanceof Level level) || !drafting(level)) {
             return;
         }
-        Session mine = e.getPlayer() == null ? null : active.get(e.getPlayer().getUUID());
-        Optional<Session> there = siteAt(level, e.getPos());
-        if (mine != null && (!mine.dimension.equals(level.dimension()) || !mine.inside(e.getPos()))) {
-            e.setCanceled(true);
-            deny((ServerPlayer) e.getPlayer(), "You're building in the site: you can't break anything outside it.");
-        } else if (mine == null && there.isPresent()) {
+        Session s = here(level, e.getPlayer());
+        if (s == null || !s.draftSite().isInside(e.getPos())) {
             e.setCanceled(true);
             if (e.getPlayer() instanceof ServerPlayer sp) {
-                deny(sp, "Someone is designing in this site right now.");
+                deny(sp, "Only the site is yours to change: the land round it is there to look at.");
             }
         }
     }
 
     private static void placed(BlockEvent.EntityPlaceEvent e) {
-        if (!(e.getLevel() instanceof Level level)) {
+        if (!(e.getLevel() instanceof Level level) || !drafting(level) || !(e.getEntity() instanceof ServerPlayer sp)) {
             return;
         }
-        Session mine = e.getEntity() instanceof ServerPlayer sp ? active.get(sp.getUUID()) : null;
-        Optional<Session> there = siteAt(level, e.getPos());
-        if (mine != null) {
-            BlockState s = e.getPlacedBlock();
-            if (!mine.dimension.equals(level.dimension()) || !mine.inside(e.getPos())) {
-                e.setCanceled(true);
-                deny((ServerPlayer) e.getEntity(), "You're building in the site: you can only place blocks inside it.");
-            } else if (!Tables.allowed(s) || MOVERS.contains(s.getBlock())) {
-                e.setCanceled(true);
-                deny((ServerPlayer) e.getEntity(), s.getBlock().getName().getString() + " can't be part of a design.");
-            }
-        } else if (there.isPresent()) {
+        Session s = here(level, sp);
+        BlockState st = e.getPlacedBlock();
+        if (s == null || !s.draftSite().isInside(e.getPos())) {
             e.setCanceled(true);
-            if (e.getEntity() instanceof ServerPlayer sp) {
-                deny(sp, "Someone is designing in this site right now.");
-            }
+            deny(sp, "Only the site is yours to build in (the yellow box in the table's view).");
+        } else if (!Tables.allowed(st) || REFUSED.contains(st.getBlock())) {
+            e.setCanceled(true);
+            deny(sp, st.getBlock().getName().getString() + " can't be part of a design.");
         }
     }
 
     private static void rightClickBlock(PlayerInteractEvent.RightClickBlock e) {
-        if (!(e.getEntity() instanceof ServerPlayer p) || !building(p)) {
+        if (!(e.getEntity() instanceof ServerPlayer p) || !drafting(p.level())) {
             return;
         }
         ItemStack held = e.getItemStack();
@@ -535,141 +591,132 @@ public final class FreeBuild {
             return;
         }
         BlockState target = p.level().getBlockState(e.getPos());
-        if (p.level().getBlockEntity(e.getPos()) != null || target.getBlock() instanceof EnderChestBlock) {
-            e.setUseBlock(TriState.FALSE); // no opening containers: place against them instead
+        if (p.level().getBlockEntity(e.getPos()) != null || target.getBlock() instanceof EnderChestBlock || target.getBlock() instanceof BedBlock
+                || target.getBlock() instanceof RespawnAnchorBlock) {
+            e.setUseBlock(TriState.FALSE); // no opening containers or sleeping: place against them instead
         }
     }
 
     private static void rightClickItem(PlayerInteractEvent.RightClickItem e) {
-        if (e.getEntity() instanceof ServerPlayer p && building(p) && !(e.getItemStack().getItem() instanceof BlockItem)) {
+        if (e.getEntity() instanceof ServerPlayer p && drafting(p.level()) && !(e.getItemStack().getItem() instanceof BlockItem)) {
             e.setCanceled(true);
             deny(p, "While you design, only blocks: no items.");
         }
     }
 
     private static void entityInteract(PlayerInteractEvent.EntityInteract e) {
-        if (e.getEntity() instanceof ServerPlayer p && building(p)) {
+        if (e.getEntity() instanceof ServerPlayer p && drafting(p.level())) {
             e.setCanceled(true);
         }
     }
 
     private static void entityInteractAt(PlayerInteractEvent.EntityInteractSpecific e) {
-        if (e.getEntity() instanceof ServerPlayer p && building(p)) {
+        if (e.getEntity() instanceof ServerPlayer p && drafting(p.level())) {
             e.setCanceled(true);
         }
     }
 
     private static void attack(AttackEntityEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p && building(p)) {
+        if (e.getEntity() instanceof ServerPlayer p && drafting(p.level())) {
             e.setCanceled(true);
         }
     }
 
     private static void toss(ItemTossEvent e) {
-        if (e.getPlayer() instanceof ServerPlayer p && building(p)) {
+        if (e.getPlayer() instanceof ServerPlayer p && drafting(p.level())) {
             e.setCanceled(true);
         }
     }
 
-    /** Nothing becomes an item (or a falling block) in a site being designed. */
+    /** Nothing lives in the drafting world but the players designing there (sand and gravel still fall). */
     private static void joined(EntityJoinLevelEvent e) {
-        if (e.loadedFromDisk() || active.isEmpty()) {
-            return;
-        }
-        if ((e.getEntity() instanceof ItemEntity || e.getEntity() instanceof ExperienceOrb || e.getEntity() instanceof FallingBlockEntity)
-                && near(e.getLevel(), e.getEntity().position()).isPresent()) {
+        if (drafting(e.getLevel()) && !(e.getEntity() instanceof Player) && !(e.getEntity() instanceof FallingBlockEntity)) {
             e.setCanceled(true);
         }
     }
 
     private static void exploded(ExplosionEvent.Detonate e) {
-        if (!active.isEmpty()) {
-            e.getAffectedBlocks().removeIf(p -> siteAt(e.getLevel(), p).isPresent());
+        if (drafting(e.getLevel())) {
+            e.getAffectedBlocks().clear();
         }
     }
 
+    /** Dying while designing (only /kill can do it) just ends the session. */
     private static void died(LivingDeathEvent e) {
         if (e.getEntity() instanceof ServerPlayer p && building(p)) {
+            e.setCanceled(true);
+            p.setHealth(p.getMaxHealth());
             finish(p, true);
         }
     }
 
-    /** Flying out of the site puts you back in it. */
     private static void tick(PlayerTickEvent.Post e) {
-        if (!(e.getEntity() instanceof ServerPlayer p) || active.isEmpty()) {
+        if (!(e.getEntity() instanceof ServerPlayer p)) {
+            return;
+        }
+        Reopen r = reopen.get(p.getUUID());
+        if (r != null && p.tickCount >= r.at) {
+            reopen.remove(p.getUUID());
+            ServerLevel level = p.server.getLevel(r.dimension);
+            if (level != null && p.level() == level && p.blockPosition().closerThan(r.table, 16)) {
+                Tables.open(p, level, r.table, r.message);
+            }
+        }
+        if (p.tickCount % 5 != 0) {
             return;
         }
         Session s = active.get(p.getUUID());
-        if (s == null || p.tickCount % 5 != 0) {
+        if (s == null) {
             return;
         }
-        if (!p.level().dimension().equals(s.dimension)) {
-            String r = finish(p, true);
-            p.sendSystemMessage(Component.literal(r).withStyle(ChatFormatting.GOLD));
+        if (!drafting(p.level())) {
+            String result = finish(p, true);
+            p.sendSystemMessage(Component.literal(result).withStyle(ChatFormatting.GOLD));
             return;
         }
         if (!p.isCreative()) {
             p.setGameMode(GameType.CREATIVE);
         }
-        BoundingBox room = s.site.inflatedBy(1);
-        BlockPos at = p.blockPosition();
-        if (!room.isInside(at) || !room.isInside(BlockPos.containing(p.getEyePosition()))) {
-            double x = Math.max(s.site.minX() + 0.5, Math.min(s.site.maxX() + 0.5, p.getX()));
-            double y = Math.max(s.site.minY(), Math.min(s.site.maxY() - 1, p.getY()));
-            double z = Math.max(s.site.minZ() + 0.5, Math.min(s.site.maxZ() + 0.5, p.getZ()));
+        // the box holds them in; this is for when they somehow get past it
+        BoundingBox room = s.room();
+        if (!room.inflatedBy(2).isInside(p.blockPosition())) {
+            double x = Math.max(room.minX() + 1, Math.min(room.maxX(), p.getX()));
+            double z = Math.max(room.minZ() + 1, Math.min(room.maxZ(), p.getZ()));
+            double y = Math.max(room.minY() + 1, Math.min(room.maxY(), p.getY()));
             p.teleportTo(x, y, z);
-            p.displayClientMessage(Component.literal("You're designing in the site: Done or Cancel (in chat) to leave.").withStyle(ChatFormatting.YELLOW), true);
         }
     }
 
-    private static void loggedOut(PlayerEvent.PlayerLoggedOutEvent e) {
-        if (e.getEntity() instanceof ServerPlayer p && building(p)) {
-            finish(p, true); // before the player is saved
-        }
-    }
-
-    /** Back after a crash: their things and the site are put back. */
+    /** Back in the game: carry on designing (or, if they're somehow in the drafting world with nothing to design, out). */
     private static void loggedIn(PlayerEvent.PlayerLoggedInEvent e) {
         if (!(e.getEntity() instanceof ServerPlayer p)) {
             return;
         }
-        Data data = Data.get(p.server);
-        Session s = data.sessions.remove(p.getUUID());
-        if (s == null) {
-            return;
+        Session s = active.get(p.getUUID());
+        if (s != null && drafting(p.level())) {
+            p.sendSystemMessage(Component.literal("You're still designing in the drafting world. ").withStyle(ChatFormatting.GOLD).append(buttons()));
+        } else if (s != null) {
+            finish(p, false); // they never got there (the server stopped as they set off)
+        } else if (drafting(p.level())) {
+            ServerLevel overworld = p.server.overworld();
+            BlockPos spawn = overworld.getSharedSpawnPos();
+            p.getInventory().clearContent();
+            p.setGameMode(p.server.getDefaultGameType());
+            p.teleportTo(overworld, spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, 0f, 0f);
+            p.sendSystemMessage(Component.literal("You were in the drafting world with nothing to design, so you're back at spawn.")
+                    .withStyle(ChatFormatting.YELLOW));
         }
-        ServerLevel level = p.server.getLevel(s.dimension);
-        if (level != null && !s.siteRestored) {
-            s.snapshot.restore(level, s.site);
-        }
-        giveBack(p, s, level);
-        data.setDirty();
-        p.sendSystemMessage(Component.literal("Your last free build didn't finish (the server stopped): the site is as it was, and you have your things back.")
-                .withStyle(ChatFormatting.YELLOW));
     }
 
-    /** After a crash: put every site back now; players get their things when they come back. */
     private static void started(ServerStartedEvent e) {
         active.clear();
-        Data data = Data.get(e.getServer());
-        for (Session s : data.sessions.values()) {
-            ServerLevel level = e.getServer().getLevel(s.dimension);
-            if (level != null && !s.siteRestored) {
-                s.snapshot.restore(level, s.site);
-                s.siteRestored = true;
-                data.setDirty();
-                Stad.LOGGER.info("Put back a free build site at {} after the server stopped mid-build", s.site);
-            }
-        }
+        reopen.clear();
+        active.putAll(Data.get(e.getServer()).sessions);
     }
 
     private static void stopping(ServerStoppingEvent e) {
-        for (ServerPlayer p : List.copyOf(e.getServer().getPlayerList().getPlayers())) {
-            if (building(p)) {
-                finish(p, true);
-            }
-        }
         active.clear();
+        reopen.clear();
     }
 
     /** For tests: the server stopped mid-build and started again, and the player comes back. */
@@ -679,8 +726,14 @@ public final class FreeBuild {
         loggedIn(new PlayerEvent.PlayerLoggedInEvent(player));
     }
 
-    /** For tests: the sites being designed in now. */
+    /** For tests: the sites being designed now, in the drafting world. */
     public static List<BoundingBox> sites() {
-        return active.values().stream().map(s -> s.site).toList();
+        return active.values().stream().map(Session::draftSite).toList();
+    }
+
+    /** For tests: where a player's site is in the drafting world (its lowest corner), or null. */
+    public static BlockPos origin(Player player) {
+        Session s = active.get(player.getUUID());
+        return s == null ? null : s.origin();
     }
 }
