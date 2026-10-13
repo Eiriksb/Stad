@@ -361,6 +361,119 @@ The rules below only apply between colonies that are both open to war. They exis
 - Captured or defecting citizens remember the war, so a town you raided will have grudges for generations
   (consolidated memories are passed down to children).
 
+### 6.8 The architect's table and workplaces
+
+Talking to the builder (§6.4) suits "a small cottage". The **architect's table** is for when you know exactly what you
+want, on exactly this piece of land: mark out a site, look at it in 3D, have the table draw a building that fits, then
+change it block by block. It works for any building type, and with **workplaces** (below) every job gets a building
+type of its own.
+
+**Marking the site.** The surveyor's tool is the scan wand (§6.5), which already marks two corners. Right-click the
+table with a marked wand to load the site, or type the corners into the table's screen (filled in from the wand). The
+site must be on the town's land, at most 32 × 32 blocks and 32 high. It goes from the lower corner's height up to the
+higher corner's, and at least 12 up so there's room for a roof.
+
+**The 3D view.** The server copies the site's blocks, plus four blocks of the land round it, and sends them to the
+client in one palette-compressed payload (about 40k blocks at most). The screen draws them with the game's own block
+models, from a camera you drag to turn, scroll to zoom and middle-drag to pan. The land round the site is drawn faded
+and can't be edited. Blocks are drawn in 8 × 8 × 8 sections, each cached in its own vertex buffer, so an edit only
+rebuilds one or two sections. A **layer slider** cuts the view off above a chosen layer so you can work inside, and
+there's a ground grid and a north arrow.
+
+```
+┌───────────────────────────────────────────────────────────────┬──────────────────────┐
+│                                                               │ Fishery  ▾  (type)   │
+│                    3D view of the site                        │ Style: Fjord ▾       │
+│          drag: turn · scroll: zoom · middle-drag: pan         │ Floors 1  Roof gable │
+│                                                               │ [Generate] [Describe]│
+│                                                               ├──────────────────────┤
+│                                                     layer ▲   │ ✓ walls all round    │
+│                                                      [ 7 ]    │ ✓ a roof             │
+│                                                       ▼       │ ✗ a barrel           │
+│                                                               │ ✓ by water           │
+├───────────────────────────────────────────────────────────────┼──────────────────────┤
+│ [place][break][pick][box][wall][floor][line][replace][mirror] │ 212 blocks, 38 short │
+│ blocks: [spruce planks][spruce log][stone bricks]... [search] │ [Save to My pack]    │
+│ ↶ undo  ↷ redo                                                │ [Plan it here]       │
+└───────────────────────────────────────────────────────────────┴──────────────────────┘
+```
+
+**Designing: a generated start, then hand edits.**
+- **Generate:** pick the building type, a style (any of the seven palettes), floors, roof, rooms and features. The
+  generator (§6.4) fills the site with a building that fits it. Its size limit goes up from 17 to 32, and it stands on
+  the site's ground (`Survey`). **Start from a pack building** works too, turned to fit the site when it fits.
+- **Describe:** type a change ("put the door on the lake side, add a second floor") and the planner model revises the
+  spec, as in §6.4.
+- **Hand edits:** place, break, pick (middle-click), box, hollow walls, floor, line, replace, a mirror axis, copy and
+  paste, and undo and redo (100 steps). The block list is a searchable list of every block a survival player could
+  place (no command blocks, barriers or bedrock), with how many of each the town has in store. The style's role
+  blocks (wall, roof, floor, trim) come first. R turns the block in hand. Stairs, doors, slabs and logs face the way
+  the click and the camera suggest. Fences, panes and stairs join up through `updateShape` on the design's own blocks,
+  never the real world.
+- **Hand edits are kept as a layer over the generated building.** The design is the generated spec plus a list of
+  edits. Change the roof or the floors and the building is generated again with the edits put back on top, so a hand
+  edit survives a change of roof. "Flatten" turns the whole thing into plain blocks, after which the spec no longer
+  applies.
+- **Markers in the editor** (M7's leftover): bed, work spot, storage and door markers are placed as overlay icons
+  rather than structure blocks. They're saved like the pack format's markers.
+
+**What it's for.** The type list holds every building type, with the new workplaces among them. The checklist on the
+right runs `Requirements` on the design (via `Contents.of(blueprint)`) after every edit. Requirements that
+depend on where the building stands, like "by water" or "next to farmland", are checked against the real land round
+the site. You can save a design that doesn't meet its requirements yet; you can't plan it until it does.
+
+**Saving and building.**
+- **Save to My pack:** name it, tag it, and it can be reused anywhere (with the Building Plans, with the builder, and
+  at the table).
+- **Plan it here:** it becomes a planned building on the site and goes through the same order checks as any other
+  (rank, standing, §6.6). Blocks already on the site that the design leaves out become clearing steps, which
+  Construction already has. The material list shows what's in store and what's short, and the town asks for whatever
+  is short, as it does now.
+- You can redesign a building that's already there: load its site and the existing blocks are where you start.
+
+**The table itself.**
+- How it's made: a cartography table with Building Plans on top.
+- It belongs to the town whose land it's on. Officers and owners can edit; members can look.
+- It keeps its project (site, spec, edits, markers) in its block entity, compressed. Breaking the table keeps the
+  project on the item.
+- One person edits at a time ("Astrid is using the table"); others watch read-only.
+- Each edit goes to the server as a small change. The server checks the player's rank, that the change is inside the
+  site, and that the block is allowed, then applies it to the project. The client applies it straight away and rolls
+  back if the server says no.
+
+**Workplaces (a real building for every job).**
+
+New building types join the ones that already exist (builder's hut, warehouse, kitchen, mine, barracks, watchtower).
+They take their requirements from vanilla's job blocks:
+
+| Job | Workplace | Needs (besides walls, roof and a door) |
+|---|---|---|
+| Farmer | Farmhouse | a composter and a chest; farmland within 16 blocks |
+| Lumberjack | Lumber camp | a chest and a crafting table; trees within 24 blocks |
+| Fisher | Fishery | a barrel; water (8+ blocks) within 6 blocks |
+| Shepherd | Barn | a loom and a hay bale; a fenced pen inside or next to it |
+| Cook | Kitchen | (as now) somewhere to cook |
+| Miner | Mine | (as now) the shaft |
+| Builder | Builder's hut | (as now) |
+| Courier | Warehouse | (as now) |
+| Guard | Barracks or watchtower | (as now) |
+
+- **Slots.** A workplace takes one worker per work-spot marker, or per job block when it has no markers, capped per
+  type. The town hall screen lists the workplaces and who works where.
+- **Assignment.** Someone given a job is put in the nearest workplace of that kind with a free slot. Players can move
+  them ("work at the lakeside fishery") and the citizen's chat screen shows it. Building a workplace gives its slots
+  to jobless or unplaced workers of that job.
+- **What it changes:**
+  - The worker's day starts and ends at the workplace (the DayPlan's work block).
+  - Their haul goes into the workplace's chests first. Couriers carry it on from there (`WorkGoal.deliverTo`).
+  - Their tools are kept there.
+  - The job's work area centres on the workplace: farmers tend the farmland round their farmhouse, fishers fish near
+    their fishery, lumberjacks fell the trees round their camp. In big towns this spreads workers out instead of all
+    of them heading for the same field.
+  - A worker with a workplace works faster (a quarter faster) and is happier. One without still works, as now, but
+    grumbles about it (a small standing cost when it lasts). Existing towns keep working.
+  - Prompt facts: "you work at the Lakeside Fishery". Citizens can talk about their workplace and ask for one.
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).
@@ -446,6 +559,8 @@ Everything after that widens it.
 | **M9** | Voice polish | Voice already works through TWT. This milestone adds voice designs from a citizen's genes and age, and voice support in the planner conversation and chat screen. (Done, with TWT API v5: adapters give voices, `talk`, `history`. Adults don't age yet; only children's voices change. The chat screen and the spoken builder's shorter replies haven't been seen or heard on a real client.) |
 | **M10** | Scale + hosting | Think budget/LOD tuned for 50+ citizens. **In TWT:** client-lent GPU backend and planner-model setting (item 8). Also a performance pass (pathing, chunk loading of colony areas, raid mob counts). (Done, with TWT API v6: `planner()`, `forPlayer()`, `backlog()`. Citizens near players get model day plans, budgeted per town; the rest a routine plan. Workers re-path at most once a second and lumberjacks spread over the trees, which took 66 citizens from 7.5 to 1 ms per tick; 125 cost about 3 ms. Towns stay loaded through NeoForge forced chunks while a member is online. Lent GPUs and the planner model were tested live with a dev client and a second model process.) |
 | **M11** | Content + release | More jobs, two or three more style packs and raider factions, balancing, docs, CI build (TWT's workflow). (Done as 0.1.0: cook, fisher, shepherd and miner (a spiral-step shaft under the Medieval pack's Mine); the Fjord and Oasis packs plus a Medieval kitchen and mine; Norse raiders, marauders and bandits by biome, each raid with a named leader; balancing from live raid trials (raider gear is for show, trained guards, falling back away from raiders); a player's guide and changelog. No CI build: the user asked for no GitHub Actions in Stad. Not published to Modrinth/CurseForge.) |
+| **M12** | Architect's table | The table block and its project, the site from the scan wand or typed corners, the 3D view (cached section buffers, orbit camera, layer cut-away, faded surroundings), generating a fitted building (generator up to 32 × 32), describing changes to the planner model, the hand-edit tools with undo, edits kept as a layer over the generated building, markers in the editor, the live requirements checklist, Save to My pack and Plan it here (with clearing steps). Game tests for capture, edits, server checks and fitting; seen on a real client. |
+| **M13** | Workplaces | Farmhouse, lumber camp, fishery and barn types; worker slots and assignment; the day, deliveries, tools and work area centred on the workplace; the work-speed and happiness bonus; workplaces in the town hall screen, chat screen and prompts. Bundled designs of the new workplaces in each pack. Game tests for each job with and without a workplace. |
 
 ## 11. Risks
 
@@ -463,6 +578,7 @@ Everything after that widens it.
 | Scope (this is two big mods in one) | Strict milestones and the M3 vertical slice. Defer complex crafting chains and research trees. |
 | TWT API changes break Stad | Small API package versioned with semver, composite build so both repos are compiled together, and Stad declares a version range. Both repos are yours, so they can change in step. |
 | Players must install TWT and its models | The TWT Models page already makes this one click. Stad's first-run screen checks for TWT's runtime and links to it. |
+| The 3D editor is slow or fiddly (big sites, picking, block facing) | Sites capped at 32 × 32 × 32. Sections cached in vertex buffers and rebuilt only when edited. Picking walks the design grid, not the rendered model. Facing and joining come from the blocks' own placement and shape rules, run on the design's blocks. Undo for everything. |
 | License | Don't copy MineColonies/MCA/Structurize code or assets (GPL-3.0). TWT is MIT and yours. |
 
 ## 12. Open questions
