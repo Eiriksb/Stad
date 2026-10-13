@@ -1,0 +1,9 @@
+{
+  "type": "stad:market",
+  "name": "Souk",
+  "description": "The covered market: a bell to call buyers, barrels of goods.",
+  "structure": "stad:oasis/souk",
+  "tags": [
+    "workplace"
+  ]
+}

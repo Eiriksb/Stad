@@ -15,7 +15,7 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 > are free beds. Citizens sleep in their own beds, eat from the town hall, plan their day each morning (in character,
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
 > Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier**, **guard**, **cook**,
-> **fisher**, **shepherd** and **miner**.
+> **fisher**, **shepherd**, **miner**, **smith**, **healer**, **merchant** and **teacher**.
 > **Plan buildings by talking to your builder**: "a small stone cottage with two bedrooms, a spruce roof and a
 > chimney". They draw it up (restyling one of the pack's buildings when it fits, or designing a new one: framing,
 > rooms, stairs, furniture, gable, hip or flat roofs, porches, chimneys), a see-through ghost of it appears on free
@@ -62,6 +62,10 @@ them.) When you talk to the builder aloud, they keep it short and leave the list
 | Fisher | fishes from the shore (the game's fishing loot) | a pond or river |
 | Shepherd | shears, breeds up to `herdSize` of each kind, butchers the extras | farm animals (named or leashed ones are pets) |
 | Miner | digs a 5x5 shaft deeper, layer by layer, down a spiral of steps; walls off water and lava | a Mine (Medieval pack) |
+| Smith | makes the tools the workers are short of (and swords), mends worn tools, smelts ore | a smithy (an anvil and a furnace) |
+| Healer | goes round treating the ill and the wounded | nothing (an infirmary gives the ill a bed) |
+| Merchant | keeps the market: players trade with the town through them, for emeralds | nothing (a market to stand at) |
+| Teacher | teaches the town's children at the school | a school (a lectern) |
 
 All of it happens on the town's land. Wheat only feeds anyone once a cook bakes it, and cooked food fills far more than
 raw, so a farmer and a cook keep a small town fed.
@@ -78,7 +82,32 @@ workplace goes there first thing in the morning, works the land round it (farmer
 lumberjacks the trees round their camp, fishers the nearest shore), works a quarter faster and is happier; when the
 town has a courier they take their haul in there, and the courier carries it on to the warehouse or the town hall.
 Without one they work as before, but grumble about it after a day or two (it costs you a little standing). The town
-hall screen shows who works where.
+hall screen shows who works where. The later jobs have theirs too: the **smithy** (an anvil, a furnace or blast furnace,
+a chest), **infirmary** (a brewing stand and a bed), **market** (a bell and a chest) and **school** (a lectern), with a
+design of each in every pack.
+
+**Skills.** Citizens get better at a job by doing it: ten levels from novice to master, each 2% quicker. The level
+is on their card and in what they say, and every job keeps its own (a farmer who turns smith starts as a novice smith,
+but is still a skilled farmer).
+
+**Tools.** Farmers need a hoe, lumberjacks an axe, miners a pickaxe, fishers a rod and shepherds shears, and they're
+real: a worker takes the best one from their workplace or the town's stores, wears it out, and puts it back in their
+workplace at night. Without one they make do, a third slower, and the town asks for one. The **smith** makes what the
+workers are short of from the game's own recipes and what's in the stores (an iron one when there's iron, else stone
+or wood; sticks from planks if it has to), mends worn tools at the anvil with their own material, and smelts the
+miner's raw ore into ingots.
+
+**Illness.** Now and then a citizen falls ill (more often when hungry or homeless; `needs.illnessChance`). They stay in
+bed (an infirmary's, if there's one free), don't work and are less happy; it passes in three days, or after two of the
+healer's treatments. The healer also mends the wounded, three hearts a treatment.
+
+**The market.** The town's money is emeralds in its stores. Its merchant sells what the town has more of than it keeps
+(over 64 of most things, more of food for a big town) and buys what it's asked for, in the game's trading screen
+(**Trade** on the merchant's card, or sneak and right-click them). Every trade moves the goods in and out of the town's
+real chests. Tools, weapons and armour aren't for sale.
+
+**School.** While the teacher is at the school, the town's children go there by day. Each school day adds to a child's
+schooling (up to ten); grown up, schooling makes them learn any job up to twice as fast.
 
 ### Talking a building through
 
@@ -255,6 +284,7 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 | `/stad colony cancel <id>` | officers |
 | `/stad citizen job <uuid> <builder\|farmer\|lumberjack\|courier\|guard\|none>` | officers (the citizen card has buttons for it) |
 | `/stad citizen workplace <uuid> <building id>` | officers: where a worker works from (ids as in `/stad colony builds`) |
+| `/stad citizen trade <uuid>` | trade with a merchant you're standing by |
 | `/stad build done` / `cancel` | end free build in the drafting world, keeping what you built as the design or not |
 | `/stad draft show` | your draft building: what it is and where (and its buttons again) |
 | `/stad draft approve` / `here` / `turn` / `save` / `cancel` | what the buttons under a draft do |

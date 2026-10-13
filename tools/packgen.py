@@ -431,6 +431,48 @@ def workplace(shell, furnish, w, d, windows, pen=None):
         return size, b
     return make
 
+# ---- the later jobs' workplaces (M14) -----------------------------------------------------------------------------
+
+def furnish_smithy(b, w, d):
+    b[(1, 1, d - 2)] = ("minecraft:anvil", {"facing": "east"})
+    b[(2, 1, d - 2)] = ("minecraft:blast_furnace", {"facing": "north", "lit": "false"})
+    b[(3, 1, d - 2)] = ("minecraft:furnace", {"facing": "north", "lit": "false"})
+    b[(w - 2, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(w - 2, 1, 1)] = ("minecraft:grindstone", {"face": "floor", "facing": "north"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def furnish_infirmary(b, w, d):
+    bed(b, "white", (1, 1, d - 3), "south")
+    bed(b, "white", (2, 1, d - 3), "south")
+    bed(b, "light_blue", (w - 2, 1, d - 3), "south")
+    b[(w // 2, 1, d - 2)] = ("minecraft:brewing_stand", {"has_bottle_0": "false", "has_bottle_1": "false", "has_bottle_2": "false"})
+    b[(w // 2 + 1, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    b[(w - 2, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def furnish_market(b, w, d):
+    b[(w // 2, 1, d - 2)] = ("minecraft:bell", {"attachment": "floor", "facing": "north", "powered": "false"})
+    b[(1, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(2, 1, d - 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(w - 2, 1, d - 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(w - 3, 1, d - 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    b[(w - 2, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def furnish_school(b, w, d, seat="minecraft:oak_stairs"):
+    b[(w // 2, 1, d - 2)] = ("minecraft:lectern", {"facing": "north", "has_book": "false", "powered": "false"})
+    b[(1, 1, d - 2)] = ("minecraft:bookshelf", {})
+    b[(w - 2, 1, d - 2)] = ("minecraft:bookshelf", {})
+    for z in (2, 3):
+        for x in range(1, w - 1):
+            if x != w // 2:
+                b[(x, 1, z)] = (seat, {"facing": "north", "half": "bottom", "shape": "straight", "waterlogged": "false"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    b[(w - 2, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def school_with(seat):
+    return lambda b, w, d: furnish_school(b, w, d, seat)
+
 SIDE_WINDOWS = lambda w, d: [(0, 2, d // 2), (w - 1, 2, d // 2)]
 
 PACKS = {
@@ -448,6 +490,14 @@ PACKS = {
                     workplace(medieval_shell, furnish_fishery, 7, 5, SIDE_WINDOWS(7, 5)), ["small", "workplace"]),
         "barn": ("stad:barn", "Barn", "Hay, a loom and a fenced pen behind it for the shepherd's animals.",
                  workplace(medieval_shell, furnish_barn, 9, 7, SIDE_WINDOWS(9, 7), ("minecraft:oak_fence", "minecraft:oak_fence_gate")), ["workplace"]),
+        "smithy": ("stad:smithy", "Smithy", "An anvil, a blast furnace and a grindstone, where the smith makes and mends the town's tools.",
+                   workplace(medieval_shell, furnish_smithy, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "infirmary": ("stad:infirmary", "Infirmary", "Three beds and a brewing stand, where the healer looks after the sick.",
+                      workplace(medieval_shell, furnish_infirmary, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "market": ("stad:market", "Market Hall", "The merchant's bell and the barrels of goods for sale.",
+                   workplace(medieval_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "school": ("stad:school", "Schoolhouse", "Benches facing the teacher's lectern, between the bookshelves.",
+                   workplace(medieval_shell, school_with("minecraft:spruce_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
     }),
     "fjord": ({"name": "Fjord", "description": "Laid log walls on stone footings, under turf roofs.", "author": "Stad"}, {
         "stue": ("stad:home", "Stue", "A log house with a turf roof and two beds.", fjord_stue, ["small", "home"]),
@@ -461,6 +511,14 @@ PACKS = {
                   workplace(fjord_shell, furnish_fishery, 7, 5, SIDE_WINDOWS(7, 5)), ["small", "workplace"]),
         "fjos": ("stad:barn", "Fjos", "The byre: hay and a loom inside, a pen behind.",
                  workplace(fjord_shell, furnish_barn, 9, 7, SIDE_WINDOWS(9, 7), ("minecraft:spruce_fence", "minecraft:spruce_fence_gate")), ["workplace"]),
+        "esse": ("stad:smithy", "Esse", "The forge under a turf roof: anvil, blast furnace and grindstone.",
+                 workplace(fjord_shell, furnish_smithy, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "sjukestue": ("stad:infirmary", "Sjukestue", "The sick-house: beds by the wall and the healer's brewing stand.",
+                      workplace(fjord_shell, furnish_infirmary, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "handelsbu": ("stad:market", "Handelsbu", "The trading booth, its bell and barrels of goods.",
+                      workplace(fjord_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "skulestue": ("stad:school", "Skulestue", "The schoolroom in a log house: benches and a lectern.",
+                      workplace(fjord_shell, school_with("minecraft:spruce_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
     }),
     "oasis": ({"name": "Oasis", "description": "Sandstone houses with flat roofs and parapets, palm-wood beams.", "author": "Stad"}, {
         "house": ("stad:home", "Sandstone House", "A cool sandstone house with two beds.", oasis_house, ["small", "home"]),
@@ -474,6 +532,14 @@ PACKS = {
                     workplace(oasis_shell, furnish_fishery, 7, 5, SIDE_WINDOWS(7, 5)), ["small", "workplace"]),
         "stable": ("stad:barn", "Stable", "Hay and a loom in the shade, a pen behind.",
                    workplace(oasis_shell, furnish_barn, 9, 7, SIDE_WINDOWS(9, 7), ("minecraft:jungle_fence", "minecraft:jungle_fence_gate")), ["workplace"]),
+        "forge": ("stad:smithy", "Desert Forge", "Thick sandstone walls round the anvil and the blast furnace.",
+                  workplace(oasis_shell, furnish_smithy, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "house_of_healing": ("stad:infirmary", "House of Healing", "Cool rooms with beds for the sick, and the healer's brewing stand.",
+                             workplace(oasis_shell, furnish_infirmary, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "souk": ("stad:market", "Souk", "The covered market: a bell to call buyers, barrels of goods.",
+                 workplace(oasis_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "school": ("stad:school", "Oasis School", "Sandstone benches facing the lectern.",
+                   workplace(oasis_shell, school_with("minecraft:sandstone_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
     }),
 }
 

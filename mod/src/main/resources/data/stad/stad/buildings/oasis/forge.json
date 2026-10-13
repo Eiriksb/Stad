@@ -1,0 +1,10 @@
+{
+  "type": "stad:smithy",
+  "name": "Desert Forge",
+  "description": "Thick sandstone walls round the anvil and the blast furnace.",
+  "structure": "stad:oasis/forge",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

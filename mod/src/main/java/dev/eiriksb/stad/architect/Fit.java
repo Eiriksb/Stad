@@ -59,10 +59,15 @@ public final class Fit {
                 rooms = List.of("kitchen", "storage");
             } else if (type.equals(BuildingDef.MINE)) {
                 rooms = List.of("storage");
-            } else if (type.equals(Requirements.WORKSHOP) || type.equals(BuildingDef.LUMBER_CAMP)) {
+            } else if (type.equals(Requirements.WORKSHOP) || type.equals(BuildingDef.LUMBER_CAMP) || type.equals(BuildingDef.SMITHY)) {
                 rooms = List.of("workshop");
-            } else if (type.equals(BuildingDef.FARMHOUSE) || type.equals(BuildingDef.FISHERY) || type.equals(BuildingDef.BARN)) {
+            } else if (type.equals(BuildingDef.FARMHOUSE) || type.equals(BuildingDef.FISHERY) || type.equals(BuildingDef.BARN)
+                    || type.equals(BuildingDef.MARKET)) {
                 rooms = List.of("storage");
+            } else if (type.equals(BuildingDef.SCHOOL)) {
+                rooms = List.of("library");
+            } else if (type.equals(BuildingDef.INFIRMARY)) {
+                rooms = List.of("bedroom", "storage");
             }
         }
         return new BuildSpec(s.name(), specType(type), "new", s.width(), s.depth(), s.floors(), s.roof(), s.walls(), s.frame(),

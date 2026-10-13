@@ -1,0 +1,9 @@
+{
+  "type": "stad:school",
+  "name": "Skulestue",
+  "description": "The schoolroom in a log house: benches and a lectern.",
+  "structure": "stad:fjord/skulestue",
+  "tags": [
+    "workplace"
+  ]
+}

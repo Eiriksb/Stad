@@ -103,6 +103,7 @@ public class CitizenEntity extends PathfinderMob {
         goalSelector.addGoal(1, new dev.eiriksb.stad.citizen.goal.GuardGoal(this));
         goalSelector.addGoal(1, new dev.eiriksb.stad.citizen.goal.ShelterGoal(this));
         goalSelector.addGoal(2, new SleepAtHomeGoal(this));
+        goalSelector.addGoal(2, new dev.eiriksb.stad.citizen.goal.IllGoal(this));
         goalSelector.addGoal(3, new EatAtTownHallGoal(this));
         goalSelector.addGoal(4, new BuildGoal(this));
         goalSelector.addGoal(4, new FarmGoal(this));
@@ -112,6 +113,11 @@ public class CitizenEntity extends PathfinderMob {
         goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.FishGoal(this));
         goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.ShepherdGoal(this));
         goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.MineGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.SmithGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.HealerGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.MerchantGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.TeacherGoal(this));
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.SchoolGoal(this));
         goalSelector.addGoal(5, new MoveTowardsRestrictionGoal(this, 0.6));
         goalSelector.addGoal(6, new GatherAtTownHallGoal(this));
         goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.6));
@@ -282,7 +288,8 @@ public class CitizenEntity extends PathfinderMob {
         // a job is worth more with somewhere to do it (PLAN.md §6.8)
         int work = r.map(x -> x.job == null ? 5 : dev.eiriksb.stad.colony.Workplaces.kinds(x.job).isEmpty() ? 15
                 : colony().flatMap(c -> dev.eiriksb.stad.colony.Workplaces.of(c, x)).isPresent() ? 20 : 12).orElse(5);
-        double h = 30 * hunger / MAX_NEED + 25 * rest / MAX_NEED + (home().isPresent() ? 20 : 0) + work + (company ? 10 : 0);
+        double h = 30 * hunger / MAX_NEED + 25 * rest / MAX_NEED + (home().isPresent() ? 20 : 0) + work + (company ? 10 : 0)
+                - (r.map(x -> x.illness != null).orElse(false) ? 15 : 0);
         return (int) Math.round(Math.max(0, Math.min(100, h)));
     }
 
@@ -292,7 +299,7 @@ public class CitizenEntity extends PathfinderMob {
 
     /** Working hours: daytime, awake, fed, and not taking the afternoon off when their plan says to rest. */
     public boolean canWork() {
-        if (isSleeping() || isNight() || hunger < 4 || isBaby()) {
+        if (isSleeping() || isNight() || hunger < 4 || isBaby() || ill()) {
             return false;
         }
         if (colony().map(c -> c.onStrike(level().getDayTime() / 24000)).orElse(false)) {
@@ -304,7 +311,23 @@ public class CitizenEntity extends PathfinderMob {
 
     /** Counts work done today (for prompts and the town hall). */
     public void didWork(int amount) {
-        record().ifPresent(r -> r.workToday += amount);
+        record().ifPresent(r -> {
+            r.workToday += amount;
+            if (Skills.learn(r, r.job, amount) && level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                colony().ifPresent(c -> dev.eiriksb.stad.colony.Announce.members(sl.getServer(), c, net.minecraft.network.chat.Component
+                        .literal(r.name + " is " + Skills.describe(r) + " now.").withStyle(net.minecraft.ChatFormatting.GREEN)));
+            }
+        });
+    }
+
+    /** Whether they're ill (PLAN.md §6.9). */
+    public boolean ill() {
+        return record().map(r -> r.illness != null).orElse(false);
+    }
+
+    /** How good they are at their job (0 to {@link Skills#MAX}). */
+    public int skill() {
+        return record().map(r -> Skills.level(r, r.job)).orElse(0);
     }
 
     /** They spent time with someone. */
@@ -346,7 +369,7 @@ public class CitizenEntity extends PathfinderMob {
     @Override
     public void aiStep() {
         if (!level().isClientSide) {
-            if (isSleeping() && (!isNight() || hunger < 2)) {
+            if (isSleeping() && (!isNight() && !ill() || hunger < 2)) {
                 stopSleeping();
             }
             if (tickCount % 20 == 0) {
@@ -357,6 +380,7 @@ public class CitizenEntity extends PathfinderMob {
             }
             if (tickCount % 100 == 0) {
                 trainedAsGuard(dev.eiriksb.stad.colony.Jobs.GUARD.equals(job().orElse(null)));
+                Tools.tidy(this);
             }
             if (tickCount % 100 == 0) {
                 record().ifPresent(r -> {
@@ -408,6 +432,14 @@ public class CitizenEntity extends PathfinderMob {
 
     @Override
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+        if (hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sp && sp.isShiftKeyDown()
+                && dev.eiriksb.stad.colony.Jobs.MERCHANT.equals(job().orElse(null))) {
+            String why = dev.eiriksb.stad.colony.Trading.open(sp, this); // sneak and right-click a merchant: straight to trading
+            if (why != null) {
+                sp.displayClientMessage(net.minecraft.network.chat.Component.literal(why).withStyle(net.minecraft.ChatFormatting.YELLOW), true);
+            }
+            return InteractionResult.SUCCESS;
+        }
         if (hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sp) {
             CitizenInteraction.show(sp, this);
             return InteractionResult.SUCCESS;

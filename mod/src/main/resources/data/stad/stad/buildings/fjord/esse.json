@@ -1,0 +1,10 @@
+{
+  "type": "stad:smithy",
+  "name": "Esse",
+  "description": "The forge under a turf roof: anvil, blast furnace and grindstone.",
+  "structure": "stad:fjord/esse",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

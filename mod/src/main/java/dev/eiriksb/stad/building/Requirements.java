@@ -88,6 +88,24 @@ public final class Requirements {
                 block("a hay bale", net.minecraft.world.level.block.Blocks.HAY_BLOCK),
                 new Need("a fenced pen beside it", c -> c.near("pen"), false),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.SMITHY,
+                block("an anvil", net.minecraft.world.level.block.Blocks.ANVIL),
+                new Need("a furnace or blast furnace", c -> c.count(net.minecraft.world.level.block.Blocks.FURNACE)
+                        + c.count(net.minecraft.world.level.block.Blocks.BLAST_FURNACE) > 0, true, net.minecraft.world.level.block.Blocks.BLAST_FURNACE),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), true, net.minecraft.world.level.block.Blocks.CHEST),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.INFIRMARY,
+                block("a brewing stand", net.minecraft.world.level.block.Blocks.BREWING_STAND),
+                new Need("a bed", c -> c.has(Contents.Thing.BED), true),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), false, net.minecraft.world.level.block.Blocks.CHEST),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.MARKET,
+                block("a bell", net.minecraft.world.level.block.Blocks.BELL),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), true, net.minecraft.world.level.block.Blocks.CHEST),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.SCHOOL,
+                block("a lectern", net.minecraft.world.level.block.Blocks.LECTERN),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
         type(WORKSHOP,
                 new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true),
                 new Need("a workstation (a smithing table, stonecutter, loom, anvil...)", c -> c.has(Contents.Thing.WORKSTATION), true),
@@ -165,7 +183,19 @@ public final class Requirements {
         if (w.contains("kitchen") || w.contains("bakery")) {
             return BuildingDef.KITCHEN;
         }
-        if (w.contains("workshop") || w.contains("smithy") || w.contains("forge")) {
+        if (w.contains("smith") || w.contains("forge")) {
+            return BuildingDef.SMITHY;
+        }
+        if (w.contains("infirmary") || w.contains("hospital") || w.contains("healer") || w.contains("clinic") || w.contains("sickhouse")) {
+            return BuildingDef.INFIRMARY;
+        }
+        if (w.contains("market") || w.contains("shop") || w.contains("stall") || w.contains("trading")) {
+            return BuildingDef.MARKET;
+        }
+        if (w.contains("school") || w.contains("classroom")) {
+            return BuildingDef.SCHOOL;
+        }
+        if (w.contains("workshop")) {
             return WORKSHOP;
         }
         if (w.contains("home") || w.contains("house") || w.contains("place") || w.contains("cottage") || w.contains("cabin")) {

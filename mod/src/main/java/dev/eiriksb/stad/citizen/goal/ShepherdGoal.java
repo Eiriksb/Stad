@@ -181,7 +181,7 @@ public class ShepherdGoal extends WorkGoal {
             case SHEAR -> {
                 if (target instanceof Sheep sheep && sheep.readyForShearing()) {
                     sheep.shear(SoundSource.NEUTRAL); // the wool drops, to be picked up next
-                    citizen.didWork(1);
+                    worked(1);
                 }
             }
             case BUTCHER -> {

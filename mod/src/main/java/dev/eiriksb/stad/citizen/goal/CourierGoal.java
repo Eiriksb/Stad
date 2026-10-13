@@ -66,13 +66,27 @@ public class CourierGoal extends WorkGoal {
                 continue;
             }
             for (ColonyStorage.Box box : dev.eiriksb.stad.colony.Workplaces.storage(level, b).boxes()) {
-                if (!box.container().isEmpty() && box.pos().distSqr(citizen.blockPosition()) < bestDist) {
+                if (hasHaul(box) && box.pos().distSqr(citizen.blockPosition()) < bestDist) {
                     best = box;
                     bestDist = box.pos().distSqr(citizen.blockPosition());
                 }
             }
         }
         return best;
+    }
+
+    /** What a workplace chest has to carry on: anything but the tools its workers keep there (PLAN.md §6.9). */
+    private static boolean haulable(ItemStack s) {
+        return !s.isEmpty() && dev.eiriksb.stad.citizen.Tools.kindOf(s) == null;
+    }
+
+    private static boolean hasHaul(ColonyStorage.Box box) {
+        for (int i = 0; i < box.container().getContainerSize(); i++) {
+            if (haulable(box.container().getItem(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static ColonyStorage warehouses(ServerLevel level, Colony colony) {
@@ -107,7 +121,7 @@ public class CourierGoal extends WorkGoal {
             int stacks = 0;
             for (int i = 0; i < haul.container().getContainerSize() && stacks < 4; i++) {
                 ItemStack st = haul.container().getItem(i);
-                if (!st.isEmpty()) {
+                if (haulable(st)) {
                     pocket(haul.container().removeItemNoUpdate(i));
                     stacks++;
                 }

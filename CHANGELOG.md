@@ -22,6 +22,19 @@
   lakeside fishery" moves them); there they start the day, work the land round it, work a quarter faster and are
   happier, and couriers carry their haul on. Without one they grumble.
 
+**The later jobs**
+- **Smith**, **healer**, **merchant** and **teacher**, with a smithy, infirmary, market and school in every pack (twelve
+  new designs), all plannable at the architect's table.
+- **Skills**: citizens get better at each job they do, from novice to master (up to a fifth quicker).
+- **Real tools**: farmers, lumberjacks, miners, fishers and shepherds take a real tool from the stores, wear it out
+  and put it back in their workplace at night; without one they make do, slower, and the town asks for one. The smith
+  makes them (from the game's own recipes), mends them and smelts ore.
+- **Illness**: citizens sometimes fall ill and stay in bed for a few days; the healer cures them sooner and mends the
+  wounded.
+- **The market**: trade with the town through its merchant (sneak and right-click, or Trade on their card), for
+  emeralds; every trade moves goods in and out of the town's real chests.
+- **School**: children go to school while there's a teacher, and grow up quicker to learn.
+
 ## 0.1.0 (first release)
 
 Stad needs [They Will Talk](https://github.com/Eiriksb/they-will-talk) 0.3.0-alpha.6 or newer, NeoForge 21.1 on

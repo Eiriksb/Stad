@@ -86,11 +86,11 @@ public class FishGoal extends WorkGoal {
         }
         level.sendParticles(ParticleTypes.SPLASH, water.getX() + 0.5, water.getY() + 1.0, water.getZ() + 0.5, 12, 0.2, 0.05, 0.2, 0.1);
         level.playSound(null, water, SoundEvents.FISHING_BOBBER_SPLASH, SoundSource.NEUTRAL, 0.6f, 1.0f);
-        for (ItemStack caught : catchAt(level, water, tool())) {
+        for (ItemStack caught : catchAt(level, water, working())) {
             pocket(caught);
         }
         citizen.swing(InteractionHand.MAIN_HAND);
-        citizen.didWork(1);
+        worked(1);
         water = null; // cast again
     }
 

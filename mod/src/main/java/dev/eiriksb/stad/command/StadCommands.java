@@ -95,6 +95,7 @@ public final class StadCommands {
                         .then(Commands.literal("talk").then(Commands.argument("uuid", StringArgumentType.word())
                                 .then(Commands.argument("text", StringArgumentType.greedyString()).executes(StadCommands::talk))))
                         .then(Commands.literal("history").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::history)))
+                        .then(Commands.literal("trade").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::trade)))
                         .then(Commands.literal("voice").requires(s -> s.hasPermission(2))
                                 .then(Commands.argument("citizens", EntityArgument.entities()).executes(StadCommands::voice)))
                         .then(Commands.literal("status").requires(s -> s.hasPermission(2))
@@ -429,6 +430,17 @@ public final class StadCommands {
                     .append(Component.literal(l.text()).withStyle(ChatFormatting.WHITE)), false);
         }
         return 1;
+    }
+
+    /** Trades with a merchant (PLAN.md §6.9). */
+    private static int trade(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        CitizenEntity c = near(ctx, player);
+        if (c == null) {
+            return fail(ctx.getSource(), "That citizen isn't nearby.");
+        }
+        String why = dev.eiriksb.stad.colony.Trading.open(player, c);
+        return why == null ? 1 : fail(ctx.getSource(), why);
     }
 
     /** Admins: how citizens sound (their voice description, pitch and pace). */

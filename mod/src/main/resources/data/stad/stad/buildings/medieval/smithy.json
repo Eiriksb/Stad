@@ -1,0 +1,10 @@
+{
+  "type": "stad:smithy",
+  "name": "Smithy",
+  "description": "An anvil, a blast furnace and a grindstone, where the smith makes and mends the town's tools.",
+  "structure": "stad:medieval/smithy",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

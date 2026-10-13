@@ -20,7 +20,8 @@ import java.util.Optional;
  * A day at work for one job: do the job's own work, and when they're carrying a fair load (or there's nothing else to
  * do, or it's late in the day) take what they've gathered to the warehouse, or the town hall when there's none.
  * Workers with a workplace (PLAN.md §6.8) go there first thing, work the land round it, work a quarter faster, and take
- * their haul in there when the town has a courier to carry it on.
+ * their haul in there when the town has a courier to carry it on. Skill makes the work quicker, and a job that needs a
+ * tool takes a real one from the town's stores and wears it out; without one they make do, slower (§6.9).
  */
 abstract class WorkGoal extends Goal {
     protected final CitizenEntity citizen;
@@ -30,6 +31,8 @@ abstract class WorkGoal extends Goal {
     private boolean delivering;
     /** the day they last started at their workplace */
     private long checkedIn = -1;
+    /** ticks until they look in the stores again for the tool they're making do without */
+    private int toolCheck;
 
     WorkGoal(CitizenEntity citizen, String job) {
         this.citizen = citizen;
@@ -43,9 +46,20 @@ abstract class WorkGoal extends Goal {
     /** One goal tick of the job's own work. */
     protected abstract void work(ServerLevel level, Colony colony);
 
-    /** The tool they hold while at work (a fishing rod, a pickaxe), or nothing. */
+    /** What their job's tool is like (a fishing rod, a pickaxe), for what it gets them; nothing for jobs without one. */
     protected ItemStack tool() {
         return ItemStack.EMPTY;
+    }
+
+    /** The tool they work with: the real one in their hand, or what they make do with. */
+    protected ItemStack working() {
+        return dev.eiriksb.stad.citizen.Tools.equipped(citizen) ? citizen.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND) : tool();
+    }
+
+    /** A piece of work done: it counts for the day and their skill, and wears their tool. */
+    protected void worked(int amount) {
+        citizen.didWork(amount);
+        dev.eiriksb.stad.citizen.Tools.wear(citizen);
     }
 
     /** How much they carry before taking it in. */
@@ -156,20 +170,12 @@ abstract class WorkGoal extends Goal {
         approach.reset();
         cooldown = 0;
         delivering = false;
-        ItemStack tool = tool();
-        if (!tool.isEmpty() && citizen.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND).isEmpty()) {
-            citizen.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, tool.copy());
-            citizen.setDropChance(net.minecraft.world.entity.EquipmentSlot.MAINHAND, 0f); // the town's tool, not loot
-        }
+        citizen.colony().ifPresent(c -> dev.eiriksb.stad.citizen.Tools.equip(citizen, (ServerLevel) citizen.level(), c));
     }
 
     @Override
     public void stop() {
         citizen.getNavigation().stop();
-        ItemStack tool = tool();
-        if (!tool.isEmpty() && citizen.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND).is(tool.getItem())) {
-            citizen.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-        }
     }
 
     @Override
@@ -182,6 +188,12 @@ abstract class WorkGoal extends Goal {
         if (!delivering && somethingToDeliver() && (pocketsFull() || carried() >= load() || lateInTheDay() || !hasWork(level, colony))) {
             delivering = true;
             approach.reset();
+        }
+        if (--toolCheck <= 0) {
+            toolCheck = 200;
+            if (dev.eiriksb.stad.citizen.Tools.lacking(citizen)) {
+                dev.eiriksb.stad.citizen.Tools.equip(citizen, level, colony);
+            }
         }
         if (delivering) {
             deliver(level, colony);
@@ -231,11 +243,20 @@ abstract class WorkGoal extends Goal {
         approach.reset();
     }
 
-    /** How long something takes: twice as long when they're working grudgingly, a quarter less from a workplace. */
+    /**
+     * How long something takes: twice as long when they're working grudgingly, half as long again without the tool,
+     * a quarter less from a workplace, and 2% less for each level of skill.
+     */
     protected int pace(int ticks) {
-        int t = citizen.grudging() ? ticks * 2 : ticks;
-        boolean placed = citizen.colony().flatMap(this::workplace).isPresent();
-        return placed ? Math.max(1, (t * 3 + 3) / 4) : t;
+        double t = citizen.grudging() ? ticks * 2 : ticks;
+        if (dev.eiriksb.stad.citizen.Tools.lacking(citizen)) {
+            t *= 1.5;
+        }
+        if (citizen.colony().flatMap(this::workplace).isPresent()) {
+            t *= 0.75;
+        }
+        t *= dev.eiriksb.stad.citizen.Skills.speed(citizen.skill());
+        return Math.max(1, (int) Math.ceil(t));
     }
 
     /** Puts what they gathered in their pockets; what doesn't fit drops at their feet. */

@@ -1,0 +1,9 @@
+{
+  "type": "stad:market",
+  "name": "Handelsbu",
+  "description": "The trading booth, its bell and barrels of goods.",
+  "structure": "stad:fjord/handelsbu",
+  "tags": [
+    "workplace"
+  ]
+}

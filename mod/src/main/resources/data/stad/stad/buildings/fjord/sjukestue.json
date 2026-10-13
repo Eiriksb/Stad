@@ -1,0 +1,9 @@
+{
+  "type": "stad:infirmary",
+  "name": "Sjukestue",
+  "description": "The sick-house: beds by the wall and the healer's brewing stand.",
+  "structure": "stad:fjord/sjukestue",
+  "tags": [
+    "workplace"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "type": "stad:infirmary",
+  "name": "Infirmary",
+  "description": "Three beds and a brewing stand, where the healer looks after the sick.",
+  "structure": "stad:medieval/infirmary",
+  "tags": [
+    "workplace"
+  ]
+}

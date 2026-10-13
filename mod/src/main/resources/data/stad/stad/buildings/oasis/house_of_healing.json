@@ -1,0 +1,9 @@
+{
+  "type": "stad:infirmary",
+  "name": "House of Healing",
+  "description": "Cool rooms with beds for the sick, and the healer's brewing stand.",
+  "structure": "stad:oasis/house_of_healing",
+  "tags": [
+    "workplace"
+  ]
+}

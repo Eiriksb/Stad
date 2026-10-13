@@ -84,9 +84,19 @@ public final class StadAdapter implements VillagerAdapter {
         } else if (job != null) {
             jobContext(c, t, f, job);
         } else {
-            f.context.add("You have no job yet; you'd like the leader to give you one (builder, farmer, lumberjack, courier, cook, fisher, shepherd, miner or guard).");
+            f.context.add("You have no job yet; you'd like the leader to give you one (" + String.join(", ", Jobs.all()) + ").");
         }
         c.record().ifPresent(r -> {
+            if (r.illness != null) {
+                f.context.add("You're ill with " + r.illness + " and staying in bed; you feel poorly and can't work"
+                        + (t.citizens().stream().anyMatch(o -> Jobs.HEALER.equals(o.job)) ? ", but the healer is looking after you." : "."));
+            }
+            if (c.isBaby() && r.schooling > 0) {
+                f.context.add("You've had " + r.schooling + (r.schooling == 1 ? " day" : " days") + " at school.");
+            }
+            if (!c.isBaby() && r.schooling >= 5) {
+                f.context.add("You did well at school, and you're quick to learn.");
+            }
             if (!r.plan.isEmpty()) {
                 f.context.add("Your plan for today: " + String.join("; ", r.plan) + ".");
             }
@@ -164,6 +174,12 @@ public final class StadAdapter implements VillagerAdapter {
         net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) c.level();
         f.context.add("You're the town's " + job + ": " + Jobs.describe(job) + ".");
         c.record().ifPresent(r -> {
+            f.context.add("You're " + dev.eiriksb.stad.citizen.Skills.describe(r) + ".");
+            if (dev.eiriksb.stad.citizen.Tools.lacking(c)) {
+                f.context.add("You have no " + dev.eiriksb.stad.citizen.Tools.of(job).words.replaceFirst("^an? ", "") + " of the town's to work with, so you make do"
+                        + " by hand, slowly; you'd like one put in the town hall" + (t.citizens().stream().anyMatch(o -> Jobs.SMITH.equals(o.job))
+                        ? " (the smith could make one, given the materials)." : "."));
+            }
             String at = dev.eiriksb.stad.colony.Workplaces.describe(t, r);
             String wanted = dev.eiriksb.stad.colony.Workplaces.wanted(job);
             if (at != null) {
@@ -182,6 +198,19 @@ public final class StadAdapter implements VillagerAdapter {
             case Jobs.COURIER -> f.context.add(ColonyStorage.warehouses(level, t).isEmpty()
                     ? "The town has no warehouse yet, so there's nothing for you to carry; you'd like the leader to have one built."
                     : "Today you've carried " + done + " items.");
+            case Jobs.SMITH -> f.context.add(done == 0 ? "You haven't had anything to make or mend yet today."
+                    : "Today you've done " + done + " pieces of work at the anvil and furnace.");
+            case Jobs.HEALER -> {
+                long ill = t.citizens().stream().filter(o -> o.illness != null).count();
+                f.context.add((ill == 0 ? "Nobody in town is ill right now." : ill + (ill == 1 ? " citizen is" : " citizens are") + " ill.")
+                        + " Today you've treated " + done + (done == 1 ? " patient." : " patients."));
+            }
+            case Jobs.MERCHANT -> f.context.add("Players trade with you at the market (they sneak and right-click you, or choose Trade). Today you've made "
+                    + done + (done == 1 ? " trade." : " trades."));
+            case Jobs.TEACHER -> {
+                long kids = t.citizens().stream().filter(o -> level.getEntity(o.uuid) instanceof CitizenEntity e && e.isBaby()).count();
+                f.context.add(kids == 0 ? "The town has no children to teach yet." : "The town has " + kids + (kids == 1 ? " child" : " children") + " to teach.");
+            }
             case Jobs.GUARD -> f.context.add(dev.eiriksb.stad.war.Combat.unarmed(c)
                     ? "You have no sword yet; you'd like one put in the town hall (an iron one, ideally)."
                     : "You carry a " + c.getMainHandItem().getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + ".");

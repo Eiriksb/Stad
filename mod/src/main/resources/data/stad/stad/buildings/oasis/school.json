@@ -1,0 +1,9 @@
+{
+  "type": "stad:school",
+  "name": "Oasis School",
+  "description": "Sandstone benches facing the lectern.",
+  "structure": "stad:oasis/school",
+  "tags": [
+    "workplace"
+  ]
+}

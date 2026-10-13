@@ -192,7 +192,7 @@ adds talk and priorities on top, nothing else.
 |---|---|
 | v1 | **Builder**, Courier (warehouse), Farmer, Lumberjack |
 | v2 | Miner, Guard, Cook, Fisher, Shepherd (done: guard in M8, the rest in M11) |
-| later | Smith, Researcher/Teacher (school), Healer, Merchant |
+| later | Smith, Teacher (school), Healer, Merchant: M14 (§6.9) |
 
 ### 6.3 Packs and blueprints
 
@@ -492,6 +492,51 @@ They take their requirements from vanilla's job blocks:
     grumbles about it (a small standing cost when it lasts). Existing towns keep working.
   - Prompt facts: "you work at the Lakeside Fishery". Citizens can talk about their workplace and ask for one.
 
+### 6.9 The later jobs (M14)
+
+Four jobs §6.2 left for later, each with a workplace of its own (§6.8), plus two things they need: **skills**, so
+work gets better with practice, and **real tools**, so a smith has something to do.
+
+**Skills.** Every citizen has a skill in each job they've done, from the work they do (a crop harvested, a log
+chopped, a block placed). Ten levels, from novice to master; each level makes the work 2% quicker (on top of the
+workplace's quarter). The level shows in the chat screen and goes into the prompt ("you're a journeyman miner"), and
+changing job starts the new one from its own level, so old skills aren't lost.
+
+**Real tools.** Farmers need a hoe, lumberjacks an axe, miners a pickaxe, fishers a rod and shepherds shears (guards
+already take a real sword). A worker takes the best one from their workplace's chests, then the town's stores, uses
+it until it breaks, and at the end of the day puts it back in their workplace (the "tools kept at the workplace" left
+from M13). Without one they make do by hand, a third slower, and the town asks for one.
+
+**Smith** (smithy: an anvil, a furnace or blast furnace, a chest). In order:
+- **mends** worn tools from the stores at the anvil, with the tool's own repair material (an iron ingot for iron
+  tools, cobblestone for stone...), a quarter of its wear per unit;
+- **makes** tools the town's workers are short of (and swords for unarmed guards), from the game's own crafting
+  recipes, with what's in the stores (sticks from planks, planks from logs if it has to); the best tier it can;
+- **smelts** raw ore the miner brings up into ingots at the furnace.
+
+**Healer** (infirmary: a brewing stand, a bed, a chest). Citizens can now **fall ill**: a small chance each morning,
+more for the hungry and the homeless. Ill, they don't work, are less happy, and stay in bed (in the infirmary if
+there's a free bed, else at home); it passes by itself in about three days. The healer walks round to the ill and the
+wounded: two treatments cure an illness, and each treatment mends a wounded citizen by a few hearts.
+
+**Merchant** (market: a bell, a chest). The town's money is **emeralds** in its stores. The merchant stands at the
+market by day, and players trade with them (Trade in the chat screen, or sneak and right-click), in the game's own
+trading screen:
+- the town **sells** what it has more of than it keeps for itself (food over what the town hall needs, logs, stone,
+  ingots...), for emeralds;
+- the town **buys** what it's asked for (builders' materials, tools, swords, food when short) with its emeralds.
+Every trade moves the goods in and out of the town's real chests. Prices come from a table of what things are worth
+(with a fallback by rarity), a little better as the merchant gets more skilled.
+
+**Teacher** (school: a lectern, a light). The teacher stands at the lectern by day; the town's children go to school
+while the teacher is there. Each day at school adds to a child's schooling (at most ten); when they grow up, schooling
+makes them learn every job faster (up to twice as fast).
+
+All four get bundled designs in each pack (smithy, infirmary, market, school: twelve in all), can be planned at the
+architect's table (which furnishes the anvil, brewing stand, bell or lectern if a generated one lacks it), and are
+assigned and moved like the other workplaces. Game tests for skills, tools wearing out and coming back, each job's
+work, illness, and trades moving real goods.
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).
@@ -579,6 +624,7 @@ Everything after that widens it.
 | **M11** | Content + release | More jobs, two or three more style packs and raider factions, balancing, docs, CI build (TWT's workflow). (Done as 0.1.0: cook, fisher, shepherd and miner (a spiral-step shaft under the Medieval pack's Mine); the Fjord and Oasis packs plus a Medieval kitchen and mine; Norse raiders, marauders and bandits by biome, each raid with a named leader; balancing from live raid trials (raider gear is for show, trained guards, falling back away from raiders); a player's guide and changelog. No CI build: the user asked for no GitHub Actions in Stad. Not published to Modrinth/CurseForge.) |
 | **M12** | Architect's table | The table block and its project, the site from the scan wand or typed corners, the 3D view (cached section buffers, orbit camera, layer cut-away, faded surroundings), generating a fitted building (generator up to 32 × 32), describing changes to the planner model, the hand-edit tools with undo, edits kept as a layer over the generated building, markers in the editor, the live requirements checklist, Save to My pack and Plan it here (with clearing steps). Game tests for capture, edits, server checks and fitting; seen on a real client. (Done. Seen on a dev client at 1280x720 (GUI 427x240): the view, generating, the AI's revisions, placing, the box tool, the picker, markers, undo, the cut-away, planning and saving all work; driven from the console with `/stad dev ui`. Not done: the requirements that depend on the land round the site ("by water") come with M13's workplaces; watchers see the design as it was when they opened the table, not the editor's changes live; translucent blocks aren't depth-sorted; markers only go in open spaces, so a `stad:storage` marker can't sit on a chest; the copy tool copies from the site and its margin only.) |
 | **M13** | Workplaces + free build | Farmhouse, lumber camp, fishery and barn types; worker slots and assignment; the day, deliveries, tools and work area centred on the workplace; the work-speed and happiness bonus; workplaces in the town hall screen, chat screen and prompts. Bundled designs of the new workplaces in each pack. Game tests for each job with and without a workplace. **Free build** in the table's site (above), with its safeguards and crash recovery. (Done. Workplaces: the four types with their needs (what's round them counts as a wish, not a need), slots, assignment, moving by talk or command, the morning walk, work areas, the speed and happiness bonus, couriers carrying hauls on, grumbling, prompts, the town hall and citizen screens, twelve bundled designs, and the table furnishing and checking workplaces. Free build: seen on a dev client driven with `/stad dev ui` (now with world input). It first built in the real site and put it back afterwards; after M13 it moved to the drafting world (a copy of the site in a void dimension, kept across logouts and restarts), and the table's screen was decluttered (the view takes up the screen, generating and asking moved into a drawer). Seen live: the copy, placing, the invisible walls, B and Keep it, the table reopening with the change, rejoining mid-build; the game test covers keeping, throwing away and a restart. Not done: tools aren't kept at the workplace (citizens' tools are still the town's, conjured as needed); shepherds don't stay near their barn's pen; grass under a free-built floor is ignored, so are opened doors.) |
+| **M14** | The later jobs | Skills that grow with work; real tools that wear out and are kept at the workplace; the smith (mending, making and smelting), the healer (and illness), the merchant (trading the town's goods for emeralds through the game's trading screen) and the teacher (school for children, who then learn faster). Smithy, infirmary, market and school types with bundled designs in each pack; table support; prompts and screens; game tests (§6.9). (Done. Game tests for skills, a rod wearing out and the town asking for another, tools going back to the workplace at night, the smith making a stone pickaxe from cobblestone and planks while mending an iron axe and smelting raw iron, the healer curing and mending, illness passing, the merchant's offers and trades moving real goods, and a child's school day. Seen live on a dev client: the market in the game's trading screen and a trade moving cobblestone and emeralds in the town hall, the chat screen's skill line and Trade button. Not seen live: the smith, healer and teacher at work (only in game tests). The smith works only from a smithy; the healer uses no materials; prices are a fixed table, the same for every player.) |
 
 ## 11. Risks
 

@@ -43,4 +43,8 @@ public record BuildingDef(ResourceLocation key, String pack, ResourceLocation ty
     public static final ResourceLocation LUMBER_CAMP = ResourceLocation.fromNamespaceAndPath("stad", "lumber_camp");
     public static final ResourceLocation FISHERY = ResourceLocation.fromNamespaceAndPath("stad", "fishery");
     public static final ResourceLocation BARN = ResourceLocation.fromNamespaceAndPath("stad", "barn");
+    public static final ResourceLocation SMITHY = ResourceLocation.fromNamespaceAndPath("stad", "smithy");
+    public static final ResourceLocation INFIRMARY = ResourceLocation.fromNamespaceAndPath("stad", "infirmary");
+    public static final ResourceLocation MARKET = ResourceLocation.fromNamespaceAndPath("stad", "market");
+    public static final ResourceLocation SCHOOL = ResourceLocation.fromNamespaceAndPath("stad", "school");
 }

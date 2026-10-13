@@ -1,0 +1,9 @@
+{
+  "type": "stad:market",
+  "name": "Market Hall",
+  "description": "The merchant's bell and the barrels of goods for sale.",
+  "structure": "stad:medieval/market",
+  "tags": [
+    "workplace"
+  ]
+}

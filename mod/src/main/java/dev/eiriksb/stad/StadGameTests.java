@@ -388,6 +388,7 @@ public final class StadGameTests {
         helper.setBlock(YARD_MID, StadRegistries.TOWN_HALL.get());
         Colony colony = foundAt(helper, owner, YARD_MID, YARD_RADIUS);
         TownHallBlockEntity hall = (TownHallBlockEntity) helper.getBlockEntity(YARD_MID);
+        hall.storage().addItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_AXE)); // the town's axe (PLAN.md §6.9)
         BlockPos trunk = new BlockPos(15, G, 3);
         helper.setBlock(trunk.below(), Blocks.DIRT);
         for (int y = 0; y < 4; y++) {

@@ -1,0 +1,9 @@
+{
+  "type": "stad:school",
+  "name": "Schoolhouse",
+  "description": "Benches facing the teacher's lectern, between the bookshelves.",
+  "structure": "stad:medieval/school",
+  "tags": [
+    "workplace"
+  ]
+}

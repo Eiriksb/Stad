@@ -149,6 +149,11 @@ public final class StadConfig {
             .comment("Minecraft days a citizen can go on a full stomach before they're starving.")
             .defineInRange("hungerDays", 1.5, 0.1, 100.0);
 
+    public static final ModConfigSpec.DoubleValue ILLNESS_CHANCE = B
+            .comment("The chance each morning that a citizen falls ill (twice as likely if they went hungry, and again if they're",
+                    "homeless). 0: nobody ever falls ill.")
+            .defineInRange("illnessChance", 0.03, 0.0, 1.0);
+
     static {
         B.pop();
     }

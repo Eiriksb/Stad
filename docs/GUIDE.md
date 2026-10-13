@@ -32,6 +32,10 @@ voice chat key while looking at them. They remember what you say and what you do
 | Fisher | fishes from the shore | a pond or river on the town's land (eight blocks of water or more) |
 | Shepherd | shears sheep, feeds the farm animals so they breed, butchers the extras, picks up eggs and wool | sheep, cows, pigs or chickens on the town's land |
 | Miner | digs the town's mine deeper, layer by layer, for stone, coal and ore | a **Mine** from the Medieval pack |
+| Smith | makes the tools the workers are short of, mends worn ones, smelts ore | a **smithy** (anvil and furnace) |
+| Healer | treats the ill and the wounded | nothing; an **infirmary** gives the ill a bed |
+| Merchant | sells the town's spare goods and buys what it needs, for emeralds | nothing; a **market** to stand at |
+| Teacher | teaches the town's children | a **school** (a lectern) |
 
 **Workplaces.** Each job works from a building of its own: a **farmhouse** (composter and chest), **lumber camp**
 (chest and crafting table), **fishery** (barrel), **barn** (loom and hay bale), the kitchen, the mine, the builder's hut,
@@ -41,6 +45,17 @@ start the day there, work the land round it, work faster and are happier; withou
 
 Workers bring what they gather to the **warehouse** (or the town hall when there's none). Late in the afternoon they
 bring the day's work in.
+
+**Skills and tools.** Citizens get better at a job the more they do it, from novice to master (their card shows it).
+Farmers, lumberjacks, miners, fishers and shepherds need a real hoe, axe, pickaxe, rod or shears: put some in the town
+hall, or get a **smith**, who makes them from what's in the stores, mends worn ones and smelts the miner's ore.
+Without a tool a worker makes do, slowly, and the town asks for one.
+
+**Illness.** Now and then someone falls ill and stays in bed for a few days; a **healer** gets them up again sooner.
+
+**Trading.** Put emeralds in the town hall and make someone the **merchant**: players can then sneak and right-click
+them to buy the town's spare goods and sell it what it's asking for. **Children** who go to school while there's a
+**teacher** grow up quicker to learn.
 
 **Feeding the town.** Wheat only feeds anyone once a cook bakes it (three wheat to a loaf), and cooked food fills a
 citizen far more than raw. A farmer and a cook keep a small town fed; add a shepherd, a fisher and a courier as it
@@ -124,6 +139,7 @@ change:
 | `colonies.leadership` | NORMAL | LOYAL (they always obey), NORMAL, HARSH |
 | `jobs.herdSize` | 6 | animals of each kind the shepherd keeps |
 | `jobs.mineDepth` | 48 | layers a mine goes down |
+| `needs.illnessChance` | 0.03 | chance each morning that a citizen falls ill (0: never) |
 | `raids.mobRaids` | NORMAL | OFF, EASY, NORMAL, HARD |
 | `raids.pvpRaids` | OPT_IN | OFF, OPT_IN, FORCED |
 | `thinking.thinkRadius` | 48 | citizens this close to a player plan their day with the AI |

@@ -109,7 +109,7 @@ public class LumberjackGoal extends WorkGoal {
         level.removeBlock(log, false);
         level.playSound(null, log, state.getSoundType().getBreakSound(), SoundSource.BLOCKS, 1.0f, 0.9f);
         citizen.swing(InteractionHand.MAIN_HAND);
-        citizen.didWork(1);
+        worked(1);
         logs = logs.subList(0, logs.size() - 1);
     }
 

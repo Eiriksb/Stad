@@ -33,16 +33,20 @@ public final class Workplaces {
 
     public static final int MAX_SLOTS = 4;
 
-    private static final Map<String, List<ResourceLocation>> FOR_JOB = Map.of(
-            Jobs.FARMER, List.of(BuildingDef.FARMHOUSE),
-            Jobs.LUMBERJACK, List.of(BuildingDef.LUMBER_CAMP),
-            Jobs.FISHER, List.of(BuildingDef.FISHERY),
-            Jobs.SHEPHERD, List.of(BuildingDef.BARN),
-            Jobs.COOK, List.of(BuildingDef.KITCHEN),
-            Jobs.MINER, List.of(BuildingDef.MINE),
-            Jobs.BUILDER, List.of(BuildingDef.BUILDER_HUT),
-            Jobs.COURIER, List.of(BuildingDef.WAREHOUSE),
-            Jobs.GUARD, List.of(BuildingDef.BARRACKS, BuildingDef.WATCHTOWER));
+    private static final Map<String, List<ResourceLocation>> FOR_JOB = Map.ofEntries(
+            Map.entry(Jobs.FARMER, List.of(BuildingDef.FARMHOUSE)),
+            Map.entry(Jobs.LUMBERJACK, List.of(BuildingDef.LUMBER_CAMP)),
+            Map.entry(Jobs.FISHER, List.of(BuildingDef.FISHERY)),
+            Map.entry(Jobs.SHEPHERD, List.of(BuildingDef.BARN)),
+            Map.entry(Jobs.COOK, List.of(BuildingDef.KITCHEN)),
+            Map.entry(Jobs.MINER, List.of(BuildingDef.MINE)),
+            Map.entry(Jobs.BUILDER, List.of(BuildingDef.BUILDER_HUT)),
+            Map.entry(Jobs.COURIER, List.of(BuildingDef.WAREHOUSE)),
+            Map.entry(Jobs.GUARD, List.of(BuildingDef.BARRACKS, BuildingDef.WATCHTOWER)),
+            Map.entry(Jobs.SMITH, List.of(BuildingDef.SMITHY)),
+            Map.entry(Jobs.HEALER, List.of(BuildingDef.INFIRMARY)),
+            Map.entry(Jobs.MERCHANT, List.of(BuildingDef.MARKET)),
+            Map.entry(Jobs.TEACHER, List.of(BuildingDef.SCHOOL)));
 
     /** The kinds of building a job works from (empty: none). */
     public static List<ResourceLocation> kinds(String job) {
@@ -70,6 +74,14 @@ public final class Workplaces {
             return s -> s.is(Blocks.LOOM);
         } else if (type.equals(BuildingDef.KITCHEN)) {
             return s -> s.getBlock() instanceof AbstractFurnaceBlock || s.getBlock() instanceof CampfireBlock;
+        } else if (type.equals(BuildingDef.SMITHY)) {
+            return s -> s.getBlock() instanceof net.minecraft.world.level.block.AnvilBlock;
+        } else if (type.equals(BuildingDef.INFIRMARY)) {
+            return s -> s.is(Blocks.BREWING_STAND);
+        } else if (type.equals(BuildingDef.MARKET)) {
+            return s -> s.is(Blocks.BELL);
+        } else if (type.equals(BuildingDef.SCHOOL)) {
+            return s -> s.is(Blocks.LECTERN);
         } else if (type.equals(BuildingDef.BARRACKS)) {
             return s -> s.getBlock() instanceof BedBlock && s.getValue(BedBlock.PART) == BedPart.HEAD;
         }

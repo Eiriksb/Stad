@@ -73,6 +73,7 @@ public final class ColonyTicker {
                 Leadership.checkConditions(level, colony);
                 dev.eiriksb.stad.war.Raids.tick(level, colony);
                 if (level.getDayTime() % 24000 <= 4000 && colony.lastReviewDay != level.getDayTime() / 24000) {
+                    dev.eiriksb.stad.citizen.Illness.morning(level, colony);
                     Leadership.review(level, colony);
                     Social.morning(level, colony);
                 }

@@ -56,6 +56,18 @@ public final class CitizenRecord {
     public long lastChildDay = -100;
     /** what they were born with (kept here so children inherit it while a parent isn't loaded) */
     public dev.eiriksb.stad.citizen.Genes genes;
+    /** how much they've practised each job they've done ({@link dev.eiriksb.stad.citizen.Skills}) */
+    public java.util.Map<String, Integer> skills = new java.util.HashMap<>();
+    /** days at school as a child (at most {@link dev.eiriksb.stad.citizen.Skills#MAX_SCHOOLING}) */
+    public int schooling;
+    /** the day they last had a day at school counted */
+    public long schoolDay = -1;
+    /** what they're ill with ("a fever"), or null when well */
+    public String illness;
+    /** the day they fell ill */
+    public long illSince;
+    /** the healer's treatments for this illness so far */
+    public int treatments;
 
     public CitizenRecord(UUID uuid, String name, long joined) {
         this.uuid = uuid;
@@ -113,6 +125,16 @@ public final class CitizenRecord {
         if (genes != null) {
             t.put("Genes", genes.save());
         }
+        CompoundTag sk = new CompoundTag();
+        skills.forEach(sk::putInt);
+        t.put("Skills", sk);
+        t.putInt("Schooling", schooling);
+        t.putLong("SchoolDay", schoolDay);
+        if (illness != null) {
+            t.putString("Illness", illness);
+            t.putLong("IllSince", illSince);
+            t.putInt("Treatments", treatments);
+        }
         return t;
     }
 
@@ -145,6 +167,15 @@ public final class CitizenRecord {
         r.parents = java.util.List.copyOf(parents);
         r.lastChildDay = t.contains("LastChildDay") ? t.getLong("LastChildDay") : -100;
         r.genes = dev.eiriksb.stad.citizen.Genes.load(t.getCompound("Genes"));
+        CompoundTag sk = t.getCompound("Skills");
+        for (String job : sk.getAllKeys()) {
+            r.skills.put(job, sk.getInt(job));
+        }
+        r.schooling = t.getInt("Schooling");
+        r.schoolDay = t.contains("SchoolDay") ? t.getLong("SchoolDay") : -1;
+        r.illness = t.contains("Illness") ? t.getString("Illness") : null;
+        r.illSince = t.getLong("IllSince");
+        r.treatments = t.getInt("Treatments");
         return r;
     }
 }

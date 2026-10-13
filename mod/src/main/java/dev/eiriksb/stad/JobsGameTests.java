@@ -125,9 +125,11 @@ public final class JobsGameTests {
         }
         long fish = catches.stream().filter(s -> s.is(ItemTags.FISHES)).count();
         helper.assertTrue(fish >= 20, "mostly fish: " + fish + " of " + catches.size());
+        hall(helper).storage().addItem(new ItemStack(Items.FISHING_ROD)); // the town's rod (PLAN.md §6.9)
         CitizenEntity fisher = worker(helper, colony, Jobs.FISHER, 11, 11);
         helper.succeedWhen(() -> {
-            helper.assertTrue(fisher.getMainHandItem().is(Items.FISHING_ROD), "a rod in hand");
+            helper.assertTrue(fisher.getMainHandItem().is(Items.FISHING_ROD) && hall(helper).storage().countItem(Items.FISHING_ROD) == 0,
+                    "the town's rod in hand");
             helper.assertTrue(carried(fisher, s -> !s.isEmpty()) + hall(helper).storage().countItem(Items.COD) + hall(helper).storage().countItem(Items.SALMON) >= 2,
                     "caught: " + carried(fisher, s -> !s.isEmpty()) + " at " + fisher.blockPosition());
             cleanUp(helper, colony, owner);

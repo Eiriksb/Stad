@@ -49,6 +49,15 @@ public final class Requests {
             wanted.add(colony.need(Request.id(net.minecraft.world.item.Items.IRON_SWORD), unarmed, colony.center, "the town hall",
                     unarmed == 1 ? "for the guard" : "for the guards", now).id);
         }
+        // a tool for each worker who's making do without (PLAN.md §6.9)
+        for (dev.eiriksb.stad.citizen.Tools.Kind k : dev.eiriksb.stad.citizen.Tools.Kind.values()) {
+            int short_ = k == dev.eiriksb.stad.citizen.Tools.Kind.SWORD ? 0 : dev.eiriksb.stad.citizen.Tools.shortage(level, colony, k);
+            if (short_ > 0) {
+                String job = dev.eiriksb.stad.citizen.Tools.jobOf(k);
+                wanted.add(colony.need(Request.id(k.basic), short_, colony.center, "the town hall",
+                        short_ == 1 ? "for the " + job : "for the " + job + "s", now).id);
+            }
+        }
         for (Request r : colony.requests()) {
             if (!Request.FOOD.equals(r.what) && !wanted.contains(r.id)) {
                 colony.removeRequest(r.id);

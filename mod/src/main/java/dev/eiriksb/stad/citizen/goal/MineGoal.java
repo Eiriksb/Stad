@@ -75,13 +75,13 @@ public class MineGoal extends WorkGoal {
         Mine.seal(level, block);
         state = level.getBlockState(block);
         if (!state.isAir() && state.getFluidState().isEmpty()) {
-            for (ItemStack drop : Block.getDrops(state, level, block, level.getBlockEntity(block), citizen, tool())) {
+            for (ItemStack drop : Block.getDrops(state, level, block, level.getBlockEntity(block), citizen, working())) {
                 pocket(drop);
             }
         }
         level.levelEvent(2001, block, Block.getId(state)); // the breaking sound and bits
         level.removeBlock(block, false);
-        citizen.didWork(1);
+        worked(1);
         block = null;
     }
 }

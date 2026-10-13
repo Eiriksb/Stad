@@ -87,7 +87,7 @@ public class FarmGoal extends WorkGoal {
                 level.removeBlock(crop, false);
             }
             level.playSound(null, crop, SoundEvents.CROP_BREAK, SoundSource.BLOCKS, 0.8f, 1.0f);
-            citizen.didWork(1);
+            worked(1);
         } else if (state.isAir()) {
             for (int i = 0; i < citizen.inventory().getContainerSize(); i++) {
                 ItemStack s = citizen.inventory().getItem(i);

@@ -77,7 +77,23 @@ public final class CitizenScreens {
                 String at = dev.eiriksb.stad.colony.Workplaces.describe(t, r);
                 about.add(at != null ? "Works from " + at : "Nowhere to work: would like " + dev.eiriksb.stad.colony.Workplaces.wanted(r.job));
             });
+            c.record().ifPresent(r -> {
+                if (r.job != null && !c.isBaby()) {
+                    int lvl = Skills.level(r, r.job);
+                    about.add(capitalize(Skills.title(lvl)) + " (" + lvl + " of " + Skills.MAX + ")"
+                            + (Tools.lacking(c) ? " · making do without " + Tools.of(r.job).words : ""));
+                }
+                if (r.illness != null) {
+                    about.add("Ill with " + r.illness + (r.treatments > 0 ? " (treated " + r.treatments + " of " + Illness.TREATMENTS + " times)" : ""));
+                }
+                if (c.isBaby() || r.schooling > 0) {
+                    about.add(r.schooling == 0 ? "Hasn't been to school" : r.schooling + (r.schooling == 1 ? " day" : " days") + " at school");
+                }
+            });
             Rank rank = t.rank(player.getUUID());
+            if (Jobs.MERCHANT.equals(job) && c.canWork()) {
+                actions.add(new CitizenScreenPayload.Action("Trade", "stad citizen trade " + c.getUUID(), false, GREEN));
+            }
             if (rank.atLeast(Rank.MEMBER)) {
                 var s = t.standing(player.getUUID());
                 about.add("The town sees you as " + s.word() + " (" + (s.score() > 0 ? "+" : "") + s.score() + ")");
