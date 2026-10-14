@@ -24,7 +24,17 @@ public final class Construction {
             // water flowing in from outside comes back however often it's cleared; it stops once the walls are up
             return now.isAir() || (now.canBeReplaced() && (now.getFluidState().isEmpty() || !now.getFluidState().isSource()));
         }
-        return now.is(step.state().getBlock());
+        return now.is(step.state().getBlock()) || (earth(step.state()) && earth(now));
+    }
+
+    /**
+     * Plain ground: a building or a path that wants dirt or grass under it leaves the ground that's already there (the
+     * grass stays grass), and only fills in where there's a hole.
+     */
+    static boolean earth(BlockState s) {
+        return s.is(net.minecraft.world.level.block.Blocks.DIRT) || s.is(net.minecraft.world.level.block.Blocks.GRASS_BLOCK)
+                || s.is(net.minecraft.world.level.block.Blocks.COARSE_DIRT) || s.is(net.minecraft.world.level.block.Blocks.PODZOL)
+                || s.is(net.minecraft.world.level.block.Blocks.ROOTED_DIRT) || s.is(net.minecraft.world.level.block.Blocks.MYCELIUM);
     }
 
     /**

@@ -11,8 +11,11 @@ import java.util.Set;
 
 /** Getting citizens places: walking up beside things, and a shortcut when they're stuck. */
 public final class Movement {
-    /** How long (goal ticks) a worker tries to walk somewhere before taking the shortcut. */
-    public static final int PATIENCE = 160;
+    /**
+     * How long (goal ticks) a worker can go without getting any closer before taking the shortcut. It counts from when
+     * they last got closer, not from when they set off: a long walk that's going well isn't cut short.
+     */
+    public static final int PATIENCE = 200;
 
     private Movement() {}
 
@@ -34,6 +37,7 @@ public final class Movement {
     /** Somewhere to stand within reach of {@code pos} (not on it); on top of the column when there's nowhere. */
     public static void teleportNear(CitizenEntity citizen, BlockPos pos) {
         ServerLevel level = (ServerLevel) citizen.level();
+        puff(level, citizen);
         for (int r = 1; r <= 4; r++) {
             for (int dy = 1; dy >= -4; dy--) {
                 for (int dx = -r; dx <= r; dx++) {
@@ -45,6 +49,7 @@ public final class Movement {
                         if (standable(level, at) && !at.equals(pos) && !at.above().equals(pos)) {
                             citizen.getNavigation().stop();
                             citizen.teleportTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+                            puff(level, citizen);
                             return;
                         }
                     }
@@ -53,6 +58,12 @@ public final class Movement {
         }
         int top = Math.max(pos.getY() + 1, level.getHeight(Heightmap.Types.MOTION_BLOCKING, pos.getX(), pos.getZ()));
         citizen.teleportTo(pos.getX() + 0.5, top, pos.getZ() + 0.5);
+        puff(level, citizen);
+    }
+
+    /** A little cloud where they were and where they come out, so it doesn't look like a glitch. */
+    private static void puff(ServerLevel level, CitizenEntity citizen) {
+        level.sendParticles(net.minecraft.core.particles.ParticleTypes.POOF, citizen.getX(), citizen.getY() + 0.8, citizen.getZ(), 8, 0.25, 0.4, 0.25, 0.02);
     }
 
     public static boolean standable(ServerLevel level, BlockPos at) {
@@ -62,15 +73,18 @@ public final class Movement {
     }
 
     /**
-     * Walks toward a block, taking the shortcut after {@link #PATIENCE} ticks. Call every goal tick; returns whether it's
-     * within reach. A new path is worked out at most every {@link #REPATH} ticks: in a big town, many workers asking for
-     * paths every tick to somewhere they can't quite reach was most of the server's time.
+     * Walks toward a block, taking the shortcut when they've got no closer for {@link #PATIENCE} ticks (sooner when
+     * there's no way there at all). Call every goal tick; returns whether it's within reach. A new path is worked out at
+     * most every {@link #REPATH} ticks: in a big town, many workers asking for paths every tick to somewhere they can't
+     * quite reach was most of the server's time.
      */
     public static final class Approach {
         static final int REPATH = 20;
         private BlockPos target;
         private int stuck;
         private int repath;
+        /** the closest they've got so far */
+        private double best;
 
         public boolean tick(CitizenEntity citizen, BlockPos pos, double reach, double speed) {
             if (near(citizen, pos, reach)) {
@@ -78,10 +92,15 @@ public final class Movement {
                 stuck = 0;
                 return true;
             }
+            double distance = citizen.position().distanceTo(pos.getCenter());
             if (!pos.equals(target)) {
                 stuck = 0;
                 repath = 0;
                 target = pos;
+                best = distance;
+            } else if (distance < best - 1) { // getting there
+                best = distance;
+                stuck = 0;
             }
             if (--repath <= 0 && citizen.getNavigation().isDone()) {
                 repath = REPATH;
@@ -92,13 +111,16 @@ public final class Movement {
                     if (path != null) {
                         citizen.getNavigation().moveTo(path, speed); // as close as it goes
                     }
-                    stuck += REPATH; // no way there: the shortcut comes sooner
+                    if (path == null || citizen.getNavigation().isDone()) {
+                        stuck += REPATH; // no way there (or no closer): the shortcut comes sooner
+                    }
                 }
             }
             if (++stuck > PATIENCE) {
                 teleportNear(citizen, pos);
                 stuck = 0;
                 repath = 0;
+                best = citizen.position().distanceTo(pos.getCenter());
             }
             return false;
         }
