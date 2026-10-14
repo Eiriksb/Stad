@@ -18,7 +18,7 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
 > Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier**, **guard**, **cook**,
 > **fisher**, **shepherd**, **miner**, **smith**, **healer**, **merchant**, **teacher**, **carpenter**, **mason**,
-> **weaver** and **beekeeper**.
+> **weaver**, **beekeeper** and **gatherer**.
 > **Plan buildings by talking to your builder**: "a small stone cottage with two bedrooms, a spruce roof and a
 > chimney". They draw it up (restyling one of the pack's buildings when it fits, or designing a new one: framing,
 > rooms, stairs, furniture, gable, hip or flat roofs, porches, chimneys), a see-through ghost of it appears on free
@@ -59,12 +59,12 @@ them.) When you talk to the builder aloud, they keep it short and leave the list
 | Builder | builds what officers plan, what it can while waiting for the rest; makes up the ground under it | the materials in the town hall (or a warehouse) |
 | Farmer | makes fields (marks one out, levels and tills it round a water hole it digs), sows, harvests and replants | seeds in the town hall (or picked from the grass), flat grass or dirt |
 | Lumberjack | fells natural trees and replants; plants a grove when there are none | trees, or saplings in the town hall |
-| Courier | carries food and materials to the town hall and the builder | a warehouse |
+| Courier | carries food and materials to the town hall and the builder; keeps the warehouse's shelves in order and makes room in a full town hall | a warehouse |
 | Guard | patrols and fights, trained (30 health, harder blows) | a sword from the town's stores |
 | Cook | bread from wheat; cooked meat, fish and potatoes, to the town hall | a furnace, smoker or campfire |
 | Fisher | fishes from the shore (the game's fishing loot) | a pond or river |
 | Shepherd | brings in animals from just outside town, shears, breeds up to `herdSize` of each kind, butchers the extras | farm animals in or near town (named or leashed ones are pets) |
-| Miner | digs a 5x5 shaft deeper, layer by layer, down a spiral of steps; walls off water and lava | a Mine (Medieval pack) |
+| Miner | digs a 5x5 shaft down to bedrock, layer by layer, down a spiral of steps; strip-mines tunnels out from it at the ore levels and digs out the veins it finds; walls off water and lava | a mine (Medieval pack, or design one at the table) or a quarry |
 | Smith | makes the tools the workers are short of (and swords), mends worn tools, smelts ore | a smithy (an anvil and a furnace) |
 | Healer | goes round treating the ill and the wounded | nothing (an infirmary gives the ill a bed) |
 | Merchant | keeps the market: players trade with the town through them, for emeralds | nothing (a market to stand at) |
@@ -73,6 +73,7 @@ them.) When you talk to the builder aloud, they keep it short and leave the list
 | Mason | burns cobblestone into stone, cuts stone bricks, slabs and stairs, makes glass from sand | a stoneworks (a stonecutter and a furnace), a pickaxe |
 | Weaver | makes wool into beds for new homes, and carpets | a loom house (a loom), wool and planks, shears |
 | Beekeeper | brings bees to the hives, sows flowers for them, takes honey (into glass bottles) and honeycomb | an apiary (lay one out at the architect's table), shears |
+| Gatherer | digs dirt, sand, gravel and clay off the top of the land round the town, forages berries, sugar cane, seeds and flowers, picks up what's lying about | nothing (a shovel makes it quicker) |
 
 All of it happens on the town's land. **Every citizen says what they're doing, or what's stopping them and what would
 fix it**, on their card and in the town hall's Citizens tab; the Jobs tab says what each job needs and whether the town
@@ -171,7 +172,7 @@ finished building on the site is redesigned in place). Officers edit; other memb
 its project.
 
 **Land for every job that works the land.** Besides homes and a workplace for every job, the kind list has land:
-a **quarry** for the miner (an open pit dug 8 to 48 layers down with steps round its edge), a **dock** for the fisher
+a **quarry** for the miner (an open pit dug 8 to 64 layers down, or to bedrock, with steps round its edge), a **dock** for the fisher
 (a pier with spots to fish from), a **guard post** (a platform the guards climb and keep watch from) and a **wall**
 (logs, stone bricks or cobblestone round the site, with a door and watch spots for the guards; it may go round what's
 already there), a **market square** (stalls round a paved square with a bell; a merchant keeps each stall) and

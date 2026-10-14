@@ -503,6 +503,68 @@ def furnish_loom_house(b, w, d):
     b[(w // 2, 1, 3)] = ("minecraft:red_carpet", {})
     b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
 
+# ---- the great warehouses: racks of chests two high round the walls, barrels down the middle --------------------
+
+GREAT_W, GREAT_D, GREAT_H = 13, 11, 5
+GREAT_WINDOWS = [(0, 4, 3), (0, 4, 7), (GREAT_W - 1, 4, 3), (GREAT_W - 1, 4, 7), (3, 4, GREAT_D - 1), (9, 4, GREAT_D - 1)]
+
+def chest(facing, kind):
+    return ("minecraft:chest", {"facing": facing, "type": kind, "waterlogged": "false"})
+
+def barrel(facing="up"):
+    return ("minecraft:barrel", {"facing": facing, "open": "false"})
+
+def furnish_great_warehouse(b, w, d, sign):
+    """Double chests two high along the back and side walls, a sign over each (the courier writes its shelf on it:
+    building.Warehouse), barrel stacks in the corners and back to back down the middle, lanterns from the ceiling."""
+    wall_sign = f"minecraft:{sign}_wall_sign"
+    for y in (1, 2):
+        # the back wall, facing the door: a double chest's left half has its other half clockwise of where it faces
+        for x in range(1, w - 3, 2):
+            b[(x, y, d - 2)] = chest("north", "left")
+            b[(x + 1, y, d - 2)] = chest("north", "right")
+        b[(w - 2, y, d - 2)] = barrel()
+        # the side walls
+        for z in range(2, d - 3, 2):
+            b[(1, y, z)] = chest("east", "left")
+            b[(1, y, z + 1)] = chest("east", "right")
+            b[(w - 2, y, z)] = chest("west", "right")
+            b[(w - 2, y, z + 1)] = chest("west", "left")
+        for x in (1, w - 2):
+            b[(x, y, 1)] = barrel()
+            b[(x, y, d - 3)] = barrel()
+        # back to back down the middle
+        for x in range(4, w - 4):
+            b[(x, y, d // 2 - 1)] = barrel("north")
+            b[(x, y, d // 2)] = barrel("south")
+    for x in range(1, w - 2):
+        b[(x, 3, d - 2)] = (wall_sign, {"facing": "north", "waterlogged": "false"})
+    for z in range(1, d - 2):
+        b[(1, 3, z)] = (wall_sign, {"facing": "east", "waterlogged": "false"})
+        b[(w - 2, 3, z)] = (wall_sign, {"facing": "west", "waterlogged": "false"})
+    for (x, z) in ((3, 3), (w - 4, 3), (3, d - 4), (w - 4, d - 4)):
+        b[(x, GREAT_H, z)] = ("minecraft:lantern", {"hanging": "true", "waterlogged": "false"})
+
+def medieval_great_warehouse():
+    size, b = house(GREAT_W, GREAT_D, GREAT_H, "minecraft:cobblestone", "minecraft:stone_bricks", "minecraft:spruce_log",
+                    "minecraft:spruce_stairs", "minecraft:spruce_planks", "minecraft:spruce_slab", GREAT_W // 2, GREAT_WINDOWS)
+    furnish_great_warehouse(b, GREAT_W, GREAT_D, "spruce")
+    return size, b
+
+def fjord_great_stabbur():
+    b = laft(GREAT_W, GREAT_D, GREAT_H, "minecraft:dark_oak_log", GREAT_W // 2, GREAT_WINDOWS)
+    for x in range(1, GREAT_W - 1):
+        for z in range(1, GREAT_D - 1):
+            b[(x, GREAT_H + 1, z)] = ("minecraft:dark_oak_planks", {})
+    top = gable(b, GREAT_W, GREAT_D, GREAT_H + 1, "minecraft:dark_oak_stairs", "minecraft:dark_oak_slab", "minecraft:dark_oak_planks")
+    furnish_great_warehouse(b, GREAT_W, GREAT_D, "dark_oak")
+    return (GREAT_W, top, GREAT_D), b
+
+def oasis_great_storehouse():
+    h, b = flat_house(GREAT_W, GREAT_D, GREAT_H, GREAT_W // 2, GREAT_WINDOWS)
+    furnish_great_warehouse(b, GREAT_W, GREAT_D, "jungle")
+    return (GREAT_W, h, GREAT_D), b
+
 SIDE_WINDOWS = lambda w, d: [(0, 2, d // 2), (w - 1, 2, d // 2)]
 
 PACKS = {
@@ -510,6 +572,8 @@ PACKS = {
         "builder_hut": ("stad:builder_hut", "Builder's Hut", "Where the town's builder lives and works.", builder_hut, ["small", "workplace"]),
         "cottage": ("stad:home", "Cottage", "A cozy home with two beds.", cottage, ["small", "home"]),
         "warehouse": ("stad:warehouse", "Warehouse", "Chests and barrels for the town's goods.", warehouse, ["storage"]),
+        "great_warehouse": ("stad:warehouse", "Great Warehouse", "Racks of chests two high round the walls, each for its own kind of goods.",
+                            medieval_great_warehouse, ["storage"]),
         "kitchen": ("stad:kitchen", "Kitchen", "A smoker and a furnace for the town's cook.", kitchen, ["small", "workplace"]),
         "mine": ("stad:mine", "Mine", "A headframe over a shaft the town's miner digs deeper, layer by layer.", mine, ["workplace"]),
         "farmhouse": ("stad:farmhouse", "Farmhouse", "Where the farmers keep their tools and take in the harvest.",
@@ -538,6 +602,8 @@ PACKS = {
     "fjord": ({"name": "Fjord", "description": "Laid log walls on stone footings, under turf roofs.", "author": "Stad"}, {
         "stue": ("stad:home", "Stue", "A log house with a turf roof and two beds.", fjord_stue, ["small", "home"]),
         "stabbur": ("stad:warehouse", "Stabbur", "The log storehouse, chests and barrels round its walls.", fjord_stabbur, ["storage"]),
+        "storstabbur": ("stad:warehouse", "Storstabbur", "The great storehouse: racks of chests round its log walls, each for its own goods.",
+                        fjord_great_stabbur, ["storage"]),
         "smie": ("stad:builder_hut", "Builder's Smie", "The builder's workshop and bed under a turf roof.", fjord_smie, ["small", "workplace"]),
         "gardshus": ("stad:farmhouse", "Gardshus", "The farm's log house, with a composter and the harvest chest.",
                      workplace(fjord_shell, furnish_farmhouse, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
@@ -565,6 +631,8 @@ PACKS = {
     "oasis": ({"name": "Oasis", "description": "Sandstone houses with flat roofs and parapets, palm-wood beams.", "author": "Stad"}, {
         "house": ("stad:home", "Sandstone House", "A cool sandstone house with two beds.", oasis_house, ["small", "home"]),
         "storehouse": ("stad:warehouse", "Storehouse", "Thick walls keep the town's goods cool.", oasis_storehouse, ["storage"]),
+        "great_storehouse": ("stad:warehouse", "Great Storehouse", "Cool sandstone halls racked with chests, each for its own goods.",
+                             oasis_great_storehouse, ["storage"]),
         "workshop": ("stad:builder_hut", "Builder's Workshop", "Where the builder works and sleeps.", oasis_workshop, ["small", "workplace"]),
         "farmhouse": ("stad:farmhouse", "Oasis Farmhouse", "Cool walls for the harvest, a composter for the fields.",
                       workplace(oasis_shell, furnish_farmhouse, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),

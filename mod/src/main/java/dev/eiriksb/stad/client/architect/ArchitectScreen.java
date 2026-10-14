@@ -889,7 +889,7 @@ public class ArchitectScreen extends Screen {
                 case "animal" -> "Animals: " + Yard.ANIMALS.get(animal);
                 case "tree" -> "Trees: " + Yard.TREES.get(tree).replace('_', ' ');
                 case "spacing" -> "Spacing: " + spacing;
-                case "depth" -> "Depth: " + depth + " layers";
+                case "depth" -> depth == dev.eiriksb.stad.building.Mine.BEDROCK ? "Depth: to bedrock" : "Depth: " + depth + " layers";
                 case "wall" -> "Wall: " + Yard.WALLS.get(wall).replace('_', ' ');
                 case "height" -> "Height: " + wallHeight;
                 case "paving" -> "Paving: " + Yard.PAVINGS.get(paving).replace('_', ' ');
@@ -1298,7 +1298,7 @@ public class ArchitectScreen extends Screen {
             int x0 = pit.stream().mapToInt(BlockPos::getX).min().orElse(0), x1 = pit.stream().mapToInt(BlockPos::getX).max().orElse(0);
             int z0 = pit.stream().mapToInt(BlockPos::getZ).min().orElse(0), z1 = pit.stream().mapToInt(BlockPos::getZ).max().orElse(0);
             int top = pit.getFirst().getY();
-            LevelRenderer.renderLineBox(pose, lines, x0 + 0.02, Math.max(0, top - depth + 1), z0 + 0.02, x1 + 0.98, top + 1.02, z1 + 0.98,
+            LevelRenderer.renderLineBox(pose, lines, x0 + 0.02, depth == dev.eiriksb.stad.building.Mine.BEDROCK ? 0 : Math.max(0, top - depth + 1), z0 + 0.02, x1 + 0.98, top + 1.02, z1 + 0.98,
                     0.75f, 0.75f, 0.8f, 1f);
         }
         for (Map.Entry<Integer, String> e : model.markers.entrySet()) {

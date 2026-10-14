@@ -37,6 +37,7 @@ public final class Tools {
         PICKAXE("a pickaxe", Items.STONE_PICKAXE, List.of(Items.IRON_PICKAXE, Items.STONE_PICKAXE, Items.WOODEN_PICKAXE)),
         FISHING_ROD("a fishing rod", Items.FISHING_ROD, List.of(Items.FISHING_ROD)),
         SHEARS("shears", Items.SHEARS, List.of(Items.SHEARS)),
+        SHOVEL("a shovel", Items.STONE_SHOVEL, List.of(Items.IRON_SHOVEL, Items.STONE_SHOVEL, Items.WOODEN_SHOVEL)),
         SWORD("a sword", Items.IRON_SWORD, List.of(Items.IRON_SWORD, Items.STONE_SWORD));
 
         public final String words;
@@ -59,6 +60,7 @@ public final class Tools {
                 case PICKAXE -> i instanceof PickaxeItem;
                 case FISHING_ROD -> i instanceof FishingRodItem;
                 case SHEARS -> i instanceof ShearsItem;
+                case SHOVEL -> i instanceof net.minecraft.world.item.ShovelItem;
                 case SWORD -> i instanceof SwordItem;
             };
         }
@@ -79,6 +81,7 @@ public final class Tools {
             case Jobs.CARPENTER -> Kind.AXE;
             case Jobs.MASON -> Kind.PICKAXE;
             case Jobs.WEAVER, Jobs.BEEKEEPER -> Kind.SHEARS;
+            case Jobs.GATHERER -> Kind.SHOVEL;
             default -> null;
         };
     }
@@ -110,6 +113,7 @@ public final class Tools {
             case PICKAXE -> Jobs.MINER;
             case FISHING_ROD -> Jobs.FISHER;
             case SHEARS -> Jobs.SHEPHERD;
+            case SHOVEL -> Jobs.GATHERER;
             case SWORD -> Jobs.GUARD;
         };
     }

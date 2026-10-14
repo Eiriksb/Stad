@@ -58,7 +58,9 @@ public final class Guide {
             Map.entry(Jobs.WEAVER, new String[]{"Makes wool into beds for new homes, and carpets.",
                     "A loom house (a loom and a chest), wool and planks in the town hall, and shears."}),
             Map.entry(Jobs.BEEKEEPER, new String[]{"Brings bees to the hives, plants flowers for them and takes the honey and honeycomb.",
-                    "An apiary (beehives among flowers: lay one out at the architect's table), shears, and glass bottles for the honey."}));
+                    "An apiary (beehives among flowers: lay one out at the architect's table), shears, and glass bottles for the honey."}),
+            Map.entry(Jobs.GATHERER, new String[]{"Digs dirt, sand, gravel and clay from the land round the town, forages berries, sugar cane, seeds"
+                    + " and flowers, and picks up what's left lying about.", "Nothing; a shovel makes it quicker."}));
 
     public static String does(String job) {
         return JOBS.getOrDefault(job, new String[]{"", ""})[0];

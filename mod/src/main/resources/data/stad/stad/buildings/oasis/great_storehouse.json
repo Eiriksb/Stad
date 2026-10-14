@@ -1,0 +1,9 @@
+{
+  "type": "stad:warehouse",
+  "name": "Great Storehouse",
+  "description": "Cool sandstone halls racked with chests, each for its own goods.",
+  "structure": "stad:oasis/great_storehouse",
+  "tags": [
+    "storage"
+  ]
+}

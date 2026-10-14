@@ -655,6 +655,39 @@ and sow the flower markers. One beekeeper keeps all of an apiary's hives.
 smith's "nothing to make one from" name everyone short of one (`Tools.whoNeeds`). A crafter doesn't start a batch when
 the town hall (or warehouse) has no room for what it makes, or its pockets can't hold it, and says the hall is full.
 
+### 6.13 Gatherers, deep mines and warehouse shelves
+
+**Gatherer.** `GatherGoal` (job `gatherer`, no workplace, tool a shovel): first anything that's lain on the town's land
+for 30 seconds (an `ItemEntity` older than 600 ticks); then what the town has asked for that the land gives, else the
+stock (`KEEP`: dirt 64, sand 32, gravel 32, clay balls 16, sweet berries, sugar cane and wheat seeds 16). It scans the
+columns round itself nearest first, within 48 of the town hall and on its land, not in any building's bounds (two
+blocks round them), a ring building's blocks, or near the town hall. `FINDS`: DIG (grass/dirt/podzol, sand, red sand,
+gravel, clay), BERRIES (a sweet berry bush aged 2 or more, set back to 1), CANE (sugar cane and cactus cut from the top
+down to the bottom block), PICK (short grass and ferns for seeds, small flowers, pumpkins, melons, mushrooms, dead
+bushes for sticks). Ground is only dug when no neighbour's ground is higher (so a dug column waits for those round it)
+and there's no water beside it; clay under up to two blocks of water is fine. Drops come from the game's loot with the
+gatherer's tool.
+
+**Mines.** `Mine.Pit` has `tunnels` (a shaft's). Shafts go down `shaftDepth` layers (default 384: to bedrock; the loop
+stops at the world's bottom and bedrock isn't diggable); a quarry's depth `Mine.BEDROCK` (0) means the same. At each
+`Mine.LEVELS` height, once the shaft's layer there is dug, `Mine.tunnels` gives the tunnels' blocks before the next
+layer: east and west corridors 24 long from the shaft's edge, side tunnels every 3 blocks off them 12 long north and
+south, then north and south corridors; each column head-high block first, then the feet, a cobblestone floor where
+it's open below, a wall torch every 6 blocks, stopping at the town's land's edge. `MineGoal` keeps a queue of ore
+(`Tags.Blocks.ORES`) seen beside each block it digs and digs it next, following the vein within 3 blocks of where it
+was first seen.
+
+**Warehouse shelves.** `building/Warehouse`: `Shelf` (OTHER, BUILDING, WOOD, ORE, FOOD, FARM, CLOTH, TOOLS), `of(stack)`
+and `of(container)` (from its custom name, or a word in it). `label` runs with the town's upkeep: each finished
+warehouse's racks (containers stacked in the same columns, a double chest's halves together) that aren't a shelf yet
+get the one with fewest racks, as their custom name (through the block entity's saved form: there's no setter) and on
+a sign just above. `ColonyStorage.put` on storage with shelves: onto same stacks on the item's shelf, then empty slots
+on it, then OTHER or unnamed containers, then anywhere. `CourierGoal`, with no request or haul, looks every 40 ticks
+for: the town hall with fewer than 6 free slots (it takes up to four stacks of what isn't food, a tool, requested or
+missing from a building), else a stack on the wrong shelf whose own shelf has room. The great warehouses (packgen
+`furnish_great_warehouse`, 13 by 11) and the generator's warehouse racks (two high round the walls, a wall sign over
+each where there's solid wall behind) make room for it.
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).

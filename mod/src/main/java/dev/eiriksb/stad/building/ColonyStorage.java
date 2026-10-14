@@ -89,19 +89,25 @@ public final class ColonyStorage {
         List<Box> found = new ArrayList<>();
         for (Building b : colony.buildings()) {
             if (b.done() && b.is(type)) {
-                b.placement().ifPresent(p -> {
-                    // with storage markers, only the containers next to them are the town's; without, all of them
-                    List<BlockPos> marked = p.markers("stad:storage");
-                    BlockPos.betweenClosedStream(p.bounds()).forEach(pos -> {
-                        BlockEntity be = level.getBlockEntity(pos);
-                        if (be instanceof Container c && !(c instanceof TownHallBlockEntity)
-                                && (marked.isEmpty() || marked.stream().anyMatch(m -> m.distManhattan(pos) <= 2 && m.closerThan(pos, 1.8)))) {
-                            found.add(new Box(pos.immutable(), c));
-                        }
-                    });
-                });
+                found.addAll(containersOf(level, b));
             }
         }
+        return found;
+    }
+
+    /** A building's containers: with storage markers, only the ones next to them are the town's; without, all of them. */
+    static List<Box> containersOf(ServerLevel level, Building b) {
+        List<Box> found = new ArrayList<>();
+        b.placement().ifPresent(p -> {
+            List<BlockPos> marked = p.markers("stad:storage");
+            BlockPos.betweenClosedStream(p.bounds()).forEach(pos -> {
+                BlockEntity be = level.getBlockEntity(pos);
+                if (be instanceof Container c && !(c instanceof TownHallBlockEntity)
+                        && (marked.isEmpty() || marked.stream().anyMatch(m -> m.distManhattan(pos) <= 2 && m.closerThan(pos, 1.8)))) {
+                    found.add(new Box(pos.immutable(), c));
+                }
+            });
+        });
         return found;
     }
 
@@ -173,16 +179,67 @@ public final class ColonyStorage {
         return null;
     }
 
-    /** Puts something into storage; what doesn't fit is returned. */
+    /**
+     * Puts something into storage; what doesn't fit is returned. On a warehouse's shelves ({@link Warehouse}): onto
+     * stacks of the same, then its own shelf, then a shelf for anything, then wherever there's room.
+     */
     public ItemStack put(ItemStack stack) {
         ItemStack rest = stack.copy();
-        for (Box b : boxes) {
-            rest = insert(b.container, rest);
-            if (rest.isEmpty()) {
-                break;
+        if (boxes.stream().noneMatch(b -> Warehouse.of(b.container) != null)) {
+            for (Box b : boxes) {
+                rest = insert(b.container, rest);
+                if (rest.isEmpty()) {
+                    break;
+                }
+            }
+            return rest;
+        }
+        Warehouse.Shelf shelf = Warehouse.of(stack);
+        for (int pass = 0; pass < 4 && !rest.isEmpty(); pass++) {
+            for (Box b : boxes) {
+                Warehouse.Shelf here = Warehouse.of(b.container);
+                if (pass == 0 && here == shelf) {
+                    rest = merge(b.container, rest);
+                } else if (pass == 1 && here == shelf || pass == 2 && (here == null || here == Warehouse.Shelf.OTHER) || pass == 3) {
+                    rest = insert(b.container, rest);
+                }
+                if (rest.isEmpty()) {
+                    break;
+                }
             }
         }
         return rest;
+    }
+
+    /** Puts what fits of a stack onto the stacks of the same in a container; returns the rest. */
+    private static ItemStack merge(Container c, ItemStack stack) {
+        ItemStack rest = stack.copy();
+        for (int i = 0; i < c.getContainerSize() && !rest.isEmpty(); i++) {
+            ItemStack s = c.getItem(i);
+            if (!s.isEmpty() && ItemStack.isSameItemSameComponents(s, rest) && s.getCount() < s.getMaxStackSize()) {
+                int n = Math.min(rest.getCount(), s.getMaxStackSize() - s.getCount());
+                s.grow(n);
+                rest.shrink(n);
+                c.setChanged();
+            }
+        }
+        return rest;
+    }
+
+    /** How many slots are empty. */
+    public int free() {
+        int n = 0;
+        for (Box b : boxes) {
+            for (int i = 0; i < b.container.getContainerSize(); i++) {
+                n += b.container.getItem(i).isEmpty() ? 1 : 0;
+            }
+        }
+        return n;
+    }
+
+    /** How many slots there are. */
+    public int size() {
+        return boxes.stream().mapToInt(b -> b.container.getContainerSize()).sum();
     }
 
     /** Puts a stack into one container (merging first); returns what didn't fit. */

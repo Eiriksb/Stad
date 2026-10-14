@@ -455,6 +455,20 @@ def _bee(l):
     l.set(15, 10, black)
 
 
+def _gather(l):
+    """The gatherer's spade stuck in a heap of earth, red berries beside it."""
+    earth, dark, berry, leaf = rgb("#6e4526"), rgb("#4a2e19"), rgb("#d0302a"), rgb("#4f8a30")
+    l.ellipse(7, 13.5, 6.5, 3, earth)
+    l.line(2, 14.5, 11, 14.5, 1, dark)
+    l.line(9, 1.5, 7.5, 8, 1.4, HANDLE)
+    l.line(7.5, 1.5, 10.5, 1.5, 1.2, HANDLE)
+    l.poly([(5, 8), (10, 8), (9.5, 11.5), (7.5, 13), (5.5, 11.5)], IRON)
+    l.line(6, 9, 6, 11, 1, IRON_LO)
+    l.line(13, 9.5, 14.5, 8, 1, leaf)
+    for (x, y) in ((13, 11.5), (14.5, 13), (12.5, 13.5)):
+        l.ellipse(x, y, 1.2, 1.2, berry)
+
+
 def _person(l):
     skin, shirt = rgb("#d9a77e"), rgb("#5f7f4a")
     l.ellipse(8, 4.5, 3, 3, skin)
@@ -593,7 +607,7 @@ ICONS = {
     "job/builder": _hammer, "job/farmer": _wheat, "job/lumberjack": _axe, "job/courier": _crate, "job/guard": _shield,
     "job/cook": _pot, "job/fisher": _fish, "job/shepherd": _sheep, "job/miner": _pickaxe, "job/smith": _anvil,
     "job/healer": _potion, "job/merchant": _emerald, "job/teacher": _book, "job/none": _question,
-    "job/carpenter": _saw, "job/mason": _trowel, "job/weaver": _yarn, "job/beekeeper": _bee,
+    "job/carpenter": _saw, "job/mason": _trowel, "job/weaver": _yarn, "job/beekeeper": _bee, "job/gatherer": _gather,
     "person": _person, "people": _people, "house": _house, "bell": _bell, "field": _hoe_field, "fence": _fence, "sapling": _sapling, "wall": _wall,
     "stall": _stall, "road": _road,
 }

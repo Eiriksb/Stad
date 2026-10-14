@@ -137,8 +137,8 @@ public final class StadConfig {
             .defineInRange("herdSize", 6, 2, 64);
 
     public static final ModConfigSpec.IntValue MINE_DEPTH = B
-            .comment("How many layers deep a miner digs a mine before it's done.")
-            .defineInRange("mineDepth", 48, 4, 320);
+            .comment("How many layers deep a miner digs a mine's shaft before it's done (as many as there are: down to bedrock).")
+            .defineInRange("shaftDepth", 384, 4, 384);
 
     static {
         B.pop();

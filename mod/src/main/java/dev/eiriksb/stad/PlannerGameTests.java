@@ -113,6 +113,16 @@ public final class PlannerGameTests {
             if (s.type().equals("warehouse")) {
                 long chests = bp.entries().stream().filter(e -> e.state().is(Blocks.CHEST)).count();
                 helper.assertTrue(chests >= 8, what + "only " + chests + " chests");
+                long racked = bp.entries().stream().filter(e -> e.state().is(Blocks.CHEST) && e.pos().getY() % 4 == 2).count();
+                helper.assertTrue(racked >= 4, what + "the racks aren't two high: " + racked + " chests on the second level");
+                for (var e : bp.entries()) {
+                    if (e.state().getBlock() instanceof net.minecraft.world.level.block.WallSignBlock) {
+                        BlockState behind = state(bp, e.pos().relative(e.state().getValue(net.minecraft.world.level.block.WallSignBlock.FACING).getOpposite()));
+                        helper.assertTrue(behind != null && behind.isSolid(), what + "a shelf sign with no wall behind it at " + e.pos() + ": " + behind);
+                    }
+                }
+                helper.assertTrue(bp.entries().stream().anyMatch(e -> e.state().getBlock() instanceof net.minecraft.world.level.block.WallSignBlock),
+                        what + "no signs over the racks");
             }
             if (s.has("chimney")) {
                 helper.assertTrue(bp.entries().stream().anyMatch(e -> e.state().is(Blocks.CAMPFIRE)), what + "no chimney smoke");

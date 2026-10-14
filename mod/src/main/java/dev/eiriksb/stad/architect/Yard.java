@@ -34,7 +34,7 @@ import java.util.Locale;
  * @param spacing grove: blocks from one sapling to the next
  * @param extra   field: lanterns on the corner posts; pen: a shelter with hay and water; wall: watch posts on its corners;
  *                quarry and dock: lamps
- * @param depth   quarry: how deep the miner digs it
+ * @param depth   quarry: how deep the miner digs it ({@link dev.eiriksb.stad.building.Mine#BEDROCK}: down to bedrock)
  * @param wall    wall: logs, stone_bricks or cobblestone
  * @param height  wall: how high
  * @param paving  stalls and road: dirt_path, gravel, cobblestone, stone_bricks or planks
@@ -49,7 +49,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
     public static final List<String> ANIMALS = List.of("sheep", "cows", "pigs", "chickens");
     public static final List<String> TREES = List.of("oak", "birch", "spruce", "acacia", "cherry", "jungle", "mixed");
     public static final int MIN_SPACING = 3, MAX_SPACING = 6;
-    public static final List<Integer> DEPTHS = List.of(8, 16, 24, 32, 48);
+    public static final List<Integer> DEPTHS = List.of(8, 16, 24, 32, 48, 64, dev.eiriksb.stad.building.Mine.BEDROCK); // the last: down to bedrock
     public static final List<String> WALLS = List.of("logs", "stone_bricks", "cobblestone");
     public static final int MIN_HEIGHT = 2, MAX_HEIGHT = 5;
     public static final List<String> PAVINGS = List.of("dirt_path", "gravel", "cobblestone", "stone_bricks", "planks");

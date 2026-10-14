@@ -41,7 +41,7 @@ public final class Yards {
                     + " town hall) and fells the trees when they're grown.";
         }
         if (p.type.equals(BuildingDef.QUARRY)) {
-            return "Marked out " + a + size + " quarry, " + y.depth() + " deep. The miner digs it down a layer at a time, with steps round its"
+            return "Marked out " + a + size + " quarry, " + (y.depth() == dev.eiriksb.stad.building.Mine.BEDROCK ? "down to bedrock" : y.depth() + " deep") + ". The miner digs it down a layer at a time, with steps round its"
                     + " edge, and brings up stone, coal and ore.";
         }
         if (p.type.equals(BuildingDef.DOCK)) {

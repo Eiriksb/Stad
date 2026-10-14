@@ -216,6 +216,8 @@ public final class StadAdapter implements VillagerAdapter {
             }
             case Jobs.CARPENTER, Jobs.MASON, Jobs.WEAVER -> f.context.add(done == 0 ? "You haven't made anything yet today."
                     : "Today you've made " + done + " things for the town.");
+            case Jobs.GATHERER -> f.context.add(done == 0 ? "You haven't gathered anything yet today." : "Today you've gathered " + done
+                    + " loads from the land round the town.");
             case Jobs.BEEKEEPER -> f.context.add(done == 0 ? "You haven't taken any honey yet today." : "Today you've done " + done
                     + " pieces of work with the bees.");
             case Jobs.GUARD -> f.context.add(dev.eiriksb.stad.war.Combat.unarmed(c)

@@ -48,7 +48,7 @@ too.
 | Cook | bakes bread from wheat, cooks meat, fish and potatoes, and brings it to the town hall | a furnace, smoker or campfire on the town's land |
 | Fisher | fishes from the shore | a pond or river on the town's land (eight blocks of water or more) |
 | Shepherd | brings in animals from just outside town, shears sheep, feeds the animals so they breed, butchers the extras, picks up eggs and wool | sheep, cows, pigs or chickens in or near town, and what they eat |
-| Miner | digs the town's mine deeper, layer by layer, for stone, coal and ore | a **Mine** from the Medieval pack |
+| Miner | digs the town's mine down to bedrock, strip-mining for ore on the way | a **mine** (Medieval pack, or design one at the table) or a **quarry** |
 | Smith | makes the tools the workers are short of, mends worn ones, smelts ore | a **smithy** (anvil and furnace) |
 | Healer | treats the ill and the wounded | nothing; an **infirmary** gives the ill a bed |
 | Merchant | sells the town's spare goods and buys what it needs, for emeralds | nothing; a **market** to stand at |
@@ -57,6 +57,7 @@ too.
 | Mason | burns cobblestone into stone, cuts stone bricks, slabs and stairs, makes glass from sand | a **stoneworks** (a stonecutter and a furnace), cobblestone or sand, and a pickaxe |
 | Weaver | makes wool into beds for new homes, and carpets | a **loom house** (a loom), wool and planks, and shears |
 | Beekeeper | brings bees to the hives, sows flowers for them, takes the honey and honeycomb | an **apiary** (beehives among flowers: lay one out at the architect's table), shears, and glass bottles for the honey |
+| Gatherer | digs dirt, sand, gravel and clay from the land round the town, forages berries, sugar cane, seeds and flowers, and picks up what's left lying about | nothing; a shovel makes it quicker |
 
 The carpenter, mason and weaver first make whatever the builders are waiting for (a door, stone bricks, a bed for a
 new house), then keep the town stocked with the basics: 64 planks and 32 sticks; 32 stone, 64 stone bricks and 16
@@ -71,6 +72,18 @@ start the day there, work the land round it, work faster and are happier; withou
 
 Workers bring what they gather to the **warehouse** (or the town hall when there's none). Late in the afternoon they
 bring the day's work in.
+
+**The warehouse's shelves.** Each chest (or double chest, or rack of them) in a warehouse is for one kind of goods:
+building blocks, wood, ores and metals, food, farming, wool and cloth, tools and arms, or everything else. It says so
+when you open it, and on the sign over the rack. Goods go onto their own shelf. To choose a chest's shelf yourself,
+name it in an anvil before you place it ("Food", "Ores"). A courier with nothing to carry puts things on the right
+shelves, and when the town hall is nearly full moves what it doesn't need to the warehouse. The **Great Warehouse**
+(and the Storstabbur and Great Storehouse) holds about 2,000 stacks.
+
+**The gatherer** needs nothing but the land round the town. They gather what the town has asked for, then keep a
+little dirt, sand, gravel, clay, berries, sugar cane and seeds in stock. They take the top off natural ground, never
+where the ground beside it is higher, so the land goes down evenly; they leave the town's buildings, yards and roads
+alone, and don't dig beside water.
 
 **Skills and tools.** Citizens get better at a job the more they do it, from novice to master (their card shows it).
 Farmers, lumberjacks, miners, fishers and shepherds need a real hoe, axe, pickaxe, rod or shears: put some in the town
@@ -93,8 +106,13 @@ alone.
 
 **The miner** digs a 5x5 shaft under the mine's headframe. One block of each layer stays as a step, each a block
 further round the wall, so the steps spiral down and the miner walks to the bottom and back. They put torches on the
-wall as they go and wall off any water or lava they break into. A mine stops at 48 layers (`mineDepth`). On a slope,
-where the shaft starts above the ground, they put the top steps in first.
+wall as they go and wall off any water or lava they break into. The shaft goes down to bedrock (`shaftDepth`). On a
+slope, where the shaft starts above the ground, they put the top steps in first.
+
+At the heights where the ores are (48, 16, 0, -16, -32 and -58) the miner **strip-mines** before going deeper: tunnels
+two high out from the shaft each way, 24 blocks, and side tunnels every three blocks off the east and west ones, so
+every block between them is seen. They light them, floor them over caves, and keep to the town's land. Ore they
+uncover they dig out, the whole vein. A **quarry** can be laid out down to bedrock too.
 
 ## Building
 
@@ -133,7 +151,7 @@ workplace for every job, and **land and roads**:
 | Field | farmer | farmland round water, sown with the crop you choose |
 | Pen | shepherd | a fenced yard with a gate, shelter, hay and water |
 | Grove | lumberjack | saplings in rows, planted and felled as they grow |
-| Quarry | miner | an open pit dug down layer by layer, with steps round the edge |
+| Quarry | miner | an open pit dug down layer by layer (8 to 64 layers, or to bedrock), with steps round the edge |
 | Dock | fisher | a pier over the water with spots to fish from (point the door at the shore) |
 | Guard post | guard | a platform the guards climb and keep watch from |
 | Wall | guard | a palisade or stone wall round the site, with a door and watch spots on the corners |
@@ -207,7 +225,7 @@ change:
 | `colonies.arrivalMinutes` | 5 | minutes between newcomers |
 | `colonies.leadership` | NORMAL | LOYAL (they always obey), NORMAL, HARSH |
 | `jobs.herdSize` | 6 | animals of each kind the shepherd keeps |
-| `jobs.mineDepth` | 48 | layers a mine goes down |
+| `jobs.shaftDepth` | 384 | layers a mine's shaft goes down (all of them: to bedrock) |
 | `needs.illnessChance` | 0.03 | chance each morning that a citizen falls ill (0: never) |
 | `raids.mobRaids` | NORMAL | OFF, EASY, NORMAL, HARD |
 | `raids.pvpRaids` | OPT_IN | OFF, OPT_IN, FORCED |

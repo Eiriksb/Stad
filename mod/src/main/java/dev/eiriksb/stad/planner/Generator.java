@@ -109,6 +109,12 @@ public final class Generator {
         }
         windows();
         door();
+        for (Sign sg : signs) { // over the racks, where there's wall to hang it on (not a window)
+            BlockState behind = blocks.get(sg.wall().offset(ox, 0, oz));
+            if (behind != null && behind.isSolid()) {
+                set(sg.at().getX(), sg.at().getY(), sg.at().getZ(), sg.state());
+            }
+        }
         int top = switch (spec.roof()) {
             case "hip" -> hipRoof();
             case "flat" -> flatRoof();
@@ -124,6 +130,11 @@ public final class Generator {
     }
 
     // ---- coordinates --------------------------------------------------------------------------------------------
+
+    /** A sign for a warehouse's rack: where (in body coordinates), the wall behind it, and the sign. */
+    private record Sign(BlockPos at, BlockPos wall, BlockState state) {}
+
+    private final List<Sign> signs = new ArrayList<>();
 
     private void set(int bx, int y, int bz, BlockState state) {
         blocks.put(new BlockPos(bx + ox, y, bz + oz), state);
@@ -501,8 +512,10 @@ public final class Generator {
             case "library" -> List.of(Blocks.BOOKSHELF, Blocks.BOOKSHELF, Blocks.LECTERN, Blocks.BOOKSHELF, Blocks.BOOKSHELF);
             default -> List.of();
         });
-        if (spec.type().equals("warehouse") && r.type.equals("storage")) {
-            for (int i = 0; i < 10; i++) {
+        boolean racks = spec.type().equals("warehouse") && r.type.equals("storage");
+        if (racks) { // a warehouse: racks all round the walls, two high, a sign on each for its shelf (building.Warehouse)
+            items.clear();
+            for (int i = 0; i < spots.size(); i++) {
                 items.add(i % 3 == 2 ? Blocks.BARREL : Blocks.CHEST);
             }
         }
@@ -521,6 +534,18 @@ public final class Generator {
                 state = state.setValue(BlockStateProperties.FACING, Direction.UP);
             }
             setC(s.u, s.v, y, state);
+            if (racks) {
+                setC(s.u, s.v, y + 1, state);
+                Materials.Material wood = floor.wood() ? floor : Materials.getOr("oak", "oak");
+                Block sign = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(
+                        wood.name() + "_wall_sign"));
+                if (!(sign instanceof net.minecraft.world.level.block.WallSignBlock)) {
+                    sign = Blocks.OAK_WALL_SIGN;
+                }
+                int[] wall = step(s, s.toWall);
+                signs.add(new Sign(new BlockPos(x(s.u, s.v), y + 2, z(s.u, s.v)), new BlockPos(x(wall[0], wall[1]), y + 2, z(wall[0], wall[1])),
+                        sign.defaultBlockState().setValue(net.minecraft.world.level.block.WallSignBlock.FACING, s.toWall.getOpposite())));
+            }
             fl.used.add(key(s.u, s.v));
         }
         int uc = (r.u0 + r.u1) / 2, vc = (1 + lv) / 2;

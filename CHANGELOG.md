@@ -105,6 +105,28 @@
   can make.
 - The crafting trades stop, and say so, when the town hall is full, instead of making what they can't put away.
 
+**Gatherers, deep mines and great warehouses**
+- A new **gatherer** job, needing no workplace: digs dirt, sand, gravel and clay from the land round the town, forages
+  berries, sugar cane, seeds, flowers, pumpkins, melons and mushrooms, and picks up what's been left lying about
+  (saplings dropped by the leaves, say). They gather what the town has asked for first, then keep a small stock (64
+  dirt, 32 sand and gravel, 16 clay, berries, sugar cane and seeds). They only take the top off natural ground, never
+  where the ground beside it is higher, so the land goes down evenly instead of getting pitted with holes; never in the
+  town's buildings, yards or roads, nor beside water (except clay from the shallows). A shovel makes it quicker.
+- **Mines go down to bedrock.** A mine's shaft keeps going until it gets there (`shaftDepth`), and a quarry can be laid
+  out **to bedrock** as well as 8 to 64 layers.
+- **Strip mining.** At the heights where the ores are (48, 16, 0, -16, -32 and -58) the miner tunnels out from the
+  shaft before going deeper: two-high tunnels 24 blocks each way, with side tunnels every three blocks off the east and
+  west ones, lit with torches, floored over caves, and on the town's land only. Any ore they uncover they dig out, the
+  whole vein, as far as they can reach it.
+- **Great warehouses** in every pack (Great Warehouse, Storstabbur, Great Storehouse): double chests two high round the
+  walls and barrels down the middle, about 2,000 slots. Warehouses generated at the table get racks two high round
+  their walls too.
+- **Shelves.** A warehouse's chests are each given a kind of goods (building blocks, wood, ores and metals, food,
+  farming, wool and cloth, tools and arms, everything else), shown when one is opened and written on the sign over its
+  rack. Goods go onto their own shelf; name a chest in an anvil ("Food") to choose its shelf yourself. With nothing to
+  carry, the courier puts what's on the wrong shelf on the right one, and when the town hall is nearly full takes what
+  it doesn't need (not its food, tools or what the builders are waiting for) to the warehouse.
+
 **Easier to play**
 - **Every citizen says what they're doing, or what's stopping them and what would fix it** ("No seeds to sow: put wheat
   seeds in the town hall", "Nowhere to cook: place a furnace..."), on their card, in the town hall and when you talk to

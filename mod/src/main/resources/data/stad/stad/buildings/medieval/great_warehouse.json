@@ -1,0 +1,9 @@
+{
+  "type": "stad:warehouse",
+  "name": "Great Warehouse",
+  "description": "Racks of chests two high round the walls, each for its own kind of goods.",
+  "structure": "stad:medieval/great_warehouse",
+  "tags": [
+    "storage"
+  ]
+}

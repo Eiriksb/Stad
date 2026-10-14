@@ -70,6 +70,7 @@ public final class ColonyTicker {
                 Workplaces.assign(colony);
                 Arrivals.tick(level, colony);
                 Requests.update(level, colony);
+                dev.eiriksb.stad.building.Warehouse.label(level, colony);
                 Leadership.checkConditions(level, colony);
                 dev.eiriksb.stad.war.Raids.tick(level, colony);
                 if (level.getDayTime() % 24000 <= 4000 && colony.lastReviewDay != level.getDayTime() / 24000) {

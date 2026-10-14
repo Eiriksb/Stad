@@ -16,12 +16,23 @@ import java.util.Optional;
 /**
  * The courier takes the town's requests one by one: fetch it from a warehouse, bring it where it's needed. With no
  * requests waiting, they carry what workers left at their workplaces (a farmhouse's wheat, a fishery's fish) on to the
- * warehouse, or the town hall when there's none.
+ * warehouse, or the town hall when there's none. With nothing to carry they keep the warehouse: when the town hall is
+ * nearly full they take what it doesn't need (not its food, tools or what the builders are waiting for) to the
+ * warehouse, and they move what's on the wrong shelf to its own ({@link dev.eiriksb.stad.building.Warehouse}).
  */
 public class CourierGoal extends WorkGoal {
     private Request request;
     /** a workplace chest to empty, when there's no request */
     private ColonyStorage.Box haul;
+    /** what to take from it */
+    private java.util.function.Predicate<ItemStack> haulWhat = CourierGoal::haulable;
+    /** why: for what they say they're doing */
+    private String haulWhy = "Fetching from the workplaces";
+    /** a warehouse or town hall box they're tidying, and ticks until they look for one again */
+    private ColonyStorage.Box tidying;
+    private int tidyIn;
+    /** the town hall is kept with at least this many slots free */
+    static final int HALL_ROOM = 6;
 
     /** the workplaces whose haul a courier carries on */
     private static final java.util.Set<net.minecraft.resources.ResourceLocation> HAULED = java.util.Set.of(
@@ -50,6 +61,16 @@ public class CourierGoal extends WorkGoal {
         request = next.orElse(null);
         if (request == null) {
             haul = nextHaul(level, colony);
+            if (haul != null) {
+                haulWhat = CourierGoal::haulable;
+                haulWhy = "Fetching from the workplaces";
+            } else if (tidying != null) {
+                haul = tidying;
+            } else if (!w.isEmpty() && --tidyIn <= 0) {
+                tidyIn = 40; // it looks through every shelf: not every tick
+                tidy(level, colony, w);
+                haul = tidying;
+            }
         }
         return request != null || haul != null;
     }
@@ -73,6 +94,67 @@ public class CourierGoal extends WorkGoal {
             }
         }
         return best;
+    }
+
+    /**
+     * Something to do in the warehouse: the town hall nearly full, or something on the wrong shelf with room on its
+     * own. Sets {@link #tidying} (and what to take) when there is.
+     */
+    private void tidy(ServerLevel level, Colony colony, ColonyStorage w) {
+        if (!citizen.inventory().getItem(citizen.inventory().getContainerSize() - 1).isEmpty() || w.free() < 8) {
+            return;
+        }
+        ColonyStorage hall = ColonyStorage.townHall(level, colony);
+        if (!hall.isEmpty() && hall.free() < HALL_ROOM) {
+            java.util.Set<net.minecraft.world.item.Item> needed = new java.util.HashSet<>();
+            colony.buildings().forEach(b -> needed.addAll(b.missing.keySet()));
+            java.util.function.Predicate<ItemStack> spare = st -> !st.isEmpty() && !ColonyStorage.isFood(st)
+                    && dev.eiriksb.stad.citizen.Tools.kindOf(st) == null && !(st.getItem() instanceof net.minecraft.world.item.SwordItem)
+                    && !needed.contains(st.getItem()) && colony.requests().stream().noneMatch(r -> r.matches(st));
+            if (hall.count(spare) > 0) {
+                tidying = hall.boxes().getFirst();
+                haulWhat = spare;
+                haulWhy = "Taking what the town hall doesn't need to the warehouse";
+                return;
+            }
+        }
+        for (ColonyStorage.Box box : w.boxes()) {
+            dev.eiriksb.stad.building.Warehouse.Shelf here = dev.eiriksb.stad.building.Warehouse.of(box.container());
+            if (here == null) {
+                continue;
+            }
+            java.util.function.Predicate<ItemStack> misplaced = st -> {
+                if (st.isEmpty()) {
+                    return false;
+                }
+                dev.eiriksb.stad.building.Warehouse.Shelf own = dev.eiriksb.stad.building.Warehouse.of(st);
+                return own != here && room(w, own, st);
+            };
+            for (int i = 0; i < box.container().getContainerSize(); i++) {
+                if (misplaced.test(box.container().getItem(i))) {
+                    tidying = box;
+                    haulWhat = misplaced;
+                    haulWhy = "Putting the warehouse in order";
+                    return;
+                }
+            }
+        }
+    }
+
+    /** Whether a shelf has room for some of a stack: an empty slot, or a stack of it that isn't full. */
+    private static boolean room(ColonyStorage w, dev.eiriksb.stad.building.Warehouse.Shelf shelf, ItemStack st) {
+        for (ColonyStorage.Box b : w.boxes()) {
+            if (dev.eiriksb.stad.building.Warehouse.of(b.container()) != shelf) {
+                continue;
+            }
+            for (int i = 0; i < b.container().getContainerSize(); i++) {
+                ItemStack s = b.container().getItem(i);
+                if (s.isEmpty() || ItemStack.isSameItemSameComponents(s, st) && s.getCount() < s.getMaxStackSize()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /** What a workplace chest has to carry on: anything but the tools its workers keep there (PLAN.md §6.9). */
@@ -126,7 +208,7 @@ public class CourierGoal extends WorkGoal {
 
     @Override
     protected String doingNow() {
-        return request != null ? "Carrying " + request.label() + " to the " + request.destName : "Fetching from the workplaces";
+        return request != null ? "Carrying " + request.label() + " to the " + request.destName : haulWhy;
     }
 
     @Override
@@ -138,7 +220,7 @@ public class CourierGoal extends WorkGoal {
             int stacks = 0;
             for (int i = 0; i < haul.container().getContainerSize() && stacks < 4; i++) {
                 ItemStack st = haul.container().getItem(i);
-                if (haulable(st)) {
+                if (haulWhat.test(st)) {
                     pocket(haul.container().removeItemNoUpdate(i));
                     stacks++;
                 }
@@ -147,6 +229,7 @@ public class CourierGoal extends WorkGoal {
             citizen.swing(InteractionHand.MAIN_HAND);
             citizen.didWork(stacks);
             haul = null;
+            tidying = null;
             approach.reset();
             return;
         }
