@@ -431,4 +431,53 @@ public final class YardGameTests {
         cleanUp(helper, colony, owner);
         helper.succeed();
     }
+
+    @GameTest(template = "lot", batch = "yard_town_roads", timeoutTicks = 100)
+    public static void layRoadsJoinsTheWholeTown(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = found(helper, owner);
+        var cottage = dev.eiriksb.stad.building.BuildingPacks.get(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("stad", "medieval/cottage"))
+                .orElseThrow();
+        Building home = colony.addBuilding(cottage.key(), cottage.name(), helper.absolutePos(new BlockPos(9, G, 8)), net.minecraft.world.level.block.Rotation.NONE,
+                helper.getLevel().getGameTime());
+        build(helper, home);
+        var first = dev.eiriksb.stad.architect.TownRoads.plan(owner, helper.getLevel(), colony, Yard.DEFAULT);
+        helper.assertTrue(!first.error() && first.message().contains(cottage.name()), "roads planned: " + first.message());
+        Building roads = colony.buildings().stream().filter(b -> b.is(BuildingDef.ROAD)).findFirst().orElseThrow();
+        java.util.List<BlockPos> paved = roads.placement().orElseThrow().markers("stad:road");
+        helper.assertTrue(paved.size() >= 15, "paved: " + paved.size());
+        BlockPos hall = helper.absolutePos(HALL), table = helper.absolutePos(TABLE);
+        helper.assertTrue(roads.placement().orElseThrow().steps().stream().noneMatch(st -> st.pos().equals(hall) || st.pos().equals(table)
+                || home.placement().orElseThrow().bounds().isInside(st.pos())), "not over the hall, the table or the cottage");
+        build(helper, roads);
+        var again = dev.eiriksb.stad.architect.TownRoads.plan(owner, helper.getLevel(), colony, Yard.DEFAULT);
+        helper.assertTrue(!again.error() && again.message().contains("already"), "nothing more to join: " + again.message());
+        helper.assertTrue(colony.buildings().stream().filter(b -> b.is(BuildingDef.ROAD)).count() == 1, "no second road");
+        cleanUp(helper, colony, owner);
+        helper.succeed();
+    }
+
+    @GameTest(template = "lot", batch = "yard_keys", timeoutTicks = 20)
+    public static void aTableSavedWithSmallSitesStillLoads(GameTestHelper helper) {
+        net.minecraft.nbt.CompoundTag t = new net.minecraft.nbt.CompoundTag();
+        t.putString("Name", "Old");
+        t.putString("Type", "stad:home");
+        t.put("Min", net.minecraft.nbt.NbtUtils.writeBlockPos(new BlockPos(0, 64, 0)));
+        t.putIntArray("Size", new int[]{40, 12, 50});
+        net.minecraft.nbt.ListTag pal = new net.minecraft.nbt.ListTag();
+        pal.add(net.minecraft.nbt.NbtUtils.writeBlockState(Blocks.STONE.defaultBlockState()));
+        t.put("Palette", pal);
+        int old = 37 | 45 << 6 | 3 << 12; // x 37, z 45, y 3, packed the old way
+        t.putIntArray("Keys", new int[]{old});
+        t.putIntArray("States", new int[]{0});
+        Project p = Project.load(t);
+        helper.assertTrue(p.edits.containsKey(Project.key(37, 3, 45)), "moved to the new packing: " + p.edits.keySet());
+        Project big = new Project();
+        big.setSite(new BlockPos(0, 64, 0), new BlockPos(299, 70, 199));
+        big.edits.put(Project.key(299, 11, 199), Blocks.STONE.defaultBlockState());
+        Project back = Project.load(big.save());
+        helper.assertTrue(back.sx == 300 && back.edits.containsKey(Project.key(299, 11, 199)) && Project.kx(Project.key(299, 11, 199)) == 299
+                && Project.kz(Project.key(299, 11, 199)) == 199 && Project.ky(Project.key(299, 11, 199)) == 11, "a 300 by 200 site keeps its edits");
+        helper.succeed();
+    }
 }

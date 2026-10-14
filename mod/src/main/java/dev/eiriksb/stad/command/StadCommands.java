@@ -68,6 +68,10 @@ public final class StadCommands {
                         .then(Commands.literal("list").requires(s -> s.hasPermission(2)).executes(StadCommands::list))
                         .then(Commands.literal("dissolve").executes(StadCommands::dissolve))
                         .then(Commands.literal("builds").executes(StadCommands::builds))
+                        .then(Commands.literal("roads").executes(c -> roads(c, "dirt_path"))
+                                .then(Commands.argument("paving", StringArgumentType.word())
+                                        .suggests((c, b) -> SharedSuggestionProvider.suggest(dev.eiriksb.stad.architect.Yard.PAVINGS, b))
+                                        .executes(c -> roads(c, StringArgumentType.getString(c, "paving")))))
                         .then(Commands.literal("requests").executes(StadCommands::requests))
                         .then(Commands.literal("standing").executes(StadCommands::standing))
                         .then(Commands.literal("setstanding").requires(s -> s.hasPermission(2)).then(Commands.argument("player", EntityArgument.player())
@@ -241,6 +245,21 @@ public final class StadCommands {
             ctx.getSource().sendSuccess(() -> Component.literal("#" + b.id + " " + b.name + " at " + b.origin.toShortString() + ": " + status(b)), false);
         }
         return c.buildings().size();
+    }
+
+    /** Plans roads joining up the whole town ({@link dev.eiriksb.stad.architect.TownRoads}). */
+    private static int roads(CommandContext<CommandSourceStack> ctx, String paving) {
+        Optional<Colony> found = here(ctx.getSource());
+        if (found.isEmpty()) {
+            return fail(ctx.getSource(), "You're not in a town.");
+        }
+        var r = dev.eiriksb.stad.architect.TownRoads.plan(ctx.getSource().getPlayer(), ctx.getSource().getLevel(), found.get(),
+                dev.eiriksb.stad.architect.Yard.parse("{\"paving\": \"" + paving + "\"}"));
+        if (r.error()) {
+            return fail(ctx.getSource(), r.message());
+        }
+        ctx.getSource().sendSuccess(() -> Component.literal(r.message()), false);
+        return 1;
     }
 
     private static int standing(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {

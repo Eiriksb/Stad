@@ -79,7 +79,11 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
     }
 
     public static void send(ServerPlayer player, Colony colony, ServerLevel level) {
-        PacketDistributor.sendToPlayer(player, new ColonyInfoPayload(of(colony, level, player)));
+        send(player, colony, level, "", false);
+    }
+
+    public static void send(ServerPlayer player, Colony colony, ServerLevel level, String notice, boolean error) {
+        PacketDistributor.sendToPlayer(player, new ColonyInfoPayload(of(colony, level, player), notice, error));
     }
 
     void write(FriendlyByteBuf buf) {

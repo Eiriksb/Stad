@@ -170,7 +170,8 @@ a **quarry** for the miner (an open pit dug 8 to 48 layers down with steps round
 (a pier with spots to fish from), a **guard post** (a platform the guards climb and keep watch from) and a **wall**
 (logs, stone bricks or cobblestone round the site, with a door and watch spots for the guards; it may go round what's
 already there), a **market square** (stalls round a paved square with a bell; a merchant keeps each stall) and
-**roads** (routed between the doors in the site, or drawn by hand with the Road tool; citizens walk faster on them),
+**roads** (routed between the doors in the site, drawn by hand with the Road tool, or laid for the whole town at once
+with **Lay roads** at the town hall; citizens walk faster on them),
 as well as fields, pens and groves. Pick **Field**, **Pen** or **Grove** as the kind and open
 **Lay out ▾**. A field is farmland round water channels or holes (every plot within four blocks of water), sown with a
 crop or mixed strips, with a fence, a path round the inside and lamps if you like. A pen is a fenced yard with a gate,

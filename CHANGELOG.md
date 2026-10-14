@@ -70,7 +70,12 @@
   (dirt path, gravel, cobblestone, stone bricks or planks; planks over water), the width (1 to 4) and lamp posts beside
   it. A road stops at the town's buildings and only paves the ground, so it never runs over a chest, the town hall or
   a roof. Roads can cross each other and run inside a wall. **Citizens walk about a third faster on the town's roads.**
-- Sites can be up to 64 by 64 now (a generated building still fits in 32), for long roads and big fields.
+- **Lay roads** (on the town hall's Buildings tab, and **Whole town** in the table's road drawer): roads joining every
+  door and gate in town, and the town hall, over all of the town's land, planned at once for the builders. Choose the
+  paving. Places with no door (a market square's open way in) are joined at the side facing the hall. Press it again
+  after building more: it grows from the roads already there and only adds what's missing.
+- A table's site can be as big as you like now, as long as it's all on the town's land (a generated building still
+  fits in 32), for long roads and big fields. Tables saved before keep their designs.
 - Fields, pens, groves and the rest are in a **Farms** tab of the Building Plans when saved into My pack (market squares
   and roads in **Town**).
 - **A new look**: the town hall, the citizen's card, the Building Plans, the architect's table and the pack editor are

@@ -688,6 +688,19 @@ public record Yard(String crop, String water, String fence, boolean path, String
         };
     }
 
+    /** What this paves with, the wood it builds in, its fence (for lamp posts): for roads laid outside a site ({@link TownRoads}). */
+    public BlockState pavingBlock() {
+        return pavingState();
+    }
+
+    public BlockState woodBlock(String what) {
+        return woodState(what);
+    }
+
+    public BlockState fenceBlock() {
+        return fenceState();
+    }
+
     /** Whether a block is road paving (what {@link #PAVINGS} lay, any wood's planks). */
     public static boolean paving(BlockState s) {
         return s.is(Blocks.DIRT_PATH) || s.is(Blocks.GRAVEL) || s.is(Blocks.COBBLESTONE) || s.is(Blocks.STONE_BRICKS) || s.is(BlockTags.PLANKS);
@@ -800,7 +813,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
         java.util.Set<Integer> line = new java.util.HashSet<>();
         p.markers.forEach((k, m) -> {
             if (m.equals("stad:road")) {
-                line.add(Project.kx(k) | Project.kz(k) << 6);
+                line.add(Project.colOf(k));
             }
         });
         java.util.Set<Integer> cells = new java.util.TreeSet<>();
@@ -808,9 +821,9 @@ public record Yard(String crop, String water, String fence, boolean path, String
         for (int c : line) {
             for (int dx = lo; dx <= hi; dx++) {
                 for (int dz = lo; dz <= hi; dz++) {
-                    int x = (c & 63) + dx, z = (c >> 6) + dz;
+                    int x = Project.kx(c) + dx, z = Project.kz(c) + dz;
                     if (x >= 0 && z >= 0 && x < p.sx && z < p.sz) {
-                        cells.add(x | z << 6);
+                        cells.add(Project.col(x, z));
                     }
                 }
             }
@@ -818,7 +831,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
         BlockState floor = pavingState(), bridge = woodState("planks");
         cells.removeAll(p.keepOut); // it stops at the town's buildings
         for (int c : cells) {
-            int x = c & 63, z = c >> 6, g = top(terrain, p, x, z);
+            int x = Project.kx(c), z = Project.kz(c), g = top(terrain, p, x, z);
             if (g < 0) {
                 continue;
             }
@@ -837,8 +850,8 @@ public record Yard(String crop, String water, String fence, boolean path, String
             List<int[]> lamps = new java.util.ArrayList<>();
             for (int c : cells) {
                 for (Direction dir : Direction.Plane.HORIZONTAL) {
-                    int x = (c & 63) + dir.getStepX(), z = (c >> 6) + dir.getStepZ();
-                    if (x < 0 || z < 0 || x >= p.sx || z >= p.sz || cells.contains(x | z << 6) || p.keepOut.contains(x | z << 6)
+                    int x = Project.kx(c) + dir.getStepX(), z = Project.kz(c) + dir.getStepZ();
+                    if (x < 0 || z < 0 || x >= p.sx || z >= p.sz || cells.contains(Project.col(x, z)) || p.keepOut.contains(Project.col(x, z))
                             || lamps.stream().anyMatch(l -> (l[0] - x) * (l[0] - x) + (l[1] - z) * (l[1] - z) < 64)) {
                         continue;
                     }

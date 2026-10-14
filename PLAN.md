@@ -610,8 +610,17 @@ nearest end each time with a Dijkstra over the columns (climbing more than one b
 the road's width are out, water, trees and turns cost more, existing paving less). The screen's **Road** tool draws
 4-connected lines between clicks; the server lays the road again after each change and the player's undo stays. A
 road is a "ring" like a wall (only its own blocks are its); roads may cross roads. Planned, its paved blocks become
-`stad:road` markers, and `Roads` knows the town's finished road blocks: citizens on one get +30% speed. Sites can be
-64 by 64 (positions are packed six bits a side).
+`stad:road` markers, and `Roads` knows the town's finished road blocks: citizens on one get +30% speed.
+
+**Roads for the whole town.** `TownRoads` (the town hall's Lay roads, the table's Whole town, `/stad colony roads
+[paving]`) routes over the town's whole claim, reading the land from the world (the heightmap, down past trees, leaves,
+plants and barriers), not a site: `Routes.Land` is the shared column grid (ground, blocked, cost), `Routes.join` the
+tree-growing, `Routes.doors` the ends (doors and gates in a building's steps, or in the world for a finished one, else
+the middle of its side nearest the hall; the hall). It grows from the town's existing road markers, so pressing it
+again adds only what's missing, and plans one road building ("Roads", then "More roads") whose blueprint holds the
+paving, the clearing above it (a tree's whole trunk) and the lamp posts. Sites can be any size on the town's land:
+positions are packed nine bits a side (`Project.key`/`col`), and tables saved with the old six-bit packing are
+converted when they load.
 
 **Stad's own look.** Screens share a theme (`client/ui/Theme`, `StadButton`): walnut panels with brass trim round dark
 felt, brass title plates, wells for lists, wood buttons and tabs, brass scroll bars, and 16 by 16 icons for every job

@@ -143,7 +143,10 @@ through the gate, or the lumberjack plants the saplings (put seeds, carrots, pot
 
 ![A field designed at the table, and the builder and farmer making it](farms.png)
 
-**Roads.** Mark a long site (up to 64 by 64) over the stretch the road should run along and choose **Road**: the table
+**Roads.** The quickest way: the town hall's **Buildings** tab has **Lay roads**, which joins every door and gate in
+town (and the hall) with roads for the builders, over all of the town's land. Press it again whenever you've built more.
+For a road of your own, mark a site (any size, on the town's land) over the stretch it should run along and choose
+**Road**: the table
 joins up the doors and gates of the buildings in it, the town hall and any path that runs up to its edge, the easiest
 way over the land (**Route it** again after you change something). Or draw it with the **Road** tool: click along the
 ground, and each click draws on from the last; right-click to stop, or to take the road off a block. Choose the paving,

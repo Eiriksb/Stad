@@ -53,6 +53,17 @@ public class TownHallScreen extends Screen {
      */
     private record Row(FormattedCharSequence text, int color, int indent, ResourceLocation icon, String small, boolean heading, int height) {}
 
+    /** what came of something done here (laying roads), shown for a while over the bottom of the list */
+    private String notice = "";
+    private boolean noticeError;
+    private long noticeAt;
+
+    void notice(String text, boolean error) {
+        notice = text;
+        noticeError = error;
+        noticeAt = System.currentTimeMillis();
+    }
+
     public TownHallScreen(ColonyView view) {
         super(Component.literal(view.name()));
         this.view = view;
@@ -66,8 +77,20 @@ public class TownHallScreen extends Screen {
         return (width - w()) / 2;
     }
 
+    /** the paving the Lay roads button uses */
+    private static int paving;
+
     private int top() {
         return 54;
+    }
+
+    /** Where the list starts: under the roads bar on the Buildings tab. */
+    private int listTop() {
+        return top() + (roadsBar() ? 24 : 0);
+    }
+
+    private boolean roadsBar() {
+        return tab == Tab.BUILDINGS && view.viewerRank().atLeast(Rank.OFFICER);
     }
 
     private int bottom() {
@@ -105,6 +128,17 @@ public class TownHallScreen extends Screen {
                 rebuildWidgets();
             }).bounds(x + t.ordinal() * (tw + 3), top() - 22, tw, 20).icon(t.sprite()).build().tab(t == tab);
             addRenderableWidget(b);
+        }
+        if (roadsBar()) { // roads for the whole town
+            addRenderableWidget(StadButton.of(Component.literal("Paving: " + dev.eiriksb.stad.architect.Yard.PAVINGS.get(paving).replace('_', ' ')), b -> {
+                paving = (paving + 1) % dev.eiriksb.stad.architect.Yard.PAVINGS.size();
+                b.setMessage(Component.literal("Paving: " + dev.eiriksb.stad.architect.Yard.PAVINGS.get(paving).replace('_', ' ')));
+            }).bounds(x + w - 220, top(), 116, 20).tooltip(Tooltip.create(Component.literal("What the roads are paved with."))).build());
+            addRenderableWidget(StadButton.of(Component.literal("Lay roads"), b -> PacketDistributor.sendToServer(new ColonyActionPayload(view.id(),
+                            ColonyActionPayload.Action.ROADS, dev.eiriksb.stad.architect.Yard.PAVINGS.get(paving))))
+                    .bounds(x + w - 100, top(), 100, 20).icon(Theme.icon("road")).tooltip(Tooltip.create(Component.literal("Join every door in town, and"
+                            + " the town hall, with roads for the builders to lay: three wide, with lamp posts, round buildings and hills. Citizens walk"
+                            + " faster on them. Press it again after building more: it adds what's missing."))).build());
         }
         int bw = (w - 3 * 4) / 4, by = height - 28;
         StadButton storage = StadButton.of(Component.literal("Storage"), b -> PacketDistributor.sendToServer(
@@ -284,7 +318,10 @@ public class TownHallScreen extends Screen {
         super.renderBackground(g, mouseX, mouseY, partialTick);
         int x = left();
         Theme.panel(g, x - 14, 2, w() + 28, height - 4);
-        Theme.inset(g, x - 4, top() - 2, w() + 8, bottom() - top() + 6);
+        Theme.inset(g, x - 4, listTop() - 2, w() + 8, bottom() - listTop() + 6);
+        if (roadsBar()) {
+            g.drawString(font, "Roads for the whole town", x, top() + 6, Theme.GOLD);
+        }
         if (!renaming) {
             Theme.header(g, font, title, width / 2, 8);
         }
@@ -293,12 +330,12 @@ public class TownHallScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        int x = left() + 4, view = bottom() - top();
+        int x = left() + 4, view = bottom() - listTop();
         scroll = Math.max(0, Math.min(scroll, total() - view));
-        g.enableScissor(left(), top(), left() + w(), bottom() + 2);
-        int y = top() + 2 - scroll;
+        g.enableScissor(left(), listTop(), left() + w(), bottom() + 2);
+        int y = listTop() + 2 - scroll;
         for (Row r : rows) {
-            if (y + r.height() >= top() && y < bottom()) {
+            if (y + r.height() >= listTop() && y < bottom()) {
                 if (r.heading()) {
                     int ty = y + r.height() - 11;
                     g.drawString(font, r.text(), x, ty, r.color());
@@ -316,7 +353,19 @@ public class TownHallScreen extends Screen {
             y += r.height();
         }
         g.disableScissor();
-        Theme.scrollbar(g, left() + w() - 6, top(), bottom() - top(), scroll, view, total());
+        Theme.scrollbar(g, left() + w() - 6, listTop(), bottom() - listTop(), scroll, view, total());
+        if (!notice.isEmpty() && System.currentTimeMillis() - noticeAt < 15000) { // what came of it, over the bottom of the list
+            List<net.minecraft.util.FormattedCharSequence> lines = font.split(Component.literal(notice), w() - 24);
+            int n = Math.min(4, lines.size()), ph = n * 10 + 12, py = bottom() - ph - 2;
+            g.flush(); // the list's text is drawn at the end of the frame: over the panel, unless it goes now
+            g.pose().pushPose();
+            g.pose().translate(0, 0, 200);
+            Theme.panel(g, left() + 4, py, w() - 8, ph);
+            for (int i = 0; i < n; i++) {
+                g.drawString(font, lines.get(i), left() + 12, py + 6 + i * 10, noticeError ? Theme.BAD : Theme.TEXT);
+            }
+            g.pose().popPose();
+        }
     }
 
     @Override

@@ -36,7 +36,7 @@ public final class StadNetwork {
         PayloadRegistrar r = event.registrar("1");
         r.playToClient(ColonyInfoPayload.TYPE, ColonyInfoPayload.CODEC, (p, ctx) -> {
             if (FMLEnvironment.dist.isClient()) {
-                dev.eiriksb.stad.client.StadClientHooks.openTownHall(p.view());
+                dev.eiriksb.stad.client.StadClientHooks.openTownHall(p.view(), p.notice(), p.error());
             }
         });
         r.playToServer(ColonyActionPayload.TYPE, ColonyActionPayload.CODEC, StadNetwork::action);
@@ -174,6 +174,12 @@ public final class StadNetwork {
                         ? dev.eiriksb.stad.war.Politics.Stance.PEACEFUL : dev.eiriksb.stad.war.Politics.Stance.OPEN)) {
                     ColonyView.send(player, colony, level);
                 }
+            }
+            case ROADS -> {
+                var r = dev.eiriksb.stad.architect.TownRoads.plan(player, level, colony, dev.eiriksb.stad.architect.Yard.parse(
+                        "{\"paving\": \"" + p.text().replaceAll("[^a-z_]", "") + "\"}"));
+                player.sendSystemMessage(Component.literal(r.message()).withStyle(r.error() ? ChatFormatting.RED : ChatFormatting.GREEN));
+                ColonyView.send(player, colony, level, r.message(), r.error());
             }
             case POACHING -> {
                 if (colony.owner().equals(player.getUUID())) {

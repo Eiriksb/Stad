@@ -236,7 +236,7 @@ public final class Tables {
     private static void keep(Project p, int wx, int wz) {
         int x = wx - p.min.getX(), z = wz - p.min.getZ();
         if (x >= 0 && z >= 0 && x < p.sx && z < p.sz) {
-            p.keepOut.add(x | z << 6);
+            p.keepOut.add(Project.col(x, z));
         }
     }
 
@@ -465,7 +465,14 @@ public final class Tables {
                     Said said = plan(player, s, p, colony);
                     status(player, s, said.message(), said.error());
                 }
-                case ROUTE -> route(player, s, p, colony, false);
+                case ROUTE -> {
+                    if (a.text().equals("town")) { // roads for the whole town, planned at once
+                        TownRoads.Result r = TownRoads.plan(player, s.level, colony, p.yard != null ? p.yard : Yard.DEFAULT);
+                        status(player, s, r.message(), r.error());
+                    } else {
+                        route(player, s, p, colony, false);
+                    }
+                }
                 case FREE_BUILD -> {
                     String problem = FreeBuild.start(player, s.level, s.table, p);
                     if (problem != null) {

@@ -26,8 +26,12 @@ import java.util.Map;
  * into one int ({@link #key}). The generated blocks aren't saved; they're drawn up again from the spec.
  */
 public final class Project {
-    /** a site is at most this wide (sites are packed in six bits a side: {@link #key}) */
-    public static final int MAX_SIDE = 64, MAX_HEIGHT = 32, MIN_HEIGHT = 12;
+    /**
+     * a site is at most this wide (positions are packed in nine bits a side: {@link #key}); in practice the town's land
+     * is the limit, since the whole site has to be on it
+     */
+    public static final int MAX_SIDE = 512, MAX_HEIGHT = 32, MIN_HEIGHT = 12;
+    private static final int BITS = 9, MASK = (1 << BITS) - 1;
     /** the land shown round the site, faded */
     public static final int MARGIN = 4;
 
@@ -48,25 +52,40 @@ public final class Project {
     /** the generated building's blocks, drawn up from {@link #spec} (not saved) */
     public final Map<Integer, BlockState> generated = new HashMap<>();
     /**
-     * Columns of the site ({@code x | z << 6}) where the town's other buildings stand, which a road stops at (worked out
+     * Columns of the site ({@link #col}) where the town's other buildings stand, which a road stops at (worked out
      * when the land is looked at: {@link Tables#capture}; not saved)
      */
     public final java.util.Set<Integer> keepOut = new java.util.HashSet<>();
 
     public static int key(int x, int y, int z) {
-        return x | z << 6 | y << 12;
+        return x | z << BITS | y << 2 * BITS;
     }
 
     public static int kx(int key) {
-        return key & 63;
+        return key & MASK;
     }
 
     public static int kz(int key) {
-        return key >> 6 & 63;
+        return key >> BITS & MASK;
     }
 
     public static int ky(int key) {
-        return key >> 12;
+        return key >> 2 * BITS;
+    }
+
+    /** A column of the site, packed: x and z (as {@link #key} with y 0). */
+    public static int col(int x, int z) {
+        return x | z << BITS;
+    }
+
+    /** The column a key is in. */
+    public static int colOf(int key) {
+        return key & (1 << 2 * BITS) - 1;
+    }
+
+    /** A key saved before sites could be bigger than 64 (six bits a side). */
+    private static int fromOld(int key) {
+        return key(key & 63, key >> 12, key >> 6 & 63);
     }
 
     public boolean hasSite() {
@@ -158,6 +177,7 @@ public final class Project {
         }
         t.putString("Door", door.getSerializedName());
         t.putInt("Floor", floorY);
+        t.putInt("KeyBits", BITS);
         List<BlockState> palette = new ArrayList<>();
         Map<BlockState, Integer> index = new LinkedHashMap<>();
         int[] keys = new int[edits.size()];
@@ -221,15 +241,16 @@ public final class Project {
         for (int i = 0; i < pal.size(); i++) {
             palette.add(NbtUtils.readBlockState(BuiltInRegistries.BLOCK.asLookup(), pal.getCompound(i)));
         }
+        boolean old = t.getInt("KeyBits") != BITS;
         int[] keys = t.getIntArray("Keys"), states = t.getIntArray("States");
         for (int i = 0; i < Math.min(keys.length, states.length); i++) {
             if (states[i] >= 0 && states[i] < palette.size()) {
-                p.edits.put(keys[i], palette.get(states[i]));
+                p.edits.put(old ? fromOld(keys[i]) : keys[i], palette.get(states[i]));
             }
         }
         for (Tag tag : t.getList("Markers", Tag.TAG_COMPOUND)) {
             CompoundTag m = (CompoundTag) tag;
-            p.markers.put(m.getInt("Key"), m.getString("Name"));
+            p.markers.put(old ? fromOld(m.getInt("Key")) : m.getInt("Key"), m.getString("Name"));
         }
         return p;
     }

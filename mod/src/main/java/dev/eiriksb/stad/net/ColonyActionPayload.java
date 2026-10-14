@@ -8,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 
 /** Client to server: something done on the town hall screen. */
 public record ColonyActionPayload(int colony, Action action, String text) implements CustomPacketPayload {
-    public enum Action { RENAME, OPEN_STORAGE, STANCE, POACHING }
+    public enum Action { RENAME, OPEN_STORAGE, STANCE, POACHING, ROADS }
 
     public static final Type<ColonyActionPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "colony_action"));
     public static final StreamCodec<FriendlyByteBuf, ColonyActionPayload> CODEC = StreamCodec.of((buf, p) -> {

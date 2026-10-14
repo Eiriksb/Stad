@@ -8,8 +8,10 @@ import net.minecraft.client.Minecraft;
 public final class StadClientHooks {
     private StadClientHooks() {}
 
-    public static void openTownHall(ColonyView view) {
-        Minecraft.getInstance().setScreen(new TownHallScreen(view));
+    public static void openTownHall(ColonyView view, String notice, boolean error) {
+        TownHallScreen s = new TownHallScreen(view);
+        s.notice(notice, error);
+        Minecraft.getInstance().setScreen(s);
     }
 
     public static void openPlans(PlansPayload plans) {

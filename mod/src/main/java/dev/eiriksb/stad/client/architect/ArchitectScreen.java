@@ -689,7 +689,15 @@ public class ArchitectScreen extends Screen {
                 setStatus("Routing...", false);
             }).tooltip(Tooltip.create(Component.literal("Join up what's in the site (the doors of the town's buildings, the town hall, and roads"
                     + " at its edge) the easiest way over the land, round buildings and hills. It adds to the road drawn so far.")))
-                    .bounds(px, y, pw, 18).build()));
+                    .bounds(px, y, half, 18).build()));
+            editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Whole town"), b -> {
+                generate(); // these settings, kept with the table
+                send(TablePayloads.Action.Kind.ROUTE, "town");
+                setStatus("Routing roads for the whole town...", false);
+            }).tooltip(Tooltip.create(Component.literal("Plan roads joining every door in the town, and the town hall, over all of its land"
+                    + " (not just this site), with this paving, width and lamps. It adds to the roads already there. The town hall has this"
+                    + " button too.")))
+                    .bounds(px + half + 2, y, half, 18).build()));
             y += 20;
         }
         editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Lay it out"), b -> generate())
@@ -1375,7 +1383,7 @@ public class ArchitectScreen extends Screen {
         Theme.header(g, font, Component.literal("Choose the site"), cx, cy - 52);
         List<FormattedCharSequence> lines = font.split(Component.literal(open.canEdit()
                 ? "Mark two corners with the scan wand and right-click the table with it, or type the corners here. "
-                + "At most " + Project.MAX_SIDE + " by " + Project.MAX_SIDE + " blocks, on the town's land."
+                + "It can be as big as you like, as long as it's all on the town's land."
                 : "An officer has to choose the site: mark two corners with the scan wand and right-click the table with it."), 250);
         for (int i = 0; i < Math.min(3, lines.size()); i++) {
             g.drawCenteredString(font, lines.get(i), cx, cy - 36 + i * 10, Theme.TEXT);

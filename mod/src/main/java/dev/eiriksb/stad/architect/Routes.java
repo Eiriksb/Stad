@@ -20,35 +20,153 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Set;
+import java.util.function.IntBinaryOperator;
 
 /**
- * The table routing a road for you (PLAN.md §6.11): it finds what there is to join in the site (the doors of the
- * town's buildings, the town hall, and roads and paths that run up to the site's edge) and joins them up the cheapest
- * way over the land as it is: round buildings, not up anything steeper than a block at a time, over water only when
- * there's no way round, along roads that are already there where it can. The route becomes {@code stad:road} markers,
- * the same as a road drawn by hand, so it can be changed afterwards.
+ * Routing roads (PLAN.md §6.11): finding what there is to join (the doors and gates of the town's buildings, the town
+ * hall, and roads that run up to a site's edge) and joining them up the cheapest way over the land as it is: round
+ * buildings, not up anything steeper than a block at a time, over water only when there's no way round, along roads
+ * that are already there where it can. The table routes inside its site ({@link #route}: the route becomes
+ * {@code stad:road} markers, the same as a road drawn by hand); {@link TownRoads} routes over the whole town.
  */
 public final class Routes {
     private Routes() {}
 
-    /** Something the road joins: a column of the site, and what it is ("the Bakery's door"). */
+    /** Something the road joins: a column ({@code x}, {@code z} from the land's corner), and what it is ("the Bakery"). */
     record End(int x, int z, String what) {}
 
-    /** What routing came to: the cells it added, what it joined, what it couldn't reach, or why it couldn't start. */
+    /** What routing in a site came to: the columns it added, what it joined, what it couldn't reach, or why it couldn't start. */
     public record Route(Set<Integer> cells, List<String> joined, List<String> missed, String problem) {
         public String message() {
             if (problem != null) {
                 return problem;
             }
-            String out = "Routed a road joining " + dev.eiriksb.stad.planner.Design.join(joined) + " (" + cells.size() + " blocks long).";
-            if (!missed.isEmpty()) {
-                out += " It can't get to " + dev.eiriksb.stad.planner.Design.join(missed) + " (too steep, or built round): draw that bit by hand.";
-            }
-            return out;
+            return "Routed a road joining " + dev.eiriksb.stad.planner.Design.join(joined) + " (" + cells.size() + " blocks long)." + missedLine(missed);
         }
     }
 
+    static String missedLine(List<String> missed) {
+        return missed.isEmpty() ? "" : " It can't get to " + dev.eiriksb.stad.planner.Design.join(missed)
+                + " (too steep, or built round): draw that bit by hand.";
+    }
+
+    /** What joining up came to: the columns added ({@code x + z * sx}), what it joined and what it couldn't reach. */
+    record Joined(Set<Integer> added, List<String> joined, List<String> missed) {}
+
     private static final int[][] STEPS = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
+
+    /**
+     * The land a road is routed over: a rectangle of columns ({@code x + z * sx}) from a corner in the world, each with
+     * the height of its ground (world y), whether a road can go there, and what going there costs.
+     */
+    static final class Land {
+        final int sx, sz, ox, oz;
+        final int[] ground;
+        final boolean[] blocked;
+        final float[] cost;
+
+        Land(int ox, int oz, int sx, int sz) {
+            this.ox = ox;
+            this.oz = oz;
+            this.sx = sx;
+            this.sz = sz;
+            ground = new int[sx * sz];
+            blocked = new boolean[sx * sz];
+            cost = new float[sx * sz];
+        }
+
+        boolean inside(int x, int z) {
+            return x >= 0 && z >= 0 && x < sx && z < sz;
+        }
+
+        /**
+         * A column: its ground at world height {@code g} (the top of the land, under any tree), with {@code tree} when a
+         * tree stands on it. Only ground a road can be laid on is open: not a chest, a table or a roof.
+         */
+        void column(int x, int z, int g, BlockState here, boolean tree) {
+            int c = x + z * sx;
+            ground[c] = g;
+            if (here.getFluidState().isEmpty() && !Yard.groundLike(here)) {
+                blocked[c] = true;
+                return;
+            }
+            cost[c] = (!here.getFluidState().isEmpty() ? 4 : Yard.paving(here) ? 0.4f : 1) + (tree ? 6 : 0);
+        }
+
+        /**
+         * Shuts off the town's buildings (with room for a road {@code pad} blocks either side of its middle, except near
+         * the ends, so it can come up to a door), the walls' own blocks and the town hall.
+         */
+        void buildings(Colony colony, int pad, List<End> ends) {
+            for (Building b : colony.buildings()) {
+                if (b.is(BuildingDef.ROAD) || b.placement().isEmpty()) {
+                    continue;
+                }
+                Placement pl = b.placement().get();
+                if (b.ring()) {
+                    pl.steps().forEach(s -> block(s.pos().getX() - ox, s.pos().getZ() - oz));
+                    continue;
+                }
+                BoundingBox box = pl.bounds();
+                for (int x = Math.max(0, box.minX() - pad - ox); x <= Math.min(sx - 1, box.maxX() + pad - ox); x++) {
+                    for (int z = Math.max(0, box.minZ() - pad - oz); z <= Math.min(sz - 1, box.maxZ() + pad - oz); z++) {
+                        int wx = x + ox, wz = z + oz, cx = x, cz = z;
+                        boolean in = wx >= box.minX() && wx <= box.maxX() && wz >= box.minZ() && wz <= box.maxZ();
+                        if (in || ends.stream().noneMatch(e -> Math.abs(e.x() - cx) + Math.abs(e.z() - cz) <= pad + 1)) {
+                            blocked[x + z * sx] = true;
+                        }
+                    }
+                }
+            }
+            block(colony.center.getX() - ox, colony.center.getZ() - oz);
+            for (End e : ends) {
+                blocked[e.x() + e.z() * sx] = false;
+            }
+        }
+
+        void block(int x, int z) {
+            if (inside(x, z)) {
+                blocked[x + z * sx] = true;
+            }
+        }
+    }
+
+    /**
+     * Joins {@code ends} up: a tree grown from {@code start} (columns of a road there already; when empty, from the first
+     * end), reaching the nearest end not yet joined each time.
+     */
+    static Joined join(Land land, List<End> ends, Set<Integer> start, String startName) {
+        Set<Integer> tree = new LinkedHashSet<>(start);
+        List<String> joined = new ArrayList<>(), missed = new ArrayList<>();
+        List<End> left = new ArrayList<>(ends);
+        Set<Integer> added = new LinkedHashSet<>();
+        if (!tree.isEmpty()) {
+            joined.add(startName);
+            left.removeIf(e -> tree.contains(e.x() + e.z() * land.sx)); // already on the road
+        } else if (!left.isEmpty()) {
+            End first = left.removeFirst();
+            tree.add(first.x() + first.z() * land.sx);
+            added.add(first.x() + first.z() * land.sx);
+            joined.add(first.what());
+        }
+        while (!left.isEmpty()) {
+            int[] path = nearest(land, tree, left);
+            if (path == null) {
+                left.forEach(e -> missed.add(e.what()));
+                break;
+            }
+            int end = path[path.length - 1];
+            End reached = left.stream().filter(e -> e.x() + e.z() * land.sx == end).findFirst().orElseThrow();
+            left.removeIf(e -> e.x() + e.z() * land.sx == end);
+            joined.add(reached.what());
+            for (int c : path) {
+                if (tree.add(c)) {
+                    added.add(c);
+                }
+            }
+        }
+        return new Joined(added, joined, missed);
+    }
 
     /** Routes a road in the site's project and adds it to the road drawn so far. */
     public static Route route(Project p, Grid terrain, Colony colony) {
@@ -56,7 +174,7 @@ public final class Routes {
         Set<Integer> drawn = new HashSet<>();
         p.markers.forEach((k, m) -> {
             if (m.equals("stad:road")) {
-                drawn.add(cell(Project.kx(k), Project.kz(k)));
+                drawn.add(Project.kx(k) + Project.kz(k) * p.sx);
             }
         });
         if (ends.isEmpty() || ends.size() == 1 && drawn.isEmpty()) {
@@ -68,129 +186,58 @@ public final class Routes {
                         + ", or where a road comes in, or draw the road with the Road tool.");
             }
         }
-        int n = p.sx * p.sz;
-        int[] ground = new int[n];
-        boolean[] blocked = new boolean[n];
-        float[] cost = new float[n];
+        Land land = new Land(p.min.getX(), p.min.getZ(), p.sx, p.sz);
         for (int x = 0; x < p.sx; x++) {
             for (int z = 0; z < p.sz; z++) {
-                int c = x + z * p.sx, g = Yard.top(terrain, p, x, z);
-                ground[c] = g;
+                int g = Yard.top(terrain, p, x, z);
                 if (g < 0 || g + 2 >= p.sy) {
-                    blocked[c] = true;
+                    land.blocked[x + z * p.sx] = true;
                     continue;
                 }
-                BlockState here = land(terrain, x, g, z), above = land(terrain, x, g + 1, z);
-                if (here.getFluidState().isEmpty() && !Yard.groundLike(here)) {
-                    blocked[c] = true; // something standing there: a chest, a table, a roof
-                    continue;
-                }
-                cost[c] = !here.getFluidState().isEmpty() ? 4 : Yard.paving(here) ? 0.4f : 1;
-                if (above.is(BlockTags.LOGS) || above.is(BlockTags.LEAVES)) {
-                    cost[c] += 6; // a tree to fell
-                }
+                BlockState above = land(terrain, x, g + 1, z);
+                land.column(x, z, g + p.min.getY(), land(terrain, x, g, z), above.is(BlockTags.LOGS) || above.is(BlockTags.LEAVES));
             }
         }
-        // buildings, with room for the road's width beside them (but it can always come up to a door)
-        int pad = (p.yard != null ? p.yard : Yard.DEFAULT).width() / 2;
-        for (Building b : colony.buildings()) {
-            if (b.ring() || b.is(BuildingDef.ROAD)) {
-                continue;
-            }
-            b.placement().map(Placement::bounds).ifPresent(box -> {
-                for (int x = Math.max(0, box.minX() - pad - p.min.getX()); x <= Math.min(p.sx - 1, box.maxX() + pad - p.min.getX()); x++) {
-                    for (int z = Math.max(0, box.minZ() - pad - p.min.getZ()); z <= Math.min(p.sz - 1, box.maxZ() + pad - p.min.getZ()); z++) {
-                        int wx = x + p.min.getX(), wz = z + p.min.getZ(), cx = x, cz = z;
-                        boolean inside = wx >= box.minX() && wx <= box.maxX() && wz >= box.minZ() && wz <= box.maxZ();
-                        if (inside || ends.stream().noneMatch(e -> Math.abs(e.x() - cx) + Math.abs(e.z() - cz) <= pad + 1)) {
-                            blocked[x + z * p.sx] = true;
-                        }
-                    }
-                }
-            });
+        land.buildings(colony, (p.yard != null ? p.yard : Yard.DEFAULT).width() / 2, ends);
+        Joined j = join(land, ends, drawn, "the road drawn so far");
+        if (j.added().isEmpty() && j.missed().isEmpty()) {
+            return new Route(Set.of(), j.joined(), j.missed(), "The road already joins " + dev.eiriksb.stad.planner.Design.join(j.joined()) + ".");
         }
-        // the town hall's own block, and anything else standing on the ground that isn't a plant
-        int hx = colony.center.getX() - p.min.getX(), hz = colony.center.getZ() - p.min.getZ();
-        if (hx >= 0 && hz >= 0 && hx < p.sx && hz < p.sz) {
-            blocked[hx + hz * p.sx] = true;
-        }
-        for (End e : ends) {
-            blocked[e.x() + e.z() * p.sx] = false;
-        }
-        Set<Integer> tree = new LinkedHashSet<>();
-        List<String> joined = new ArrayList<>(), missed = new ArrayList<>();
-        List<End> left = new ArrayList<>(ends);
-        if (!drawn.isEmpty()) {
-            for (int c : drawn) {
-                tree.add(Project.kx(c) + (c >> 6) * p.sx);
-            }
-            joined.add("the road drawn so far");
-        } else {
-            End first = left.removeFirst();
-            tree.add(first.x() + first.z() * p.sx);
-            joined.add(first.what());
-        }
-        Set<Integer> added = new LinkedHashSet<>();
-        while (!left.isEmpty()) {
-            int[] path = nearest(p, tree, left, ground, blocked, cost);
-            if (path == null) {
-                left.forEach(e -> missed.add(e.what()));
-                break;
-            }
-            int end = path[path.length - 1];
-            End reached = left.stream().filter(e -> e.x() + e.z() * p.sx == end).findFirst().orElseThrow();
-            left.remove(reached);
-            joined.add(reached.what());
-            for (int c : path) {
-                if (tree.add(c)) {
-                    added.add(c);
-                }
-            }
-        }
-        if (drawn.isEmpty() && !tree.isEmpty()) {
-            added.add(tree.iterator().next());
-        }
-        if (added.isEmpty() && missed.isEmpty()) {
-            return new Route(Set.of(), joined, missed, "The road already joins " + dev.eiriksb.stad.planner.Design.join(joined) + ".");
-        }
-        if (joined.size() < 2) {
-            return new Route(Set.of(), joined, missed, "There's no way to " + dev.eiriksb.stad.planner.Design.join(missed)
+        if (j.joined().size() < 2) {
+            return new Route(Set.of(), j.joined(), j.missed(), "There's no way to " + dev.eiriksb.stad.planner.Design.join(j.missed())
                     + " without climbing more than a block at a time or going through a building: draw the road with the Road tool.");
         }
         Set<Integer> cells = new LinkedHashSet<>();
-        for (int c : added) {
+        for (int c : j.added()) {
             int x = c % p.sx, z = c / p.sx;
-            p.markers.put(Project.key(x, Math.max(0, ground[c]), z), "stad:road");
-            cells.add(cell(x, z));
+            p.markers.put(Project.key(x, Math.max(0, land.ground[c] - p.min.getY()), z), "stad:road");
+            cells.add(Project.col(x, z));
         }
-        return new Route(cells, joined, missed, null);
-    }
-
-    private static int cell(int x, int z) {
-        return x | z << 6;
+        return new Route(cells, j.joined(), j.missed(), null);
     }
 
     /**
-     * The cheapest way from any cell of {@code tree} to the nearest of {@code ends} (cells as {@code x + z * sx}, the
-     * end last), or null when none can be reached. Turning costs a little, so the road runs straight where it can.
+     * The cheapest way from any column of {@code tree} to the nearest of {@code ends} (columns as {@code x + z * sx},
+     * the end last), or null when none can be reached. Turning costs a little, so the road runs straight where it can.
      */
-    private static int[] nearest(Project p, Set<Integer> tree, List<End> ends, int[] ground, boolean[] blocked, float[] cost) {
-        int n = p.sx * p.sz;
+    private static int[] nearest(Land land, Set<Integer> tree, List<End> ends) {
+        int n = land.sx * land.sz;
         float[] dist = new float[n * 5];
         int[] from = new int[n * 5];
         Arrays.fill(dist, Float.MAX_VALUE);
         Arrays.fill(from, -1);
         Set<Integer> goals = new HashSet<>();
-        ends.forEach(e -> goals.add(e.x() + e.z() * p.sx));
-        PriorityQueue<float[]> open = new PriorityQueue<>((a, b) -> Float.compare(a[0], b[0]));
+        ends.forEach(e -> goals.add(e.x() + e.z() * land.sx));
+        PriorityQueue<long[]> open = new PriorityQueue<>((a, b) -> Float.compare(Float.intBitsToFloat((int) a[0]), Float.intBitsToFloat((int) b[0])));
         for (int c : tree) {
             dist[c * 5 + 4] = 0;
-            open.add(new float[]{0, c * 5 + 4});
+            open.add(new long[]{Float.floatToIntBits(0), c * 5L + 4});
         }
         while (!open.isEmpty()) {
-            float[] top = open.poll();
+            long[] top = open.poll();
+            float at = Float.intBitsToFloat((int) top[0]);
             int state = (int) top[1], c = state / 5, dir = state % 5;
-            if (top[0] > dist[state]) {
+            if (at > dist[state]) {
                 continue;
             }
             if (goals.contains(c) && !tree.contains(c)) {
@@ -200,23 +247,23 @@ public final class Routes {
                 }
                 return path.stream().mapToInt(Integer::intValue).toArray();
             }
-            int x = c % p.sx, z = c / p.sx;
+            int x = c % land.sx, z = c / land.sx;
             for (int d = 0; d < 4; d++) {
                 int nx = x + STEPS[d][0], nz = z + STEPS[d][1];
-                if (nx < 0 || nz < 0 || nx >= p.sx || nz >= p.sz) {
+                if (!land.inside(nx, nz)) {
                     continue;
                 }
-                int m = nx + nz * p.sx;
-                int climb = Math.abs(ground[m] - ground[c]);
-                if (blocked[m] || climb > 1) {
+                int m = nx + nz * land.sx;
+                int climb = Math.abs(land.ground[m] - land.ground[c]);
+                if (land.blocked[m] || climb > 1) {
                     continue;
                 }
-                float next = top[0] + cost[m] + climb * 2 + (dir != 4 && dir != d ? 0.6f : 0);
+                float next = at + land.cost[m] + climb * 2 + (dir != 4 && dir != d ? 0.6f : 0);
                 int ns = m * 5 + d;
                 if (next < dist[ns]) {
                     dist[ns] = next;
                     from[ns] = state;
-                    open.add(new float[]{next, ns});
+                    open.add(new long[]{Float.floatToIntBits(next), ns});
                 }
             }
         }
@@ -228,35 +275,39 @@ public final class Routes {
     }
 
     /**
-     * What there is to join: the doors (and gates) of the town's buildings, outside them, that are in the site; the
-     * town hall; and roads and paths running up to the site's edge (one end for each).
+     * The doors (and gates) of the town's buildings in the land, the first column outside each, and the town hall (a
+     * column beside it whose ground is the hall's: {@code groundAt} gives a column's ground, world y). A finished
+     * building's doors are looked for in {@code world} too (a gate that stood there before it was planned isn't one of
+     * its steps); one with no door at all (a market square's open way in) is joined at the middle of its side nearest
+     * the hall.
      */
-    static List<End> ends(Project p, Grid terrain, Colony colony) {
+    static List<End> doors(Colony colony, Land land, IntBinaryOperator groundAt, java.util.function.Function<BlockPos, BlockState> world) {
         List<End> out = new ArrayList<>();
-        BoundingBox site = new BoundingBox(p.min.getX(), p.min.getY(), p.min.getZ(), p.min.getX() + p.sx - 1, p.min.getY() + p.sy - 1,
-                p.min.getZ() + p.sz - 1);
+        BoundingBox area = new BoundingBox(land.ox, -100000, land.oz, land.ox + land.sx - 1, 100000, land.oz + land.sz - 1);
         for (Building b : colony.buildings()) {
             if (b.ring() || b.is(BuildingDef.ROAD) || b.placement().isEmpty()) {
                 continue;
             }
             Placement pl = b.placement().get();
             BoundingBox box = pl.bounds();
-            if (!box.inflatedBy(1).intersects(site)) {
+            if (!box.inflatedBy(1).intersects(area)) {
                 continue;
             }
             List<BlockPos> doors = new ArrayList<>(pl.markers("stad:door"));
             for (Placement.Step s : pl.steps()) {
-                BlockState st = s.state();
-                if (st.getBlock() instanceof DoorBlock && st.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER || st.getBlock() instanceof FenceGateBlock) {
+                if (door(s.state())) {
                     doors.add(s.pos());
                 }
+            }
+            if (doors.isEmpty() && world != null && b.done()) {
+                BlockPos.betweenClosedStream(box).filter(pos -> door(world.apply(pos))).findFirst().ifPresent(pos -> doors.add(pos.immutable()));
             }
             End found = null;
             for (BlockPos d : doors) {
                 for (Direction dir : Direction.Plane.HORIZONTAL) {
                     BlockPos o = d.relative(dir);
-                    int x = o.getX() - p.min.getX(), z = o.getZ() - p.min.getZ();
-                    if (!box.isInside(o) && x >= 0 && z >= 0 && x < p.sx && z < p.sz) {
+                    int x = o.getX() - land.ox, z = o.getZ() - land.oz;
+                    if (!box.isInside(o) && land.inside(x, z)) {
                         found = new End(x, z, "the " + b.name);
                         break;
                     }
@@ -265,19 +316,56 @@ public final class Routes {
                     break;
                 }
             }
+            if (found == null && doors.isEmpty()) { // no door: the middle of the side facing the hall
+                int mx = (box.minX() + box.maxX()) / 2, mz = (box.minZ() + box.maxZ()) / 2;
+                int[][] sides = {{mx, box.minZ() - 1}, {mx, box.maxZ() + 1}, {box.minX() - 1, mz}, {box.maxX() + 1, mz}};
+                int[] best = null;
+                for (int[] sd : sides) {
+                    if (land.inside(sd[0] - land.ox, sd[1] - land.oz) && (best == null || dist(sd, colony.center) < dist(best, colony.center))) {
+                        best = sd;
+                    }
+                }
+                if (best != null) {
+                    found = new End(best[0] - land.ox, best[1] - land.oz, "the " + b.name);
+                }
+            }
             if (found != null) {
                 out.add(found);
             }
         }
         BlockPos hall = colony.center;
-        int hx = hall.getX() - p.min.getX(), hz = hall.getZ() - p.min.getZ();
         for (Direction dir : Direction.Plane.HORIZONTAL) {
-            int x = hx + dir.getStepX(), z = hz + dir.getStepZ();
-            if (x >= 0 && z >= 0 && x < p.sx && z < p.sz && Yard.top(terrain, p, x, z) == hall.getY() - p.min.getY() - 1) {
+            int x = hall.getX() + dir.getStepX() - land.ox, z = hall.getZ() + dir.getStepZ() - land.oz;
+            if (land.inside(x, z) && groundAt.applyAsInt(x, z) == hall.getY() - 1) {
                 out.add(new End(x, z, "the town hall"));
                 break;
             }
         }
+        return out;
+    }
+
+    private static boolean door(BlockState st) {
+        return st.getBlock() instanceof DoorBlock && st.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER || st.getBlock() instanceof FenceGateBlock;
+    }
+
+    private static long dist(int[] c, BlockPos to) {
+        long dx = c[0] - to.getX(), dz = c[1] - to.getZ();
+        return dx * dx + dz * dz;
+    }
+
+    /**
+     * What there is to join in a site: the doors, the town hall, and roads and paths running up to the site's edge
+     * (one end for each).
+     */
+    static List<End> ends(Project p, Grid terrain, Colony colony) {
+        Land area = new Land(p.min.getX(), p.min.getZ(), p.sx, p.sz);
+        List<End> out = doors(colony, area, (x, z) -> {
+            int g = Yard.top(terrain, p, x, z);
+            return g < 0 ? Integer.MIN_VALUE : g + p.min.getY();
+        }, pos -> { // the site and the land round it, as the table sees it
+            int x = pos.getX() - p.min.getX() + Project.MARGIN, y = pos.getY() - p.min.getY() + Project.MARGIN, z = pos.getZ() - p.min.getZ() + Project.MARGIN;
+            return terrain.inside(x, y, z) ? terrain.get(x, y, z) : net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+        });
         // roads coming up to the edge: runs of paths (or the town's roads) just outside it, one end in the middle of each
         List<BoundingBox> roads = colony.buildings().stream().filter(b -> b.done() && b.is(BuildingDef.ROAD))
                 .flatMap(b -> b.placement().map(Placement::bounds).stream()).toList();
