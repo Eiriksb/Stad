@@ -473,6 +473,36 @@ def furnish_school(b, w, d, seat="minecraft:oak_stairs"):
 def school_with(seat):
     return lambda b, w, d: furnish_school(b, w, d, seat)
 
+
+# ---- the trades' workplaces ---------------------------------------------------------------------------------------
+
+def furnish_sawmill(b, w, d):
+    b[(1, 1, d - 2)] = ("minecraft:crafting_table", {})
+    b[(2, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    for x in range(w - 3, w - 1):  # the log pile
+        for y in (1, 2):
+            b[(x, y, d - 2)] = ("minecraft:oak_log", {"axis": "z"})
+    b[(w - 2, 1, 1)] = ("minecraft:oak_slab", {"type": "bottom", "waterlogged": "false"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def furnish_stoneworks(b, w, d):
+    b[(1, 1, d - 2)] = ("minecraft:stonecutter", {"facing": "north"})
+    b[(2, 1, d - 2)] = ("minecraft:furnace", {"facing": "north", "lit": "false"})
+    b[(3, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(w - 2, 1, d - 2)] = ("minecraft:cobblestone", {})
+    b[(w - 2, 2, d - 2)] = ("minecraft:cobblestone_slab", {"type": "bottom", "waterlogged": "false"})
+    b[(w - 2, 1, d - 3)] = ("minecraft:stone_bricks", {})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+def furnish_loom_house(b, w, d):
+    b[(w // 2, 1, d - 2)] = ("minecraft:loom", {"facing": "north"})
+    b[(1, 1, d - 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(w - 2, 1, d - 2)] = ("minecraft:white_wool", {})
+    b[(w - 2, 2, d - 2)] = ("minecraft:red_wool", {})
+    b[(w - 3, 1, d - 2)] = ("minecraft:light_blue_wool", {})
+    b[(w // 2, 1, 3)] = ("minecraft:red_carpet", {})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
 SIDE_WINDOWS = lambda w, d: [(0, 2, d // 2), (w - 1, 2, d // 2)]
 
 PACKS = {
@@ -498,6 +528,12 @@ PACKS = {
                    workplace(medieval_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
         "school": ("stad:school", "Schoolhouse", "Benches facing the teacher's lectern, between the bookshelves.",
                    workplace(medieval_shell, school_with("minecraft:spruce_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "sawmill": ("stad:sawmill", "Sawmill", "A crafting table and a log pile, where the carpenter saws planks and makes doors and fences.",
+                    workplace(medieval_shell, furnish_sawmill, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "stoneworks": ("stad:stoneworks", "Stoneworks", "A stonecutter and a furnace, where the mason makes stone, bricks and glass.",
+                       workplace(medieval_shell, furnish_stoneworks, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "loom_house": ("stad:loom_house", "Loom House", "The weaver's loom among bales of wool, for beds and carpets.",
+                       workplace(medieval_shell, furnish_loom_house, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
     }),
     "fjord": ({"name": "Fjord", "description": "Laid log walls on stone footings, under turf roofs.", "author": "Stad"}, {
         "stue": ("stad:home", "Stue", "A log house with a turf roof and two beds.", fjord_stue, ["small", "home"]),
@@ -519,6 +555,12 @@ PACKS = {
                       workplace(fjord_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
         "skulestue": ("stad:school", "Skulestue", "The schoolroom in a log house: benches and a lectern.",
                       workplace(fjord_shell, school_with("minecraft:spruce_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "sagbruk": ("stad:sawmill", "Sagbruk", "The saw shed: crafting table and log pile under a turf roof.",
+                    workplace(fjord_shell, furnish_sawmill, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "steinhoggeri": ("stad:stoneworks", "Steinhoggeri", "The stonecutter's hut: stonecutter, furnace and a heap of cobblestone.",
+                         workplace(fjord_shell, furnish_stoneworks, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "vevstue": ("stad:loom_house", "Vevstue", "The weaving room: the loom and the wool in a warm log house.",
+                    workplace(fjord_shell, furnish_loom_house, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
     }),
     "oasis": ({"name": "Oasis", "description": "Sandstone houses with flat roofs and parapets, palm-wood beams.", "author": "Stad"}, {
         "house": ("stad:home", "Sandstone House", "A cool sandstone house with two beds.", oasis_house, ["small", "home"]),
@@ -540,6 +582,12 @@ PACKS = {
                  workplace(oasis_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
         "school": ("stad:school", "Oasis School", "Sandstone benches facing the lectern.",
                    workplace(oasis_shell, school_with("minecraft:sandstone_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "sawpit": ("stad:sawmill", "Sawpit", "Where palm and acacia logs are sawn into planks.",
+                   workplace(oasis_shell, furnish_sawmill, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "stonecutters": ("stad:stoneworks", "Stonecutters' Yard", "Sandstone walls round the stonecutter and the kiln.",
+                         workplace(oasis_shell, furnish_stoneworks, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
+        "weaving_house": ("stad:loom_house", "Weaving House", "A cool room for the loom and the dyed wool.",
+                          workplace(oasis_shell, furnish_loom_house, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
     }),
 }
 

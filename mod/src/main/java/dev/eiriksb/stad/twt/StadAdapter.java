@@ -214,6 +214,10 @@ public final class StadAdapter implements VillagerAdapter {
                 long kids = t.citizens().stream().filter(o -> level.getEntity(o.uuid) instanceof CitizenEntity e && e.isBaby()).count();
                 f.context.add(kids == 0 ? "The town has no children to teach yet." : "The town has " + kids + (kids == 1 ? " child" : " children") + " to teach.");
             }
+            case Jobs.CARPENTER, Jobs.MASON, Jobs.WEAVER -> f.context.add(done == 0 ? "You haven't made anything yet today."
+                    : "Today you've made " + done + " things for the town.");
+            case Jobs.BEEKEEPER -> f.context.add(done == 0 ? "You haven't taken any honey yet today." : "Today you've done " + done
+                    + " pieces of work with the bees.");
             case Jobs.GUARD -> f.context.add(dev.eiriksb.stad.war.Combat.unarmed(c)
                     ? "You have no sword yet; you'd like one put in the town hall (an iron one, ideally)."
                     : "You carry a " + c.getMainHandItem().getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + ".");

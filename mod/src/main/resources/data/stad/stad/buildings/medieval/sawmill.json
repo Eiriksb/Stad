@@ -1,0 +1,10 @@
+{
+  "type": "stad:sawmill",
+  "name": "Sawmill",
+  "description": "A crafting table and a log pile, where the carpenter saws planks and makes doors and fences.",
+  "structure": "stad:medieval/sawmill",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

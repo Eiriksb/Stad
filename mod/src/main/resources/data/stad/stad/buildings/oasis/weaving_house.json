@@ -1,0 +1,10 @@
+{
+  "type": "stad:loom_house",
+  "name": "Weaving House",
+  "description": "A cool room for the loom and the dyed wool.",
+  "structure": "stad:oasis/weaving_house",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

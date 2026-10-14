@@ -631,6 +631,30 @@ PNG in the assets; `models.py` drives Blockbench over its debugging port to buil
 table as a drafting table, the town hall as a panelled desk with a ledger) and saves each as a `.bbmodel` in
 `art/blockbench`, a Java block model and a preview. Both blocks face the player who places them.
 
+### 6.12 The trades: carpenter, mason, weaver, beekeeper
+
+**Crafting trades.** `citizen/Crafts` defines a `Trade` for each of the carpenter (sawmill: crafting table), the mason
+(stoneworks: stonecutter, plus a furnace for smelting) and the weaver (loom house: loom): what it makes (by item tags,
+or for the mason stone, brick and glass blocks), the stock it keeps (planks 64, sticks 32; stone 32, stone bricks 64,
+glass 16; beds 2) and what it makes things from (for the "nothing to make X from" line). `Crafts.how` finds a batch:
+the stonecutter first (for the mason), then crafting through `Smithing.bill` (which makes planks and sticks on the
+way), then the furnace; up to eight at a time. `CrafterGoal` plans every 50 ticks: the town's requests (what waiting
+buildings are missing) that the trade makes come first, then the stock, counting what's in the stores and in its own
+pockets; it fetches the bill, works at the bench (or furnace), and takes the result to the town hall. The workplaces
+need walls and a roof plus their bench (the table furnishes it when generating) and are in every pack.
+
+**Beekeeper.** The apiary is land (`stad:apiary`, a `Yard` kind): levelled, fenced with a gate, beehives every three
+blocks along its middle facing the gate, an optional path from the gate, and flowers on every other block, which
+become `stad:flower` land markers for the beekeeper to sow. Builders make a hive from six oak planks
+(`Placement.itemFor/cost`). `BeekeeperGoal`: harvest a full hive (honey bottle with a glass bottle from the stores,
+else three honeycomb; the honey level is reset without angering the bees), bring bees to a hive with fewer than two (a
+wild bee within 48 blocks is given the hive; with none, a swarm settles in once a day when there are flowers near),
+and sow the flower markers. One beekeeper keeps all of an apiary's hives.
+
+**Tools.** `Tools.of`: carpenter axe, mason pickaxe, weaver and beekeeper shears; the town's tool requests and the
+smith's "nothing to make one from" name everyone short of one (`Tools.whoNeeds`). A crafter doesn't start a batch when
+the town hall (or warehouse) has no room for what it makes, or its pockets can't hold it, and says the hall is full.
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).

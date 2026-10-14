@@ -173,7 +173,9 @@ public class SmithGoal extends WorkGoal {
         }
         for (Tools.Kind k : Tools.Kind.values()) {
             if (Tools.shortage(level, colony, k) > 0) {
-                return "The " + Tools.jobOf(k) + "s need " + k.words + ", but there's nothing to make one from: put " + materials(k)
+                String who = Tools.whoNeeds(level, colony, k);
+                return Character.toUpperCase(who.charAt(0)) + who.substring(1) + " need" + (who.contains(" and ") || who.endsWith("s") ? " " : "s ")
+                        + k.words + ", but there's nothing to make one from: put " + materials(k)
                         + " in the town hall";
             }
         }

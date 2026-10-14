@@ -109,6 +109,9 @@ public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Ste
                 || b == net.minecraft.world.level.block.Blocks.MYCELIUM) {
             return Items.DIRT;
         }
+        if (b == net.minecraft.world.level.block.Blocks.BEEHIVE) {
+            return Items.OAK_PLANKS; // knocked together from planks: a new town has no honeycomb for the real recipe
+        }
         return b.asItem();
     }
 
@@ -125,6 +128,9 @@ public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Ste
         }
         if (state.getBlock() instanceof SlabBlock && state.getValue(SlabBlock.TYPE) == SlabType.DOUBLE) {
             return 2;
+        }
+        if (state.is(net.minecraft.world.level.block.Blocks.BEEHIVE) && item == Items.OAK_PLANKS) {
+            return 6;
         }
         return 1;
     }

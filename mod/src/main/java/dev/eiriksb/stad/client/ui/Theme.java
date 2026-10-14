@@ -38,7 +38,7 @@ public final class Theme {
     public static final int ON_BRASS = 0xFF2B1D14;
 
     private static final Set<String> JOBS = Set.of("builder", "farmer", "lumberjack", "courier", "guard", "cook", "fisher", "shepherd", "miner",
-            "smith", "healer", "merchant", "teacher");
+            "smith", "healer", "merchant", "teacher", "carpenter", "mason", "weaver", "beekeeper");
 
     /** A job's 16 by 16 icon (a question mark for no job). */
     public static ResourceLocation job(String job) {

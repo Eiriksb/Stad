@@ -86,6 +86,25 @@
 - Builders ask for dirt, not grass or path blocks (which a survival player can't pick up), and turn it into what the
   design needs.
 
+**Four new trades**
+- **Carpenter** at a **sawmill** (a crafting table): saws the lumberjack's logs into planks and sticks, and makes the
+  doors, fences, stairs, chests and the like the builders are waiting for.
+- **Mason** at a **stoneworks** (a stonecutter and a furnace): burns cobblestone into stone, cuts stone bricks, slabs,
+  stairs and walls, and makes glass from sand.
+- **Weaver** at a **loom house** (a loom): makes the shepherd's wool into beds for new homes, and carpets.
+- **Beekeeper** at an **apiary**, a new kind of land at the architect's table: a fenced meadow with beehives in a row
+  and flowers between. The beekeeper sows the flowers, brings wild bees to the hives (or a swarm settles in now and
+  then), and takes the honey into glass bottles from the stores, or as honeycomb. The builders knock the hives
+  together from planks, since a new town has no honeycomb for the real recipe.
+- The three crafting trades use the game's own recipes and make what the builders are short of first, then keep a
+  small stock of the basics. Their workplaces are in every pack (nine new designs), can be generated at the table, and
+  have job icons of their own. The table's list of kinds puts the workplaces in two columns when they don't fit.
+- They all work with real tools, like the other jobs: the carpenter an axe, the mason a pickaxe, the weaver and the
+  beekeeper shears. They take the best from the stores, wear it out and put it back at night; without one they work
+  slower and the town asks for one ("1 shears for the town hall (for the weaver and the shepherd)"), which the smith
+  can make.
+- The crafting trades stop, and say so, when the town hall is full, instead of making what they can't put away.
+
 **Easier to play**
 - **Every citizen says what they're doing, or what's stopping them and what would fix it** ("No seeds to sow: put wheat
   seeds in the town hall", "Nowhere to cook: place a furnace..."), on their card, in the town hall and when you talk to

@@ -1,0 +1,10 @@
+{
+  "type": "stad:sawmill",
+  "name": "Sagbruk",
+  "description": "The saw shed: crafting table and log pile under a turf roof.",
+  "structure": "stad:fjord/sagbruk",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

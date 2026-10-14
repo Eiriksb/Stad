@@ -76,11 +76,33 @@ public final class Tools {
             case Jobs.FISHER -> Kind.FISHING_ROD;
             case Jobs.SHEPHERD -> Kind.SHEARS;
             case Jobs.GUARD -> Kind.SWORD;
+            case Jobs.CARPENTER -> Kind.AXE;
+            case Jobs.MASON -> Kind.PICKAXE;
+            case Jobs.WEAVER, Jobs.BEEKEEPER -> Kind.SHEARS;
             default -> null;
         };
     }
 
-    /** The job that uses a kind of tool. */
+    /**
+     * Who's short of a kind of tool, in words: "the carpenter and the lumberjacks" (each job once, plural when there's
+     * more than one of them); the job that mostly uses it when nobody is.
+     */
+    public static String whoNeeds(ServerLevel level, Colony colony, Kind k) {
+        java.util.Map<String, Integer> jobs = new java.util.LinkedHashMap<>();
+        for (CitizenRecord r : colony.citizens()) {
+            if (of(r.job) == k && level.getEntity(r.uuid) instanceof CitizenEntity e && !k.matches(e.getItemBySlot(EquipmentSlot.MAINHAND))) {
+                jobs.merge(r.job, 1, Integer::sum);
+            }
+        }
+        if (jobs.isEmpty()) {
+            return "the " + jobOf(k) + "s";
+        }
+        List<String> words = new ArrayList<>();
+        jobs.forEach((j, n) -> words.add("the " + j + (n > 1 ? "s" : "")));
+        return dev.eiriksb.stad.planner.Design.join(words);
+    }
+
+    /** The job that mostly uses a kind of tool. */
     public static String jobOf(Kind k) {
         return switch (k) {
             case HOE -> Jobs.FARMER;

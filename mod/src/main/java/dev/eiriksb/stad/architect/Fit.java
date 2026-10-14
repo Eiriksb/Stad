@@ -61,7 +61,8 @@ public final class Fit {
                 rooms = List.of("kitchen", "storage");
             } else if (type.equals(BuildingDef.MINE)) {
                 rooms = List.of("storage");
-            } else if (type.equals(Requirements.WORKSHOP) || type.equals(BuildingDef.LUMBER_CAMP) || type.equals(BuildingDef.SMITHY)) {
+            } else if (type.equals(Requirements.WORKSHOP) || type.equals(BuildingDef.LUMBER_CAMP) || type.equals(BuildingDef.SMITHY)
+                    || type.equals(BuildingDef.SAWMILL) || type.equals(BuildingDef.STONEWORKS) || type.equals(BuildingDef.LOOM_HOUSE)) {
                 rooms = List.of("workshop");
             } else if (type.equals(BuildingDef.FARMHOUSE) || type.equals(BuildingDef.FISHERY) || type.equals(BuildingDef.BARN)
                     || type.equals(BuildingDef.MARKET)) {

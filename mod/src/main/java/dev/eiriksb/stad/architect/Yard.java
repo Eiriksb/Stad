@@ -60,7 +60,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
 
     /** The land kinds, and the job each is for. */
     public static final List<ResourceLocation> KINDS = List.of(BuildingDef.FIELD, BuildingDef.PEN, BuildingDef.GROVE, BuildingDef.QUARRY,
-            BuildingDef.DOCK, BuildingDef.POST, BuildingDef.WALL, BuildingDef.STALLS, BuildingDef.ROAD);
+            BuildingDef.DOCK, BuildingDef.POST, BuildingDef.WALL, BuildingDef.STALLS, BuildingDef.APIARY, BuildingDef.ROAD);
 
     /** Whether a kind of building is land the table generates with a {@link Yard} rather than a {@link dev.eiriksb.stad.planner.BuildSpec}. */
     public static boolean is(ResourceLocation type) {
@@ -76,6 +76,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
             case "quarry" -> "miner";
             case "dock" -> "fisher";
             case "stalls" -> "merchant";
+            case "apiary" -> "beekeeper";
             case "road" -> null;
             default -> "guard";
         };
@@ -214,7 +215,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
             return "There's nothing to generate.";
         }
         int min = p.type.equals(BuildingDef.ROAD) ? 1 : p.type.equals(BuildingDef.PEN) || p.type.equals(BuildingDef.QUARRY)
-                || p.type.equals(BuildingDef.WALL) || p.type.equals(BuildingDef.STALLS) ? 5 : 3;
+                || p.type.equals(BuildingDef.WALL) || p.type.equals(BuildingDef.STALLS) || p.type.equals(BuildingDef.APIARY) ? 5 : 3;
         if (p.sx < min || p.sz < min) {
             return "The site is too small: make it at least " + min + " by " + min + " blocks.";
         }
@@ -251,6 +252,8 @@ public record Yard(String crop, String water, String fence, boolean path, String
             field(p);
         } else if (p.type.equals(BuildingDef.STALLS)) {
             stalls(p);
+        } else if (p.type.equals(BuildingDef.APIARY)) {
+            apiary(p, terrain);
         } else {
             pen(p);
         }
@@ -789,6 +792,55 @@ public record Yard(String crop, String water, String fence, boolean path, String
         p.generated.put(Project.key(bell[0], f + 1, bell[1]), Blocks.BELL.defaultBlockState()
                 .setValue(net.minecraft.world.level.block.BellBlock.FACING, p.door)
                 .setValue(net.minecraft.world.level.block.BellBlock.ATTACHMENT, net.minecraft.world.level.block.state.properties.BellAttachType.FLOOR));
+    }
+
+    /** The flowers an apiary is sown with, in turn. */
+    public static final List<Block> FLOWERS = List.of(Blocks.DANDELION, Blocks.POPPY, Blocks.CORNFLOWER, Blocks.OXEYE_DAISY, Blocks.ALLIUM, Blocks.AZURE_BLUET);
+
+    /**
+     * An apiary for the beekeeper: levelled grass inside a fence with a gate, beehives every three blocks along its
+     * middle (facing the gate), a path from the gate to them when asked for, and flowers on every other block of the rest
+     * (the beekeeper plants those: they're land, like a field's crops). Lamps on the corner posts with {@code extra}.
+     */
+    private void apiary(Project p, Grid terrain) {
+        int f = p.floorY;
+        Yard y = fence.equals("none") ? withFence("oak") : this; // the bees' meadow is fenced
+        y.ring(p, f + 1);
+        boolean alongX = p.sx >= p.sz;
+        int len = alongX ? p.sx : p.sz, mid = (alongX ? p.sz : p.sx) / 2;
+        java.util.Set<Integer> hives = new java.util.HashSet<>();
+        for (int a = 2; a <= len - 3; a += 3) {
+            int x = alongX ? a : mid, z = alongX ? mid : a;
+            p.generated.put(Project.key(x, f + 1, z), Blocks.BEEHIVE.defaultBlockState().setValue(net.minecraft.world.level.block.BeehiveBlock.FACING, p.door));
+            hives.add(Project.col(x, z));
+        }
+        java.util.Set<Integer> way = new java.util.HashSet<>();
+        if (path) { // from the gate straight in to the row of hives
+            int[] g = gate(p);
+            int dx = p.door.getStepX(), dz = p.door.getStepZ();
+            for (int x = g[0] - dx, z = g[1] - dz; x > 0 && z > 0 && x < p.sx - 1 && z < p.sz - 1 && (alongX ? z != mid : x != mid); x -= dx, z -= dz) {
+                p.generated.put(Project.key(x, f, z), Blocks.DIRT_PATH.defaultBlockState());
+                way.add(Project.col(x, z));
+            }
+        }
+        int i = 0;
+        for (int x = 1; x < p.sx - 1; x++) {
+            for (int z = 1; z < p.sz - 1; z++) {
+                int c = Project.col(x, z);
+                if ((x + z) % 2 != 0 || hives.contains(c) || way.contains(c) || (alongX ? z == mid : x == mid)) {
+                    continue;
+                }
+                if (!land(terrain, x, f, z).is(BlockTags.DIRT) || p.generated.containsKey(Project.key(x, f, z))) {
+                    p.generated.put(Project.key(x, f, z), Blocks.GRASS_BLOCK.defaultBlockState());
+                }
+                p.generated.put(Project.key(x, f + 1, z), FLOWERS.get(i++ % FLOWERS.size()).defaultBlockState());
+            }
+        }
+        if (extra && !fence.equals("none")) {
+            for (int[] c : new int[][]{{0, 0}, {p.sx - 1, 0}, {0, p.sz - 1}, {p.sx - 1, p.sz - 1}}) {
+                p.generated.put(Project.key(c[0], f + 2, c[1]), Blocks.LANTERN.defaultBlockState());
+            }
+        }
     }
 
     /** Where three-wide stalls start along {@code from} to {@code to} (inclusive): as many as fit a block apart, centred. */

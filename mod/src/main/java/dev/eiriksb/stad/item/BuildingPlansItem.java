@@ -73,6 +73,9 @@ public class BuildingPlansItem extends Item {
         if (t.equals(BuildingDef.STALLS)) {
             return "An open-air market: a merchant keeps each stall.";
         }
+        if (t.equals(BuildingDef.APIARY)) {
+            return "Beehives among flowers: the beekeeper takes the honey and honeycomb.";
+        }
         if (t.equals(BuildingDef.HOME)) {
             return "A home." + sleeps;
         }

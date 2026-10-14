@@ -53,9 +53,8 @@ public final class Requests {
         for (dev.eiriksb.stad.citizen.Tools.Kind k : dev.eiriksb.stad.citizen.Tools.Kind.values()) {
             int short_ = k == dev.eiriksb.stad.citizen.Tools.Kind.SWORD ? 0 : dev.eiriksb.stad.citizen.Tools.shortage(level, colony, k);
             if (short_ > 0) {
-                String job = dev.eiriksb.stad.citizen.Tools.jobOf(k);
                 wanted.add(colony.need(Request.id(k.basic), short_, colony.center, "the town hall",
-                        short_ == 1 ? "for the " + job : "for the " + job + "s", now).id);
+                        "for " + dev.eiriksb.stad.citizen.Tools.whoNeeds(level, colony, k), now).id);
             }
         }
         for (Request r : colony.requests()) {

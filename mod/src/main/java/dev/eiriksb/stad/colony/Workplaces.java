@@ -46,7 +46,11 @@ public final class Workplaces {
             Map.entry(Jobs.SMITH, List.of(BuildingDef.SMITHY)),
             Map.entry(Jobs.HEALER, List.of(BuildingDef.INFIRMARY)),
             Map.entry(Jobs.MERCHANT, List.of(BuildingDef.MARKET, BuildingDef.STALLS)),
-            Map.entry(Jobs.TEACHER, List.of(BuildingDef.SCHOOL)));
+            Map.entry(Jobs.TEACHER, List.of(BuildingDef.SCHOOL)),
+            Map.entry(Jobs.CARPENTER, List.of(BuildingDef.SAWMILL)),
+            Map.entry(Jobs.MASON, List.of(BuildingDef.STONEWORKS)),
+            Map.entry(Jobs.WEAVER, List.of(BuildingDef.LOOM_HOUSE)),
+            Map.entry(Jobs.BEEKEEPER, List.of(BuildingDef.APIARY)));
 
     /** The kinds of building a job works from (empty: none). */
     public static List<ResourceLocation> kinds(String job) {
@@ -80,6 +84,14 @@ public final class Workplaces {
             return s -> s.is(Blocks.BREWING_STAND);
         } else if (type.equals(BuildingDef.MARKET)) {
             return s -> s.is(Blocks.BELL);
+        } else if (type.equals(BuildingDef.SAWMILL)) {
+            return s -> s.is(Blocks.CRAFTING_TABLE);
+        } else if (type.equals(BuildingDef.STONEWORKS)) {
+            return s -> s.is(Blocks.STONECUTTER);
+        } else if (type.equals(BuildingDef.LOOM_HOUSE)) {
+            return s -> s.is(Blocks.LOOM);
+        } else if (type.equals(BuildingDef.APIARY)) {
+            return s -> false; // one beekeeper looks after all the hives
         } else if (type.equals(BuildingDef.STALLS)) {
             return s -> s.is(Blocks.BARREL); // one behind each stall's counter
         } else if (type.equals(BuildingDef.SCHOOL)) {

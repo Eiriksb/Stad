@@ -480,4 +480,39 @@ public final class YardGameTests {
                 && Project.kz(Project.key(299, 11, 199)) == 199 && Project.ky(Project.key(299, 11, 199)) == 11, "a 300 by 200 site keeps its edits");
         helper.succeed();
     }
+
+    @GameTest(template = "lot", batch = "yard_apiary", timeoutTicks = 3000)
+    public static void tableLaysOutAnApiaryTheBeekeeperKeeps(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        Project p = site(helper, 6, 6, 16, 14);
+        p.type = BuildingDef.APIARY;
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, Yard.DEFAULT, Direction.NORTH) == null, "laid out");
+        var check = Tables.check(helper.getLevel(), p);
+        helper.assertTrue(check.ready() && check.rows().stream().allMatch(r -> r.met()), "an apiary with hives, flowers and a fence: " + check.rows());
+        Tables.Said said = Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE));
+        helper.assertTrue(!said.error() && said.message().contains("beekeeper"), "planned: " + said.message());
+        Building apiary = colony.buildings().stream().filter(b -> b.is(BuildingDef.APIARY)).findFirst().orElseThrow();
+        Placement pl = apiary.placement().orElseThrow();
+        helper.assertTrue(pl.materials().containsKey(Items.OAK_PLANKS) && !pl.materials().containsKey(Items.BEEHIVE), "hives from planks: " + pl.materials());
+        java.util.List<BlockPos> flowers = pl.markers("stad:flower");
+        helper.assertTrue(flowers.size() >= 4 && pl.steps().stream().noneMatch(st -> st.state().is(BlockTags.SMALL_FLOWERS)), "the flowers are the beekeeper's");
+        build(helper, apiary);
+        BlockPos full = pl.steps().stream().filter(st -> st.state().is(Blocks.BEEHIVE)).map(Placement.Step::pos).findFirst().orElseThrow();
+        helper.getLevel().setBlock(full, helper.getLevel().getBlockState(full).setValue(net.minecraft.world.level.block.BeehiveBlock.HONEY_LEVEL, 5), 3);
+        hall(helper).storage().addItem(new ItemStack(Items.GLASS_BOTTLE, 2));
+        CitizenEntity keeper = worker(helper, colony, Jobs.BEEKEEPER, 4, 4);
+        helper.succeedWhen(() -> {
+            var town = dev.eiriksb.stad.building.ColonyStorage.deliveries(helper.getLevel(), colony);
+            helper.assertTrue(town.count(Items.HONEY_BOTTLE) + keeper.inventory().countItem(Items.HONEY_BOTTLE) >= 1, "honey taken: " + keeper.status().text());
+            helper.assertTrue(helper.getLevel().getBlockState(full).getValue(net.minecraft.world.level.block.BeehiveBlock.HONEY_LEVEL) == 0, "the hive emptied");
+            long sown = flowers.stream().filter(f -> helper.getLevel().getBlockState(f).is(BlockTags.SMALL_FLOWERS)).count();
+            helper.assertTrue(sown == flowers.size(), "flowers sown: " + sown + "/" + flowers.size() + "; " + keeper.status().text());
+            helper.assertTrue(helper.getLevel().getBlockEntity(full) instanceof net.minecraft.world.level.block.entity.BeehiveBlockEntity be && be.getOccupantCount() > 0
+                    || !helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, new net.minecraft.world.phys.AABB(full).inflate(16),
+                    b -> full.equals(b.getHivePos())).isEmpty(), "bees in the hive");
+            cleanUp(helper, colony, owner);
+        });
+    }
 }

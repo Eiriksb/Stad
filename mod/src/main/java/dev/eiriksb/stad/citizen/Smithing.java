@@ -76,6 +76,12 @@ public final class Smithing {
         return make(level, p, target, DEPTH) ? p.take : null;
     }
 
+    /** How many one crafting of {@code target} makes (four planks from a log), by its first recipe; 0 when there's none. */
+    public static int yield(ServerLevel level, Item target) {
+        List<CraftingRecipe> r = recipes(level, target);
+        return r.isEmpty() ? 0 : r.getFirst().getResultItem(level.registryAccess()).getCount();
+    }
+
     /** What's left in the stores, what's been taken from them, and the spares of what was made on the way. */
     private record Pools(Map<Item, Integer> left, Map<Item, Integer> take, Map<Item, Integer> made) {
         Pools copy() {

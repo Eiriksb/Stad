@@ -17,7 +17,8 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 > are free beds. Citizens sleep in their own beds, eat from the town hall, plan their day each morning (in character,
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
 > Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier**, **guard**, **cook**,
-> **fisher**, **shepherd**, **miner**, **smith**, **healer**, **merchant** and **teacher**.
+> **fisher**, **shepherd**, **miner**, **smith**, **healer**, **merchant**, **teacher**, **carpenter**, **mason**,
+> **weaver** and **beekeeper**.
 > **Plan buildings by talking to your builder**: "a small stone cottage with two bedrooms, a spruce roof and a
 > chimney". They draw it up (restyling one of the pack's buildings when it fits, or designing a new one: framing,
 > rooms, stairs, furniture, gable, hip or flat roofs, porches, chimneys), a see-through ghost of it appears on free
@@ -68,6 +69,10 @@ them.) When you talk to the builder aloud, they keep it short and leave the list
 | Healer | goes round treating the ill and the wounded | nothing (an infirmary gives the ill a bed) |
 | Merchant | keeps the market: players trade with the town through them, for emeralds | nothing (a market to stand at) |
 | Teacher | teaches the town's children at the school | a school (a lectern) |
+| Carpenter | saws logs into planks and sticks; makes the doors, fences, stairs and chests the builders are short of | a sawmill (a crafting table), logs, an axe |
+| Mason | burns cobblestone into stone, cuts stone bricks, slabs and stairs, makes glass from sand | a stoneworks (a stonecutter and a furnace), a pickaxe |
+| Weaver | makes wool into beds for new homes, and carpets | a loom house (a loom), wool and planks, shears |
+| Beekeeper | brings bees to the hives, sows flowers for them, takes honey (into glass bottles) and honeycomb | an apiary (lay one out at the architect's table), shears |
 
 All of it happens on the town's land. **Every citizen says what they're doing, or what's stopping them and what would
 fix it**, on their card and in the town hall's Citizens tab; the Jobs tab says what each job needs and whether the town

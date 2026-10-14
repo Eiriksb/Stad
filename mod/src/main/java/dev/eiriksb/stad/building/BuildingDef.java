@@ -63,6 +63,14 @@ public record BuildingDef(ResourceLocation key, String pack, ResourceLocation ty
     public static final ResourceLocation WALL = ResourceLocation.fromNamespaceAndPath("stad", "wall");
     /** an open-air market: stalls round a square, where the merchants trade */
     public static final ResourceLocation STALLS = ResourceLocation.fromNamespaceAndPath("stad", "stalls");
+    /** the carpenter's sawmill: a crafting table, where logs become planks, sticks, doors and fences */
+    public static final ResourceLocation SAWMILL = ResourceLocation.fromNamespaceAndPath("stad", "sawmill");
+    /** the mason's stoneworks: a stonecutter and a furnace, for stone, stone bricks and glass */
+    public static final ResourceLocation STONEWORKS = ResourceLocation.fromNamespaceAndPath("stad", "stoneworks");
+    /** the weaver's loom house: a loom, where wool becomes beds and carpets */
+    public static final ResourceLocation LOOM_HOUSE = ResourceLocation.fromNamespaceAndPath("stad", "loom_house");
+    /** the beekeeper's apiary: beehives in a meadow of flowers */
+    public static final ResourceLocation APIARY = ResourceLocation.fromNamespaceAndPath("stad", "apiary");
     /** a road: paving the citizens walk faster on */
     public static final ResourceLocation ROAD = ResourceLocation.fromNamespaceAndPath("stad", "road");
 }

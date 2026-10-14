@@ -291,6 +291,8 @@ public class ArchitectScreen extends Screen {
                     Blocks.SPRUCE_FENCE_GATE, Blocks.LANTERN, Blocks.STONE_BRICK_STAIRS, Blocks.STONE_BRICK_SLAB};
             case "stad:stalls" -> new Block[]{fenceBlock(), Blocks.BARREL, Blocks.SPRUCE_SLAB, Blocks.RED_WOOL, Blocks.WHITE_WOOL, Blocks.BELL,
                     Blocks.LANTERN, Blocks.COBBLESTONE, Blocks.FLOWER_POT};
+            case "stad:apiary" -> new Block[]{Blocks.BEEHIVE, Blocks.DANDELION, Blocks.POPPY, Blocks.CORNFLOWER, Blocks.ALLIUM, fenceBlock(),
+                    Blocks.OAK_FENCE_GATE, Blocks.GRASS_BLOCK, Blocks.LANTERN};
             case "stad:road" -> new Block[]{Blocks.DIRT_PATH, Blocks.GRAVEL, Blocks.COBBLESTONE, Blocks.STONE_BRICKS, Blocks.SPRUCE_PLANKS,
                     Blocks.STONE_BRICK_STAIRS, Blocks.STONE_BRICK_SLAB, Blocks.OAK_FENCE, Blocks.LANTERN};
             default -> null;
@@ -504,13 +506,26 @@ public class ArchitectScreen extends Screen {
         };
     }
 
+    /** How many columns the list of kinds has: the workplaces take two when they don't fit in one. */
+    private int pickerColumns() {
+        long work = open.types().stream().filter(t -> !Yard.is(t) && !TOWN_KINDS.contains(t)).count();
+        return work > (height - TOP - 18) / 20 ? 4 : 3;
+    }
+
+    /** the room between the columns: less with four */
+    private int pickerGap() {
+        return pickerColumns() == 4 ? 2 : 4;
+    }
+
     private int pickerColumn() {
-        return Math.min(132, (width - 32) / 3);
+        int n = pickerColumns();
+        return Math.min(132, (width - 16 - (n - 1) * pickerGap()) / n - (n == 4 ? 0 : 5));
     }
 
     /** Where the list of kinds starts: centred. */
     private int pickerX() {
-        return (width - 3 * pickerColumn() - 8) / 2;
+        int n = pickerColumns();
+        return (width - n * pickerColumn() - (n - 1) * pickerGap()) / 2;
     }
 
     /** The list of kinds over the view, in three columns: homes and the town's buildings, workplaces, and land. */
@@ -520,17 +535,18 @@ public class ArchitectScreen extends Screen {
                 w.visible = false;
             }
         }
-        int cw = pickerColumn(), x0 = pickerX(), y0 = TOP + 16;
-        int[] rows = new int[3];
+        int cw = pickerColumn(), x0 = pickerX(), y0 = TOP + 16, n = pickerColumns();
+        int[] rows = new int[n];
+        long work = open.types().stream().filter(t -> !Yard.is(t) && !TOWN_KINDS.contains(t)).count(), seen = 0;
         for (int i = 0; i < open.types().size(); i++) {
             String t = open.types().get(i);
-            int col = Yard.is(t) ? 2 : TOWN_KINDS.contains(t) ? 0 : 1;
+            int col = Yard.is(t) ? n - 1 : TOWN_KINDS.contains(t) ? 0 : n == 4 && seen++ >= (work + 1) / 2 ? 2 : 1;
             int index = i;
             String job = jobOf(t);
             List<String> needs = new ArrayList<>();
             ResourceLocation id = ResourceLocation.tryParse(t);
             if (id != null) {
-                Requirements.needs(id).stream().filter(Requirements.Need::required).forEach(n -> needs.add(n.what()));
+                Requirements.needs(id).stream().filter(Requirements.Need::required).forEach(need -> needs.add(need.what()));
             }
             String tip = (job != null ? "For the " + job + ". " : "") + (needs.isEmpty() ? "" : "Needs " + dev.eiriksb.stad.planner.Design.join(needs) + ".");
             StadButton b = StadButton.of(Component.literal(font.plainSubstrByWidth(capital(word(t)), cw - 26)), btn -> {
@@ -548,21 +564,22 @@ public class ArchitectScreen extends Screen {
                 tool = roadType() ? Tool.ROAD : tool == Tool.ROAD ? Tool.PLACE : tool;
                 roadFrom = null;
                 rebuildWidgets();
-            }).bounds(x0 + col * (cw + 4), y0 + rows[col] * 20, cw, 18).icon(typeIcon(t)).tooltip(Tooltip.create(Component.literal(tip))).build();
+            }).bounds(x0 + col * (cw + pickerGap()), y0 + rows[col] * 20, cw, 18).icon(typeIcon(t)).tooltip(Tooltip.create(Component.literal(tip))).build();
             addRenderableWidget(b.chosen(index == typeIndex));
             rows[col]++;
         }
-        pickerRows = Math.max(rows[0], Math.max(rows[1], rows[2]));
+        pickerRows = java.util.Arrays.stream(rows).max().orElse(0);
     }
 
     private int pickerRows;
 
     private void drawTypePicker(GuiGraphics g) {
-        int cw = pickerColumn(), x0 = pickerX(), y0 = TOP + 16;
-        Theme.panel(g, x0 - 8, TOP - 2, 3 * cw + 8 + 16, pickerRows * 20 + 26);
-        String[] heads = {"Homes and the town", "Workplaces", "Land and roads"};
-        for (int c = 0; c < 3; c++) {
-            g.drawString(font, heads[c], x0 + c * (cw + 4), TOP + 4, Theme.GOLD);
+        int cw = pickerColumn(), x0 = pickerX(), n = pickerColumns();
+        Theme.panel(g, x0 - 8, TOP - 2, n * cw + (n - 1) * pickerGap() + 16, pickerRows * 20 + 26);
+        String[] heads = n == 4 ? new String[]{"The town", "Workplaces", "", "Land and roads"}
+                : new String[]{"Homes and the town", "Workplaces", "Land and roads"};
+        for (int c = 0; c < n; c++) {
+            g.drawString(font, heads[c], x0 + c * (cw + pickerGap()), TOP + 4, Theme.GOLD);
         }
     }
 
@@ -619,6 +636,14 @@ public class ArchitectScreen extends Screen {
                 rows.add(new Object[]{"extra", "Lanterns at the end of the pier.", (Runnable) () -> extra = !extra, false});
             }
             case "stad:post" -> rows.add(new Object[]{"fence", "What the post is built of.", wood, false});
+            case "stad:apiary" -> {
+                rows.add(new Object[]{"fence", "What the apiary is fenced with.", (Runnable) () -> {
+                    fence = (fence + 1) % (Yard.FENCES.size() - 1);
+                    defaultHotbar();
+                }, false});
+                rows.add(new Object[]{"path", "A path from the gate to the hives.", (Runnable) () -> path = !path, false});
+                rows.add(new Object[]{"extra", "Lanterns on the corner posts.", (Runnable) () -> extra = !extra, false});
+            }
             case "stad:stalls" -> {
                 rows.add(new Object[]{"awning", "The colour of the stalls' awnings.", (Runnable) () -> awning = (awning + 1) % Yard.AWNINGS.size(), true});
                 rows.add(new Object[]{"paving", "What the square is paved with.", (Runnable) () -> paving = (paving + 1) % Yard.PAVINGS.size(), true});
@@ -679,6 +704,8 @@ public class ArchitectScreen extends Screen {
             case "stad:dock" -> "The builders build the pier; the fishers fish from the marked spots on it.";
             case "stad:post" -> "The builders build it; the guards patrol to it and keep watch from the top.";
             case "stad:stalls" -> "The builders pave the square and build the stalls; a merchant keeps each one. Trade with them there.";
+            case "stad:apiary" -> "The builders put up the fence and the hives (from planks); the beekeeper sows the flowers, brings bees and takes"
+                    + " the honey (into glass bottles from the town hall).";
             case "stad:road" -> "Draw it with the Road tool, or Route it to join the doors, the town hall and roads at the site's edge. Citizens"
                     + " walk faster on it.";
             default -> "The builders build it round whatever is inside. With watch spots, the guards patrol along it.";

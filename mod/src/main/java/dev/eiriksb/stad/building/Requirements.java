@@ -140,6 +140,26 @@ public final class Requirements {
                 new Need("a way in (a door or a gate)", c -> c.has(Contents.Thing.DOOR)
                         || c.count(s -> s.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) > 0, true),
                 new Need("watch spots for the guards", c -> c.marker("stad:post"), false)));
+        type(BuildingDef.SAWMILL,
+                block("a crafting table", net.minecraft.world.level.block.Blocks.CRAFTING_TABLE),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), true, net.minecraft.world.level.block.Blocks.CHEST),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.STONEWORKS,
+                block("a stonecutter", net.minecraft.world.level.block.Blocks.STONECUTTER),
+                new Need("a furnace", c -> c.count(net.minecraft.world.level.block.Blocks.FURNACE) + c.count(net.minecraft.world.level.block.Blocks.BLAST_FURNACE) > 0,
+                        true, net.minecraft.world.level.block.Blocks.FURNACE),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), true, net.minecraft.world.level.block.Blocks.CHEST),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.LOOM_HOUSE,
+                block("a loom", net.minecraft.world.level.block.Blocks.LOOM),
+                new Need("a chest", c -> c.has(Contents.Thing.STORAGE), true, net.minecraft.world.level.block.Blocks.CHEST),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        TYPES.put(BuildingDef.APIARY, List.of( // out in the open, among the flowers
+                new Need("a beehive", c -> c.count(net.minecraft.world.level.block.Blocks.BEEHIVE) + c.count(net.minecraft.world.level.block.Blocks.BEE_NEST) > 0, true,
+                        net.minecraft.world.level.block.Blocks.BEEHIVE),
+                new Need("flowers for the bees (four or more)", c -> c.count(s -> s.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS)) >= 4
+                        || c.markerLike("stad:flower"), false),
+                new Need("a fence round it", c -> c.count(s -> s.getBlock() instanceof net.minecraft.world.level.block.FenceBlock) >= 8, false)));
         TYPES.put(BuildingDef.STALLS, List.of(
                 new Need("stalls, with a spot for each merchant (Lay it out, or mark work spots)", c -> c.marker("stad:work"), true),
                 block("a bell", net.minecraft.world.level.block.Blocks.BELL),
@@ -231,6 +251,18 @@ public final class Requirements {
         }
         if (w.contains("infirmary") || w.contains("hospital") || w.contains("healer") || w.contains("clinic") || w.contains("sickhouse")) {
             return BuildingDef.INFIRMARY;
+        }
+        if (w.contains("sawmill") || w.contains("carpent") || w.contains("joiner")) {
+            return BuildingDef.SAWMILL;
+        }
+        if (w.contains("mason") || w.contains("stonework") || w.contains("stonecutter")) {
+            return BuildingDef.STONEWORKS;
+        }
+        if (w.contains("loom") || w.contains("weav") || w.contains("tailor")) {
+            return BuildingDef.LOOM_HOUSE;
+        }
+        if (w.contains("apiary") || w.contains("bee") || w.contains("hive")) {
+            return BuildingDef.APIARY;
         }
         if (w.contains("road") || w.contains("street")) {
             return BuildingDef.ROAD;

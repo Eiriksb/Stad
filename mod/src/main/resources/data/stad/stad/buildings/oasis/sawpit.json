@@ -1,0 +1,10 @@
+{
+  "type": "stad:sawmill",
+  "name": "Sawpit",
+  "description": "Where palm and acacia logs are sawn into planks.",
+  "structure": "stad:oasis/sawpit",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

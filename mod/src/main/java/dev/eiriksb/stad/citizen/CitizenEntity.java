@@ -118,6 +118,10 @@ public class CitizenEntity extends PathfinderMob {
         goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.MerchantGoal(this));
         goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.TeacherGoal(this));
         goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.SchoolGoal(this));
+        for (dev.eiriksb.stad.citizen.Crafts.Trade t : dev.eiriksb.stad.citizen.Crafts.ALL) {
+            goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.CrafterGoal(this, t));
+        }
+        goalSelector.addGoal(4, new dev.eiriksb.stad.citizen.goal.BeekeeperGoal(this));
         goalSelector.addGoal(5, new MoveTowardsRestrictionGoal(this, 0.6));
         goalSelector.addGoal(6, new GatherAtTownHallGoal(this));
         goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.6));

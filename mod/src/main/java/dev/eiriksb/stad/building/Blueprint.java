@@ -46,7 +46,7 @@ public record Blueprint(Vec3i size, List<Entry> entries, List<Marker> markers) {
      */
     public static boolean land(String name) {
         return name.startsWith("stad:plot") || name.equals("stad:water") || name.startsWith("stad:sapling") || name.startsWith("stad:pen")
-                || name.startsWith("stad:quarry") || name.equals("stad:fish") || name.equals("stad:post");
+                || name.startsWith("stad:quarry") || name.equals("stad:fish") || name.equals("stad:post") || name.equals("stad:flower");
     }
 
     /** Whether {@code name} is one of our markers (or {@code stad:road}: where a road was drawn at the table, never built). */

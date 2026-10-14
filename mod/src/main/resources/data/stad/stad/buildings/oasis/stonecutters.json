@@ -1,0 +1,10 @@
+{
+  "type": "stad:stoneworks",
+  "name": "Stonecutters' Yard",
+  "description": "Sandstone walls round the stonecutter and the kiln.",
+  "structure": "stad:oasis/stonecutters",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

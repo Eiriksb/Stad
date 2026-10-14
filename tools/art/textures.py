@@ -405,6 +405,56 @@ def _book(l):
             l.set(x, y, ink)
 
 
+def _saw(l):
+    """The carpenter's hand saw: a toothed blade with a wooden grip."""
+    blade, tooth = IRON, IRON_LO
+    l.poly([(1.5, 9.5), (11, 2), (13, 4.5), (3.5, 13)], blade)
+    for i in range(5):  # teeth along the lower edge
+        x, y = 3 + i * 2, 12 - i * 2
+        l.set(x, y + 1, tooth)
+        l.set(x + 1, y, tooth)
+    l.poly([(10.5, 1.5), (13, 0.5), (15.5, 3), (14.5, 5.5), (12.5, 4.5)], HANDLE)
+    l.set(13, 3, rgb("#5a3a1e"))
+
+
+def _trowel(l):
+    """The mason's bricks and trowel."""
+    brick, mortar = rgb("#9c9a94"), rgb("#6e6b66")
+    l.rect(1, 8, 13, 15, brick)
+    for x in range(1, 13):
+        l.set(x, 11, mortar)
+    for (x, y0, y1) in ((5, 8, 11), (9, 8, 11), (3, 11, 15), (7, 11, 15), (11, 11, 15)):
+        for y in range(y0, y1):
+            l.set(x, y, mortar)
+    l.poly([(7, 6.5), (11.5, 1.5), (15.5, 5.5), (10.5, 9)], IRON)
+    l.line(10, 6, 13.5, 2.5, 1, IRON_LO)
+    l.line(6.5, 7, 4.5, 9, 1.4, HANDLE)
+
+
+def _yarn(l):
+    """The weaver's ball of red wool, a loose end trailing."""
+    wool, dark, hi = rgb("#c8463c"), rgb("#8f2a24"), rgb("#e88a7c")
+    l.ellipse(8, 8, 6, 6, wool)
+    for (a, b, c, d) in ((3, 6, 12, 3), (3, 10, 13, 6), (5, 13, 13, 9), (6, 3, 4, 12)):
+        l.line(a, b, c, d, 1, dark)
+    l.set(6, 5, hi)
+    l.set(7, 4, hi)
+    l.line(13, 12, 15.5, 15.5, 1, wool)
+
+
+def _bee(l):
+    """A bee: striped body, wings up."""
+    yellow, black, wing = rgb("#f2c230"), rgb("#2a2018"), rgb("#dfeef5", 220)
+    l.ellipse(5.5, 4.5, 3, 2.5, wing)
+    l.ellipse(10, 4, 3, 2.5, wing)
+    l.ellipse(8, 9.5, 6, 4, yellow)
+    for x in (6, 9):
+        l.rect(x, 6, x + 2, 14, black)
+    l.ellipse(2.5, 9.5, 1.8, 2, black)
+    l.set(14, 9, black)
+    l.set(15, 10, black)
+
+
 def _person(l):
     skin, shirt = rgb("#d9a77e"), rgb("#5f7f4a")
     l.ellipse(8, 4.5, 3, 3, skin)
@@ -543,6 +593,7 @@ ICONS = {
     "job/builder": _hammer, "job/farmer": _wheat, "job/lumberjack": _axe, "job/courier": _crate, "job/guard": _shield,
     "job/cook": _pot, "job/fisher": _fish, "job/shepherd": _sheep, "job/miner": _pickaxe, "job/smith": _anvil,
     "job/healer": _potion, "job/merchant": _emerald, "job/teacher": _book, "job/none": _question,
+    "job/carpenter": _saw, "job/mason": _trowel, "job/weaver": _yarn, "job/beekeeper": _bee,
     "person": _person, "people": _people, "house": _house, "bell": _bell, "field": _hoe_field, "fence": _fence, "sapling": _sapling, "wall": _wall,
     "stall": _stall, "road": _road,
 }

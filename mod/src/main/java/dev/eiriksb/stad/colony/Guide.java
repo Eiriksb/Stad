@@ -50,7 +50,15 @@ public final class Guide {
             Map.entry(Jobs.HEALER, new String[]{"Treats the ill and the wounded.", "Nothing; an infirmary gives the ill a bed."}),
             Map.entry(Jobs.MERCHANT, new String[]{"Sells the town's spare goods to players and buys what it's short of, for emeralds.",
                     "Emeralds in the town hall; a market or a market square (a stall each) to stand at."}),
-            Map.entry(Jobs.TEACHER, new String[]{"Teaches the town's children, who grow up quicker to learn.", "A school (with a lectern), and children."}));
+            Map.entry(Jobs.TEACHER, new String[]{"Teaches the town's children, who grow up quicker to learn.", "A school (with a lectern), and children."}),
+            Map.entry(Jobs.CARPENTER, new String[]{"Saws logs into planks and sticks, and makes the doors, fences, stairs and chests the builders ask for.",
+                    "A sawmill (a crafting table and a chest), logs in the town hall, and an axe."}),
+            Map.entry(Jobs.MASON, new String[]{"Burns cobblestone into stone, cuts stone bricks, slabs and stairs, and makes glass from sand.",
+                    "A stoneworks (a stonecutter, a furnace and a chest), cobblestone or sand in the town hall, and a pickaxe."}),
+            Map.entry(Jobs.WEAVER, new String[]{"Makes wool into beds for new homes, and carpets.",
+                    "A loom house (a loom and a chest), wool and planks in the town hall, and shears."}),
+            Map.entry(Jobs.BEEKEEPER, new String[]{"Brings bees to the hives, plants flowers for them and takes the honey and honeycomb.",
+                    "An apiary (beehives among flowers: lay one out at the architect's table), shears, and glass bottles for the honey."}));
 
     public static String does(String job) {
         return JOBS.getOrDefault(job, new String[]{"", ""})[0];
@@ -93,6 +101,10 @@ public final class Guide {
                     dev.eiriksb.stad.citizen.goal.ShepherdGoal::herd).isEmpty() ? "No farm animals in or near town" : null;
             case Jobs.MINER -> Mine.pits(colony).isEmpty() ? "No mine or quarry" : null;
             case Jobs.SMITH -> built(colony, BuildingDef.SMITHY) ? null : "No smithy";
+            case Jobs.CARPENTER -> built(colony, BuildingDef.SAWMILL) ? null : "No sawmill";
+            case Jobs.MASON -> built(colony, BuildingDef.STONEWORKS) ? null : "No stoneworks";
+            case Jobs.WEAVER -> built(colony, BuildingDef.LOOM_HOUSE) ? null : "No loom house";
+            case Jobs.BEEKEEPER -> built(colony, BuildingDef.APIARY) ? null : "No apiary";
             case Jobs.TEACHER -> !built(colony, BuildingDef.SCHOOL) ? "No school"
                     : colony.citizens().stream().noneMatch(r -> level.getEntity(r.uuid) instanceof dev.eiriksb.stad.citizen.CitizenEntity e && e.isBaby())
                     ? "No children" : null;

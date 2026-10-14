@@ -1,0 +1,10 @@
+{
+  "type": "stad:loom_house",
+  "name": "Loom House",
+  "description": "The weaver's loom among bales of wool, for beds and carpets.",
+  "structure": "stad:medieval/loom_house",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

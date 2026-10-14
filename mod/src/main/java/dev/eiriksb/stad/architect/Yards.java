@@ -51,6 +51,12 @@ public final class Yards {
         if (p.type.equals(BuildingDef.POST)) {
             return "Drew up a watch post. The guards patrol to it and keep watch from the top.";
         }
+        if (p.type.equals(BuildingDef.APIARY)) {
+            long hives = d.values().stream().filter(s -> s.is(Blocks.BEEHIVE)).count();
+            long flowers = d.values().stream().filter(s -> s.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS)).count();
+            return "Laid out " + a + size + " apiary: " + hives + (hives == 1 ? " beehive" : " beehives") + " among " + flowers + " flowers. The builders"
+                    + " put up the fence and the hives (from planks); the beekeeper sows the flowers, brings the bees and takes the honey.";
+        }
         if (p.type.equals(BuildingDef.STALLS)) {
             long stalls = p.markers.values().stream().filter("stad:work"::equals).count();
             return "Laid out " + a + size + " market square with " + stalls + (stalls == 1 ? " stall" : " stalls") + " round a bell. A merchant"
@@ -86,6 +92,8 @@ public final class Yards {
                 out.put(k, "stad:water");
             } else if (p.type.equals(BuildingDef.GROVE) && Yard.treeOf(s) != null) {
                 out.put(k, "stad:sapling_" + Yard.treeOf(s));
+            } else if (p.type.equals(BuildingDef.APIARY) && s.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS)) {
+                out.put(k, "stad:flower");
             }
         }
         if (p.type.equals(BuildingDef.PEN)) {
@@ -104,6 +112,9 @@ public final class Yards {
         if (type.equals(BuildingDef.FIELD)) {
             return s.is(Blocks.FARMLAND) || s.is(Blocks.WATER) || Yard.cropOf(s) != null;
         }
+        if (type.equals(BuildingDef.APIARY)) {
+            return s.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS);
+        }
         return type.equals(BuildingDef.GROVE) && Yard.treeOf(s) != null;
     }
 
@@ -118,6 +129,7 @@ public final class Yards {
             case "dock" -> "fish from it";
             case "post" -> "keep watch from it";
             case "stalls" -> "keep the stalls";
+            case "apiary" -> "sow the flowers, bring the bees and take the honey";
             default -> "watch from it";
         };
         if (p.type.equals(BuildingDef.ROAD)) {

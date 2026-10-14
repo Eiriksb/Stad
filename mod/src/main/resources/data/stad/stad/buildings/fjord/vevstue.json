@@ -1,0 +1,10 @@
+{
+  "type": "stad:loom_house",
+  "name": "Vevstue",
+  "description": "The weaving room: the loom and the wool in a warm log house.",
+  "structure": "stad:fjord/vevstue",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}

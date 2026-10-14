@@ -53,6 +53,15 @@ too.
 | Healer | treats the ill and the wounded | nothing; an **infirmary** gives the ill a bed |
 | Merchant | sells the town's spare goods and buys what it needs, for emeralds | nothing; a **market** to stand at |
 | Teacher | teaches the town's children | a **school** (a lectern) |
+| Carpenter | saws logs into planks and sticks, and makes the doors, fences, stairs and chests the builders ask for | a **sawmill** (a crafting table), logs in the town hall, and an axe |
+| Mason | burns cobblestone into stone, cuts stone bricks, slabs and stairs, makes glass from sand | a **stoneworks** (a stonecutter and a furnace), cobblestone or sand, and a pickaxe |
+| Weaver | makes wool into beds for new homes, and carpets | a **loom house** (a loom), wool and planks, and shears |
+| Beekeeper | brings bees to the hives, sows flowers for them, takes the honey and honeycomb | an **apiary** (beehives among flowers: lay one out at the architect's table), shears, and glass bottles for the honey |
+
+The carpenter, mason and weaver first make whatever the builders are waiting for (a door, stone bricks, a bed for a
+new house), then keep the town stocked with the basics: 64 planks and 32 sticks; 32 stone, 64 stone bricks and 16
+glass; two beds. Everything goes to the town hall, where the builders look. When the town hall is full they stop and
+say so: build a warehouse.
 
 **Workplaces.** Each job works from a building of its own: a **farmhouse** (composter and chest), **lumber camp**
 (chest and crafting table), **fishery** (barrel), **barn** (loom and hay bale), the kitchen, the mine, the builder's hut,

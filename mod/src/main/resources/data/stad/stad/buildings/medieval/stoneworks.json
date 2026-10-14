@@ -1,0 +1,10 @@
+{
+  "type": "stad:stoneworks",
+  "name": "Stoneworks",
+  "description": "A stonecutter and a furnace, where the mason makes stone, bricks and glass.",
+  "structure": "stad:medieval/stoneworks",
+  "tags": [
+    "small",
+    "workplace"
+  ]
+}
