@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_job",
+  "display": {
+    "icon": {
+      "id": "minecraft:crafting_table"
+    },
+    "title": {
+      "text": "Many Hands"
+    },
+    "description": {
+      "text": "Ten different jobs in one town"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

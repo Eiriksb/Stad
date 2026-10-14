@@ -146,6 +146,7 @@ public class ResearchGoal extends WorkGoal {
             colony.research.current = null;
             colony.research.progress = 0;
             colony.research.paid = false;
+            dev.eiriksb.stad.colony.Achievements.feat(colony, dev.eiriksb.stad.colony.Achievements.RESEARCH);
             Announce.members(level.getServer(), colony, Component.literal("The university has finished researching " + t.name() + ". "
                     + Research.gives(t) + ".").withStyle(ChatFormatting.GREEN));
             level.playSound(null, p, SoundEvents.PLAYER_LEVELUP, SoundSource.BLOCKS, 0.7f, 1f);

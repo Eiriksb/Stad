@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_building",
+  "display": {
+    "icon": {
+      "id": "minecraft:white_bed"
+    },
+    "title": {
+      "text": "A Roof for Everyone"
+    },
+    "description": {
+      "text": "Five citizens or more, and a home for every one of them"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

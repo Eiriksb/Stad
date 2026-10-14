@@ -34,6 +34,7 @@ public final class Stad {
 
     public Stad(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.COMMON, StadConfig.SPEC);
+        container.registerConfig(ModConfig.Type.CLIENT, StadClientConfig.SPEC);
         StadRegistries.register(modBus);
         StadNetwork.register(modBus);
         TheyWillTalkApi.get().registerAdapter(new StadAdapter());

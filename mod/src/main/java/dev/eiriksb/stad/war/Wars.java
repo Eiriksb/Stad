@@ -394,10 +394,12 @@ public final class Wars {
                     defected = defect(defLevel, defender, attLevel, attacker);
                 }
                 attacker.changeLeadersStanding(4, "you won the raid on " + defender.name(), gameTime);
+                dev.eiriksb.stad.colony.Achievements.feat(attacker, dev.eiriksb.stad.colony.Achievements.WAR);
                 defender.changeLeadersStanding(-4, attacker.name() + " took our banner", gameTime);
             }
             case DEFENDERS, RETREAT -> {
                 defender.changeLeadersStanding(5, "you held off " + attacker.name() + "'s raid", gameTime);
+                dev.eiriksb.stad.colony.Achievements.feat(defender, dev.eiriksb.stad.colony.Achievements.WAR);
                 attacker.changeLeadersStanding(-3, "the raid on " + defender.name() + " failed", gameTime);
             }
             case PEACE -> {

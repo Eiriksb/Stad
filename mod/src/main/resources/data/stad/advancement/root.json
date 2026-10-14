@@ -1,0 +1,23 @@
+{
+  "display": {
+    "icon": {
+      "id": "stad:town_hall"
+    },
+    "title": {
+      "text": "Stad"
+    },
+    "description": {
+      "text": "Found a town: place a town hall"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false,
+    "background": "minecraft:textures/block/spruce_planks.png"
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

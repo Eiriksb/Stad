@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_job",
+  "display": {
+    "icon": {
+      "id": "minecraft:oak_door"
+    },
+    "title": {
+      "text": "Raising the Roof"
+    },
+    "description": {
+      "text": "Your builder finishes a first building"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

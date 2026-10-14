@@ -63,6 +63,7 @@ public final class ColonyTicker {
         dev.eiriksb.stad.planner.Drafts.tick(server);
         dev.eiriksb.stad.war.Envoys.tick(server);
         ColonyChunks.update(server);
+        Tutorial.update(server);
         for (Colony colony : ColonyManager.get(server).all()) {
             ServerLevel level = server.getLevel(colony.dimension);
             if (level != null) {
@@ -74,6 +75,7 @@ public final class ColonyTicker {
                 dev.eiriksb.stad.building.Warehouse.label(level, colony);
                 Leadership.checkConditions(level, colony);
                 dev.eiriksb.stad.war.Raids.tick(level, colony);
+                Achievements.update(level, colony);
                 if (level.getDayTime() % 24000 <= 4000 && colony.lastReviewDay != level.getDayTime() / 24000) {
                     dev.eiriksb.stad.citizen.Illness.morning(level, colony);
                     Leadership.review(level, colony);

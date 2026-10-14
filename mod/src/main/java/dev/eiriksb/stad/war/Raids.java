@@ -338,6 +338,9 @@ public final class Raids {
             story.append(' ').append(Design.join(raid.dead)).append(raid.dead.size() == 1 ? " was" : " were").append(" killed.");
         }
         story.append(beaten ? " We beat them off." : " The ones left got away.");
+        if (beaten) {
+            dev.eiriksb.stad.colony.Achievements.feat(colony, dev.eiriksb.stad.colony.Achievements.RAID);
+        }
         if (beaten && raid.dead.isEmpty()) {
             colony.changeLeadersStanding(5, "you saw the town through a raid", now);
         }

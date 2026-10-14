@@ -99,6 +99,11 @@ public final class StadNetwork {
                 dev.eiriksb.stad.client.StadClientHooks.placePreview(p);
             }
         });
+        r.playToClient(GuidePayload.TYPE, GuidePayload.CODEC, (p, ctx) -> {
+            if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.guide(p);
+            }
+        });
         r.playToClient(DraftPreviewPayload.TYPE, DraftPreviewPayload.CODEC, (p, ctx) -> {
             if (FMLEnvironment.dist.isClient()) {
                 dev.eiriksb.stad.client.StadClientHooks.draftPreview(p);

@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_citizen",
+  "display": {
+    "icon": {
+      "id": "minecraft:wooden_shovel"
+    },
+    "title": {
+      "text": "Put to Work"
+    },
+    "description": {
+      "text": "Give a citizen a job"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

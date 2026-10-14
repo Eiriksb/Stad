@@ -102,8 +102,9 @@ public class TownHallBlock extends BaseEntityBlock {
             return;
         }
         player.sendSystemMessage(Component.literal("You founded " + f.colony().name() + "! ").withStyle(ChatFormatting.GOLD)
-                .append(Component.literal("Place a bed or two and newcomers will move in. Right-click the town hall to see what to do"
-                        + " next; sneak and right-click it for its storage, where food and building materials go.").withStyle(ChatFormatting.GRAY)));
+                .append(Component.literal("Place a bed or two and newcomers will move in. The guide in the corner of the screen shows"
+                        + " what to do next (U hides it), and the town hall has more: right-click it, or sneak and right-click it for its"
+                        + " storage, where food and building materials go.").withStyle(ChatFormatting.GRAY)));
     }
 
     static Optional<Colony> colonyAt(Level level, BlockPos pos) {

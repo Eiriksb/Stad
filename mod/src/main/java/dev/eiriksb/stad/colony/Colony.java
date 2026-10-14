@@ -50,6 +50,8 @@ public final class Colony {
     public final dev.eiriksb.stad.war.Politics politics = new dev.eiriksb.stad.war.Politics();
     /** what it's learned at its university ({@link Research}) */
     public final Research.State research = new Research.State();
+    /** the achievements it's earned (see {@link Achievements}): its members get them */
+    public final java.util.Set<String> feats = new java.util.LinkedHashSet<>();
     /** game time of the last newcomer, for {@link Arrivals} */
     long lastArrival;
     private Runnable onChange = () -> {};
@@ -346,6 +348,9 @@ public final class Colony {
         t.putLong("StrikeDay", strikeDay);
         t.put("Politics", politics.save());
         t.put("Research", research.save());
+        ListTag fs = new ListTag();
+        feats.forEach(f -> fs.add(net.minecraft.nbt.StringTag.valueOf(f)));
+        t.put("Feats", fs);
         return t;
     }
 
@@ -390,6 +395,9 @@ public final class Colony {
             c.research.load(t.getCompound("Research"));
         } else {
             c.research.fromBuildings(c); // a town from before research knows what it's built
+        }
+        for (Tag tag : t.getList("Feats", Tag.TAG_STRING)) {
+            c.feats.add(tag.getAsString());
         }
         return c;
     }

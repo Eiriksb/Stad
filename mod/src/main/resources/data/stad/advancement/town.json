@@ -1,0 +1,23 @@
+{
+  "parent": "stad:village",
+  "display": {
+    "icon": {
+      "id": "minecraft:lantern"
+    },
+    "title": {
+      "text": "A Proper Town"
+    },
+    "description": {
+      "text": "Twenty-five citizens"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

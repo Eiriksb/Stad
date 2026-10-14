@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_building",
+  "display": {
+    "icon": {
+      "id": "minecraft:lectern"
+    },
+    "title": {
+      "text": "Bright Ideas"
+    },
+    "description": {
+      "text": "Your university finishes researching a topic"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

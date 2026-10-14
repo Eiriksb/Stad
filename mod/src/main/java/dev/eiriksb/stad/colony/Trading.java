@@ -338,6 +338,7 @@ public final class Trading {
                     colony.center.getY() + 1.2, colony.center.getZ() + 0.5, rest);
             level.addFreshEntity(drop);
         }
+        Achievements.feat(colony, Achievements.TRADE);
         colony.changed();
     }
 }

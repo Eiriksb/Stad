@@ -1,0 +1,23 @@
+{
+  "parent": "stad:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:red_bed"
+    },
+    "title": {
+      "text": "Someone Moves In"
+    },
+    "description": {
+      "text": "A newcomer settles in your town"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

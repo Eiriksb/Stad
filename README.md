@@ -35,8 +35,9 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 > **Lead them well**: your standing with the town rises and falls with how they're fed, housed and treated (and with
 > what they make of your conversations). A respected leader is obeyed; a doubted one gets grudging, slower work; a
 > resented one hears "no", with a reason, or "only once I've eaten". Miserable citizens leave, and an unhappy town
-> goes on strike. Players have ranks, and every order is checked and logged. The design and roadmap are in
-> [PLAN.md](PLAN.md).
+> goes on strike. Players have ranks, and every order is checked and logged. A **guide** in the corner of the screen
+> shows your town's next step, and the town earns **achievements** (a Stad tab in the advancements screen). The design
+> and roadmap are in [PLAN.md](PLAN.md).
 
 ### Talking to citizens
 

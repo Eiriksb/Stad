@@ -1,0 +1,23 @@
+{
+  "parent": "stad:raid",
+  "display": {
+    "icon": {
+      "id": "minecraft:iron_sword"
+    },
+    "title": {
+      "text": "To the Victor"
+    },
+    "description": {
+      "text": "Win a war against another town"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_job",
+  "display": {
+    "icon": {
+      "id": "minecraft:bedrock"
+    },
+    "title": {
+      "text": "Rock Bottom"
+    },
+    "description": {
+      "text": "Your miners dig down to bedrock"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

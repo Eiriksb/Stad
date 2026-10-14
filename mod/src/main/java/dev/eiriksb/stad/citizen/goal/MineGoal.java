@@ -131,6 +131,12 @@ public class MineGoal extends WorkGoal {
             }
         }
         level.levelEvent(2001, block, Block.getId(state)); // the breaking sound and bits
+        if (state.is(net.neoforged.neoforge.common.Tags.Blocks.ORES_DIAMOND)) {
+            dev.eiriksb.stad.colony.Achievements.feat(colony, dev.eiriksb.stad.colony.Achievements.DIAMONDS);
+        }
+        if (block.getY() <= level.getMinBuildHeight() + 5) {
+            dev.eiriksb.stad.colony.Achievements.feat(colony, dev.eiriksb.stad.colony.Achievements.BEDROCK);
+        }
         level.removeBlock(block, false);
         look(level, block);
         worked(1);

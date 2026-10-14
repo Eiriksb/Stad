@@ -1,0 +1,23 @@
+{
+  "parent": "stad:town",
+  "display": {
+    "icon": {
+      "id": "minecraft:filled_map"
+    },
+    "title": {
+      "text": "As Far as the Eye Can See"
+    },
+    "description": {
+      "text": "Your town's land grows as far as it goes"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

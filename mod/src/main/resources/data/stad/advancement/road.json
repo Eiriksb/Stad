@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_building",
+  "display": {
+    "icon": {
+      "id": "minecraft:dirt_path"
+    },
+    "title": {
+      "text": "All Roads Lead Home"
+    },
+    "description": {
+      "text": "Build a road"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

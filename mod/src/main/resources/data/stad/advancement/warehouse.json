@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_building",
+  "display": {
+    "icon": {
+      "id": "minecraft:barrel"
+    },
+    "title": {
+      "text": "A Place for Everything"
+    },
+    "description": {
+      "text": "A warehouse, and a courier to carry the goods"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

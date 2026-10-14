@@ -1,0 +1,23 @@
+{
+  "parent": "stad:warehouse",
+  "display": {
+    "icon": {
+      "id": "minecraft:emerald"
+    },
+    "title": {
+      "text": "Open for Business"
+    },
+    "description": {
+      "text": "Trade with your town's merchant"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

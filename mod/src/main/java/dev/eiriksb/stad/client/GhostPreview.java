@@ -46,6 +46,11 @@ public final class GhostPreview {
     private static final double RANGE = 128;
     private static volatile List<Ghost> ghosts = List.of();
     private static volatile DraftPreviewPayload current = DraftPreviewPayload.CLEAR;
+
+    /** Whether a draft's preview (and its list of materials, top right) is showing. */
+    static boolean showing() {
+        return current.active();
+    }
     private static boolean failed;
 
     private GhostPreview() {}

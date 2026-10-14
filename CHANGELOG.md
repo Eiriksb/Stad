@@ -147,6 +147,20 @@
   land at once, and the town hall says how far it reaches and how it'll grow. Towns founded before keep their land
   and grow from there.
 
+**Achievements and a guide**
+- **Achievements**: 21 of them, in their own Stad tab of the advancements screen (L): founding a town, the first
+  citizen, job and building, a village, a town and a city (10, 25 and 50 citizens), a road, a warehouse, a child
+  born, the first trade, diamonds and bedrock from the mine, research, beating off a raid, winning a war and more.
+  The town earns them, and every member gets them (the ones away get them when they're next on).
+- **A guide in the corner of the screen**: your town's next step (the town hall's getting-started list), and a toast
+  as each is done, until they all are. U hides it and shows it again (it remembers).
+
+**Smoother**
+- Citizens don't jump across town any more on a long walk: they only take the shortcut when they've stopped getting
+  any closer for ten seconds (with a puff of cloud), not eight seconds after setting off.
+- Builders leave the ground as it is: where a building or a path wants dirt or grass and there's grass (or dirt,
+  podzol...) already, it stays; only holes are filled.
+
 **Placing buildings by hand**
 - **Preview** in the building plans now shows the whole building, see-through, where it would go, instead of an
   outline, and you can move it before planning it, much like placing a Create schematic: the arrow keys move it,

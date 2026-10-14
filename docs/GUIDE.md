@@ -14,8 +14,9 @@
 
 ## Your first hour
 
-Right-click the town hall any time: its **Town** tab lists the next steps, ticks off the ones you've done, and says
-who can't work and why.
+Your town's next step shows in the top right corner of the screen, with a toast as each is done (U hides it and shows
+it again). Right-click the town hall any time: its **Town** tab lists all the steps, ticks off the ones you've done,
+and says who can't work and why. Your town's achievements are in the Stad tab of the advancements screen (L).
 
 1. **Beds.** Place a bed or two anywhere on the town's land. Newcomers move in every few minutes while there's a free
    bed (the first comes straight away).
@@ -28,7 +29,7 @@ who can't work and why.
    where you look, and again to put it down; Enter plans it there, Backspace puts it away. The keys can be changed in
    the game's controls. (Or describe a house to your builder: "a small stone cottage with two bedrooms".)
 4. **Materials.** Sneak and right-click the town hall (or press Storage on its screen) and put the materials in. The
-   builder makes up the ground under the house, builds what they can, and says what's still missing.
+   builder makes up the ground under the house (grass that's there stays), builds what they can, and says what's still missing.
 5. **Food.** Put some food in the town hall. Make a **farmer**: they mark out a field by their farmhouse or the town
    hall, till it round a water hole they dig, and sow it (put wheat seeds in the town hall, or they pick seeds from
    the grass, slowly). Make a **cook** and place a furnace: three wheat bake a loaf, and cooked food fills far more.
@@ -246,7 +247,9 @@ Wars between players' towns are opt-in for each town; see the README.
 
 ## Settings
 
-`config/stad-common.toml` (and They Will Talk's own `config/theywilltalk-common.toml`). The ones you're most likely to
+Each player's own: `config/stad-client.toml`, `showGuide` (the guide in the corner; U turns it on and off).
+
+The world's: `config/stad-common.toml` (and They Will Talk's own `config/theywilltalk-common.toml`). The ones you're most likely to
 change:
 
 | Setting | Default | |

@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_job",
+  "display": {
+    "icon": {
+      "id": "minecraft:bread"
+    },
+    "title": {
+      "text": "Bread on the Table"
+    },
+    "description": {
+      "text": "A farmer and a cook to keep the town fed"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

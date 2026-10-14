@@ -51,7 +51,7 @@ public final class DraftingHud {
         site = TablePayloads.Drafting.NONE;
     }
 
-    static boolean drafting(Minecraft mc) {
+    public static boolean drafting(Minecraft mc) {
         return mc.level != null && mc.level.dimension().location().equals(DRAFTING);
     }
 

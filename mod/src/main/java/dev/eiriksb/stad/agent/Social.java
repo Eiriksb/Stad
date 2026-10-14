@@ -170,6 +170,7 @@ public final class Social {
         for (CitizenRecord p : List.of(a, b)) {
             memory.remember(NewMemory.of(p.uuid, Subject.villager(baby.getUUID()), "Our child " + name + " was born!").withKind("event").withImportance(9));
         }
+        dev.eiriksb.stad.colony.Achievements.feat(colony, dev.eiriksb.stad.colony.Achievements.CHILD);
         colony.changed();
         Announce.members(level.getServer(), colony, Component.literal(a.name + " and " + b.name + " had a baby: " + name + "!")
                 .withStyle(ChatFormatting.LIGHT_PURPLE));

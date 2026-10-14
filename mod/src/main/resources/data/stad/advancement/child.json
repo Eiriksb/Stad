@@ -1,0 +1,23 @@
+{
+  "parent": "stad:first_citizen",
+  "display": {
+    "icon": {
+      "id": "minecraft:cake"
+    },
+    "title": {
+      "text": "The Next Generation"
+    },
+    "description": {
+      "text": "A child is born in your town"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "done": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
