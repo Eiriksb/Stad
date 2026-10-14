@@ -74,9 +74,10 @@ public final class ArchitectGameTests {
     public static void designsTravelAndKeep(GameTestHelper helper) {
         // only blocks a survival player could place
         helper.assertTrue(Tables.allowed(Blocks.AIR.defaultBlockState()) && Tables.allowed(Blocks.OAK_PLANKS.defaultBlockState())
-                && Tables.allowed(Blocks.WALL_TORCH.defaultBlockState()), "ordinary blocks are fine");
+                && Tables.allowed(Blocks.WALL_TORCH.defaultBlockState()) && Tables.allowed(Blocks.WATER.defaultBlockState()),
+                "ordinary blocks are fine, and water (for fields)");
         helper.assertTrue(!Tables.allowed(Blocks.COMMAND_BLOCK.defaultBlockState()) && !Tables.allowed(Blocks.BEDROCK.defaultBlockState())
-                && !Tables.allowed(Blocks.WATER.defaultBlockState()) && !Tables.allowed(Blocks.STRUCTURE_BLOCK.defaultBlockState()), "no game-master blocks");
+                && !Tables.allowed(Blocks.LAVA.defaultBlockState()) && !Tables.allowed(Blocks.STRUCTURE_BLOCK.defaultBlockState()), "no game-master blocks");
         // the land travels run-length encoded
         Grid g = new Grid(5, 4, 3);
         g.set(1, 2, 0, Blocks.STONE.defaultBlockState());

@@ -35,6 +35,26 @@
   emeralds; every trade moves goods in and out of the town's real chests.
 - **School**: children go to school while there's a teacher, and grow up quicker to learn.
 
+**Farms at the architect's table, and a new look**
+- The architect's table designs land as well as buildings: pick **Field**, **Pen** or **Grove** as its kind and open
+  **Lay out ▾**. A **field** fills the site with farmland round water channels (or holes) spaced so every plot stays
+  wet, with the crop you choose (or mixed strips), a fence, a path and lamps if you like. A **pen** is a fenced yard
+  with a gate for the animals you choose, with a shelter, hay and water. A **grove** is saplings in rows, as far apart
+  as you like. Change anything by hand afterwards, including painting farmland, water (now allowed in designs) and
+  crops; the checklist says whether every plot has water, the fence is closed, and the saplings have room.
+- Planned, the land goes to the workers: the farmer digs the water, tills and sows each plot with the crop it asks for
+  (fetching it from the town hall first); the lumberjack plants each spot with the sapling it asks for and fells the
+  trees as they grow; the shepherd leads the pen's animals in through its gate (loose ones in town first, then a pair
+  from outside). The builders level the ground and put up the fence, path and the rest.
+- Fields, pens and groves are in a **Farms** tab of the Building Plans when saved into My pack.
+- **A new look**: the town hall, the citizen's card, the Building Plans, the architect's table and the pack editor are
+  dark walnut panels with brass trim, with icons for every job, wood buttons, tabs and scroll bars.
+- **New models**: the architect's table is a drafting table with a blueprint, a roll of plans and an ink pot; the town
+  hall is a panelled desk with the town's crest and its ledger lying open. Both face you when placed. Building Plans
+  and the scan wand have their own textures.
+- Builders ask for dirt, not grass or path blocks (which a survival player can't pick up), and turn it into what the
+  design needs.
+
 **Easier to play**
 - **Every citizen says what they're doing, or what's stopping them and what would fix it** ("No seeds to sow: put wheat
   seeds in the town hall", "Nowhere to cook: place a furnace..."), on their card, in the town hall and when you talk to

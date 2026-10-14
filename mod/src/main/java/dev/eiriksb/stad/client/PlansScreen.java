@@ -1,5 +1,7 @@
 package dev.eiriksb.stad.client;
 
+import dev.eiriksb.stad.client.ui.StadButton;
+import dev.eiriksb.stad.client.ui.Theme;
 import dev.eiriksb.stad.net.PlanActionPayload;
 import dev.eiriksb.stad.net.PlansPayload;
 import net.minecraft.ChatFormatting;
@@ -13,7 +15,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 /** The building plans: pick a building, turn it, preview its outline, plan it. */
 public class PlansScreen extends Screen {
-    private static final int W = 320;
+    private static final int W = 340;
     private final PlansPayload plans;
     private int selected;
     private Rotation rotation;
@@ -63,44 +65,61 @@ public class PlansScreen extends Screen {
         int tw = groups.isEmpty() ? 0 : Math.min(80, (W - 4 * (groups.size() - 1)) / groups.size());
         for (int i = 0; i < groups.size(); i++) {
             String g = groups.get(i);
-            Button tab = addRenderableWidget(Button.builder(Component.literal(g), b -> {
+            addRenderableWidget(StadButton.of(Component.literal(g), b -> {
                 group = g;
                 scroll = 0;
                 selected = inGroup().getFirst();
                 rebuildWidgets();
-            }).bounds(x + i * (tw + 4), 22, tw, 18).build());
-            tab.active = !g.equals(group);
+            }).bounds(x + i * (tw + 4), 26, tw, 20).icon(groupIcon(g)).build().tab(g.equals(group)));
         }
         java.util.List<Integer> list = inGroup();
-        int rows = Math.max(1, (listBottom() - 44) / 22);
+        int rows = Math.max(1, (listBottom() - 50) / 22);
         scroll = Math.max(0, Math.min(scroll, list.size() - rows));
-        int y = 44;
+        int y = 51;
         for (int k = scroll; k < Math.min(list.size(), scroll + rows); k++) {
             int index = list.get(k);
-            Button b = addRenderableWidget(Button.builder(Component.literal(plans.options().get(index).name()), btn -> {
+            addRenderableWidget(StadButton.of(Component.literal(font.plainSubstrByWidth(plans.options().get(index).name(), 104)), btn -> {
                 selected = index;
                 rebuildWidgets();
-            }).bounds(x, y, 110, 20).build());
-            b.active = index != selected;
+            }).bounds(x + 3, y, 110, 20).build().chosen(index == selected));
             y += 22;
         }
         int by = height - 30;
-        turn = addRenderableWidget(Button.builder(doorLabel(), b -> {
+        turn = addRenderableWidget(StadButton.of(doorLabel(), b -> {
             rotation = rotation.getRotated(Rotation.CLOCKWISE_90);
             b.setMessage(doorLabel());
         }).bounds(x, by, 100, 20).build());
-        if (!plans.palettes().isEmpty() && !"Fields".equals(group)) {
-            addRenderableWidget(Button.builder(styleLabel(), b -> {
+        if (!plans.palettes().isEmpty() && !"Farms".equals(group)) {
+            addRenderableWidget(StadButton.of(styleLabel(), b -> {
                 palette = palette + 1 >= plans.palettes().size() ? -1 : palette + 1;
                 b.setMessage(styleLabel());
             }).bounds(x, by - 24, 110, 20).build());
         }
-        addRenderableWidget(Button.builder(Component.literal("Preview"), b -> send(true)).bounds(x + 106, by, 70, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Plan it").withStyle(ChatFormatting.GREEN), b -> {
+        addRenderableWidget(StadButton.of(Component.literal("Preview"), b -> send(true)).bounds(x + 106, by, 70, 20).build());
+        addRenderableWidget(StadButton.of(Component.literal("Plan it").withStyle(ChatFormatting.GREEN), b -> {
             send(false);
             onClose();
         }).bounds(x + 182, by, 70, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose()).bounds(x + 258, by, 62, 20).build());
+        addRenderableWidget(StadButton.of(Component.literal("Cancel"), b -> onClose()).bounds(x + 258, by, 82, 20).build());
+    }
+
+    private static net.minecraft.resources.ResourceLocation groupIcon(String group) {
+        return switch (group) {
+            case "Homes" -> Theme.icon("house");
+            case "Workplaces" -> Theme.job("builder");
+            case "Farms" -> Theme.icon("field");
+            default -> Theme.icon("bell");
+        };
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        int x = left();
+        Theme.panel(g, x - 12, 2, W + 24, height - 4);
+        Theme.header(g, font, title, width / 2, 7);
+        Theme.inset(g, x, 46, 116, listBottom() - 44);
+        Theme.inset(g, x + 120, 46, W - 120, listBottom() - 44);
     }
 
     @Override
@@ -133,41 +152,46 @@ public class PlansScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        int x = left() + 120;
-        g.drawString(font, Component.literal("Building plans").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), left(), 8, 0xFFFFFF);
+        int x = left() + 127, tw = W - 134;
         if (plans.options().isEmpty()) {
-            g.drawString(font, "No building packs are loaded.", x, 30, 0xAAAAAA);
+            g.drawString(font, "No building packs are loaded.", x, 52, Theme.MUTED);
             return;
         }
         PlansPayload.Option o = plans.options().get(selected);
-        int y = 44;
-        g.drawString(font, Component.literal(o.name()).withStyle(ChatFormatting.WHITE, ChatFormatting.BOLD), x, y, 0xFFFFFF);
-        y += 12;
-        for (var line : font.split(Component.literal(o.purpose()), W - 120)) {
-            g.drawString(font, line, x, y, 0xFFDD88);
+        int y = 52;
+        g.drawString(font, Component.literal(o.name()).withStyle(ChatFormatting.BOLD), x, y, Theme.GOLD);
+        y += 13;
+        for (var line : font.split(Component.literal(o.purpose()), tw)) {
+            g.drawString(font, line, x, y, 0xFFFFE08A);
             y += 10;
         }
-        for (var line : font.split(Component.literal(o.description()), W - 120)) {
-            g.drawString(font, line, x, y, 0xAAAAAA);
+        y += 2;
+        for (var line : font.split(Component.literal(o.description()), tw)) {
+            g.drawString(font, line, x, y, Theme.MUTED);
             y += 10;
         }
         y += 4;
-        g.drawString(font, o.sizeX() + " x " + o.sizeZ() + " blocks, " + o.sizeY() + " high", x, y, 0xAAAAAA);
+        g.drawString(font, o.sizeX() + " × " + o.sizeZ() + " blocks, " + o.sizeY() + " high", x, y, Theme.FAINT);
         y += 14;
-        g.drawString(font, Component.literal("Materials").withStyle(ChatFormatting.GOLD), x, y, 0xFFFFFF);
-        y += 12;
-        for (var line : font.split(Component.literal(o.materials()), W - 120)) {
-            g.drawString(font, line, x, y, 0xCCCCCC);
+        Theme.heading(g, font, "Materials", x, y, tw);
+        y += 13;
+        for (var line : font.split(Component.literal(o.materials()), tw)) {
+            g.drawString(font, line, x, y, Theme.TEXT);
             y += 10;
         }
         y += 6;
-        for (var line : font.split(Component.literal("Fields".equals(o.group()) ? "Centred on the block you clicked, level with it."
+        for (var line : font.split(Component.literal("Farms".equals(o.group()) ? "Centred on the block you clicked, level with it. Design"
+                + " fields, pens and groves of any shape at the architect's table."
                 : "Centred on the block you clicked, floor level with it. Builders take the "
                 + "materials from the town hall." + (palette < 0 ? "" : " In the " + plans.palettes().get(palette)
-                + " style, walls, roof, floor and frame are built in its materials instead.")), W - 120)) {
-            g.drawString(font, line, x, y, 0x888888);
+                + " style, walls, roof, floor and frame are built in its materials instead.")), tw)) {
+            if (y < listBottom() - 4) {
+                g.drawString(font, line, x, y, Theme.FAINT);
+            }
             y += 10;
         }
+        int rows = Math.max(1, (listBottom() - 50) / 22);
+        Theme.scrollbar(g, left() + 116 - 7, 48, listBottom() - 48, scroll, rows, inGroup().size());
     }
 
     @Override

@@ -27,7 +27,7 @@ public class BuildingPlansItem extends Item {
         super(props);
     }
 
-    private static final List<String> GROUPS = List.of("Homes", "Workplaces", "Town", "Fields");
+    private static final List<String> GROUPS = List.of("Homes", "Workplaces", "Town", "Farms");
 
     private static int groupOrder(String g) {
         return GROUPS.indexOf(g);
@@ -36,8 +36,8 @@ public class BuildingPlansItem extends Item {
     /** What kind of building it is, for the plans' tabs. */
     static String group(BuildingDef d) {
         net.minecraft.resources.ResourceLocation t = d.type();
-        if (t.equals(BuildingDef.FIELD)) {
-            return "Fields";
+        if (dev.eiriksb.stad.architect.Yard.is(t)) {
+            return "Farms";
         }
         if (t.equals(BuildingDef.HOME)) {
             return "Homes";
@@ -56,7 +56,13 @@ public class BuildingPlansItem extends Item {
                 && e.state().getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.HEAD).count();
         String sleeps = beds == 0 ? "" : " Sleeps " + beds + ".";
         if (t.equals(BuildingDef.FIELD)) {
-            return "Where the farmers grow wheat (and whatever seeds the town has).";
+            return "Where the farmers grow wheat (and whatever seeds the town has). Design your own at the architect's table.";
+        }
+        if (t.equals(BuildingDef.PEN)) {
+            return "A fenced pen: the shepherd brings animals in through the gate.";
+        }
+        if (t.equals(BuildingDef.GROVE)) {
+            return "Saplings for the lumberjack to plant and fell.";
         }
         if (t.equals(BuildingDef.HOME)) {
             return "A home." + sleeps;

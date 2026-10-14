@@ -40,6 +40,12 @@ public final class Contents {
      * nobody looked (then needs that depend on it count as met)
      */
     public java.util.Set<String> near;
+    /** farmland with no water within four blocks, where crops won't grow (fields; worked out at the architect's table) */
+    public int dry;
+    /** fenced in all round, so animals can't get out (pens; worked out at the architect's table, assumed otherwise) */
+    public boolean penned = true;
+    /** saplings planted with less than two blocks between them, too close to grow (groves; at the architect's table) */
+    public int crowded;
 
     public int count(Thing t) {
         return counts.getOrDefault(t, 0);
@@ -55,6 +61,22 @@ public final class Contents {
 
     public int count(Block b) {
         return blocks.getOrDefault(b, 0);
+    }
+
+    /** How many blocks of a kind it has. */
+    public int count(java.util.function.Predicate<BlockState> what) {
+        int n = 0;
+        for (Map.Entry<Block, Integer> e : blocks.entrySet()) {
+            if (what.test(e.getKey().defaultBlockState())) {
+                n += e.getValue();
+            }
+        }
+        return n;
+    }
+
+    /** Whether it has a marker whose name starts with {@code prefix} ("stad:plot" matches "stad:plot_carrots"). */
+    public boolean markerLike(String prefix) {
+        return markers.stream().anyMatch(m -> m.startsWith(prefix));
     }
 
     /** Whether there's {@code what} round it (or nobody looked). */

@@ -34,12 +34,13 @@ public final class TablePayloads {
     }
 
     /** The design: what it puts where (site keys and block state ids), its markers, and what it was generated from. */
-    public record Design(String name, String type, String spec, String door, int floorY, int[] keys, int[] states, int[] markerKeys,
+    public record Design(String name, String type, String spec, String yard, String door, int floorY, int[] keys, int[] states, int[] markerKeys,
                          List<String> markerNames) {
         static void write(FriendlyByteBuf b, Design d) {
             b.writeUtf(d.name);
             b.writeUtf(d.type);
             b.writeUtf(d.spec, 4096);
+            b.writeUtf(d.yard, 1024);
             b.writeUtf(d.door);
             b.writeVarInt(d.floorY + 1);
             b.writeVarIntArray(d.keys);
@@ -49,7 +50,7 @@ public final class TablePayloads {
         }
 
         static Design read(FriendlyByteBuf b) {
-            return new Design(b.readUtf(), b.readUtf(), b.readUtf(4096), b.readUtf(), b.readVarInt() - 1, b.readVarIntArray(),
+            return new Design(b.readUtf(), b.readUtf(), b.readUtf(4096), b.readUtf(1024), b.readUtf(), b.readVarInt() - 1, b.readVarIntArray(),
                     b.readVarIntArray(), b.readVarIntArray(), b.readList(FriendlyByteBuf::readUtf));
         }
     }

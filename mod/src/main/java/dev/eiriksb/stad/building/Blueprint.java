@@ -38,6 +38,21 @@ public record Blueprint(Vec3i size, List<Entry> entries, List<Marker> markers) {
     /** what each marker means: storage counts as the town's, work is where the worker stands, sit and bed are for people */
     public static final Set<String> MARKERS = Set.of("stad:bed", "stad:work", "stad:storage", "stad:door", "stad:sit", "stad:shaft");
 
+    /**
+     * The land markers of fields, pens and groves (PLAN.md §6.11): a plot to till ({@code stad:plot}, or
+     * {@code stad:plot_carrots} for one crop), a water hole ({@code stad:water}), a sapling to plant
+     * ({@code stad:sapling}, {@code stad:sapling_birch}...), and the middle of a pen ({@code stad:pen}, {@code stad:pen_sheep}...).
+     * The workers make these, not the builders, so they don't clear the spot either.
+     */
+    public static boolean land(String name) {
+        return name.startsWith("stad:plot") || name.equals("stad:water") || name.startsWith("stad:sapling") || name.startsWith("stad:pen");
+    }
+
+    /** Whether {@code name} is one of our markers. */
+    public static boolean isMarker(String name) {
+        return MARKERS.contains(name) || land(name) && name.matches("stad:[a-z_]+");
+    }
+
     public Blueprint {
         entries = List.copyOf(entries);
         markers = List.copyOf(markers);
@@ -68,7 +83,9 @@ public record Blueprint(Vec3i size, List<Entry> entries, List<Marker> markers) {
             String marker = marker(state, b.getCompound("nbt"));
             if (marker != null) {
                 markers.add(new Marker(pos, marker));
-                entries.add(new Entry(pos, Blocks.AIR.defaultBlockState()));
+                if (!land(marker)) {
+                    entries.add(new Entry(pos, Blocks.AIR.defaultBlockState()));
+                }
             } else if (!state.is(Blocks.STRUCTURE_VOID)) {
                 entries.add(new Entry(pos, state));
             }
@@ -82,7 +99,7 @@ public record Blueprint(Vec3i size, List<Entry> entries, List<Marker> markers) {
             return null;
         }
         String meta = nbt.getString("metadata").strip();
-        return MARKERS.contains(meta) ? meta : null;
+        return isMarker(meta) ? meta : null;
     }
 
     /**
@@ -99,7 +116,9 @@ public record Blueprint(Vec3i size, List<Entry> entries, List<Marker> markers) {
                 String m = marker(s, sb.saveWithoutMetadata(level.registryAccess()));
                 if (m != null) {
                     markers.add(new Marker(rel, m));
-                    entries.add(new Entry(rel, Blocks.AIR.defaultBlockState()));
+                    if (!land(m)) {
+                        entries.add(new Entry(rel, Blocks.AIR.defaultBlockState()));
+                    }
                     continue;
                 }
             }

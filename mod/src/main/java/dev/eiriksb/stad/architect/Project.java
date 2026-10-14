@@ -37,6 +37,8 @@ public final class Project {
     public ResourceLocation type = BuildingDef.HOME;
     /** the generated building's spec, or null */
     public BuildSpec spec;
+    /** what a field, pen or grove was generated from ({@link Yard}), or null */
+    public Yard yard;
     public Direction door = Direction.NORTH;
     /** the floor's height in the site (-1: not worked out yet) */
     public int floorY = -1;
@@ -70,6 +72,19 @@ public final class Project {
         return x < sx && y >= 0 && y < sy && z < sz;
     }
 
+    /** Draws the generated part again from what it was generated from (a building's spec or a yard); why not, or null. */
+    public String regenerate(Grid terrain) {
+        if (yard != null && Yard.is(type)) {
+            return yard.generate(this, terrain);
+        }
+        return spec != null ? Fit.generate(this, terrain) : null;
+    }
+
+    /** Whether it was generated from something (and so can be drawn again). */
+    public boolean generatedFrom() {
+        return spec != null || yard != null && Yard.is(type);
+    }
+
     /** What the design puts at {@code key}: a hand edit, else the generated building, else null (the land as it is). */
     public BlockState at(int key) {
         BlockState e = edits.get(key);
@@ -90,6 +105,7 @@ public final class Project {
         sy = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, Math.abs(a.getY() - b.getY()) + 1));
         sz = Math.abs(a.getZ() - b.getZ()) + 1;
         spec = null;
+        yard = null;
         floorY = -1;
         edits.clear();
         markers.clear();
@@ -130,6 +146,9 @@ public final class Project {
         t.putIntArray("Size", new int[]{sx, sy, sz});
         if (spec != null) {
             t.putString("Spec", spec.toJson());
+        }
+        if (yard != null) {
+            t.putString("Yard", yard.toJson());
         }
         t.putString("Door", door.getSerializedName());
         t.putInt("Floor", floorY);
@@ -184,6 +203,9 @@ public final class Project {
         p.sz = size[2];
         if (t.contains("Spec")) {
             p.spec = BuildSpec.parse(t.getString("Spec"));
+        }
+        if (t.contains("Yard")) {
+            p.yard = Yard.parse(t.getString("Yard"));
         }
         Direction door = Direction.byName(t.getString("Door"));
         p.door = door != null && door.getAxis().isHorizontal() ? door : Direction.NORTH;

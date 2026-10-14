@@ -91,8 +91,8 @@ public final class Planning {
             outcome = Order.Outcome.ACCEPTED;
             planned = colony.addBuilding(key, name, origin, rotation, level.getGameTime(), design);
             planned.outlineUntil = level.getGameTime() + 200;
-            if (Fields.is(planned)) {
-                planned.status = Building.Status.DONE; // the farmers make it
+            if (dev.eiriksb.stad.architect.Yard.is(planned.type()) && planned.placement().map(p -> p.steps().isEmpty()).orElse(true)) {
+                planned.status = Building.Status.DONE; // only land: the farmers (or lumberjacks) make it
                 colony.changed();
             }
         }
@@ -103,7 +103,7 @@ public final class Planning {
 
     /** What a player is told when they've planned a building: who'll build it and what to put in the town hall. */
     public static String plannedMessage(ServerLevel level, Colony colony, Building b) {
-        if (Fields.is(b)) {
+        if (Fields.is(b) && b.done()) {
             boolean farmer = colony.citizens().stream().anyMatch(c -> dev.eiriksb.stad.colony.Jobs.FARMER.equals(c.job));
             return "Planned a field. " + (farmer ? "The farmers will till it, water it and sow it" : "Make someone a farmer and they'll till it, water it and sow it")
                     + " (with seeds from the town hall, or what they find in the grass).";

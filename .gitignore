@@ -12,3 +12,6 @@ bin/
 
 # dev game directories
 run/
+
+# python
+__pycache__/

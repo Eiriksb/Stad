@@ -96,6 +96,11 @@ public final class Building {
         return key.getPath().startsWith("repair/");
     }
 
+    /** Whether there's something for the builders here (it isn't finished, and isn't only land for the farmers). */
+    public boolean needsBuilding() {
+        return !done() && placement().map(p -> !p.steps().isEmpty()).orElse(false);
+    }
+
     public boolean done() {
         return status == Status.DONE;
     }

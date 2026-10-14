@@ -1,15 +1,17 @@
 package dev.eiriksb.stad.client;
 
+import dev.eiriksb.stad.client.ui.StadButton;
+import dev.eiriksb.stad.client.ui.Theme;
 import dev.eiriksb.stad.colony.Rank;
 import dev.eiriksb.stad.net.ColonyActionPayload;
 import dev.eiriksb.stad.net.ColonyView;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -21,25 +23,35 @@ import java.util.List;
  * (or what's stopping them), every job with what it needs and whether the town has it, and its buildings.
  */
 public class TownHallScreen extends Screen {
-    private enum Tab { TOWN("Town"), CITIZENS("Citizens"), JOBS("Jobs"), BUILDINGS("Buildings");
-        final String label;
+    private enum Tab { TOWN("Town", "bell"), CITIZENS("Citizens", "people"), JOBS("Jobs", null), BUILDINGS("Buildings", "house");
+        final String label, icon;
 
-        Tab(String label) {
+        Tab(String label, String icon) {
             this.label = label;
+            this.icon = icon;
+        }
+
+        ResourceLocation sprite() {
+            return icon == null ? Theme.job("builder") : Theme.icon(icon);
         }
     }
 
-    private static final int LINE = 10;
-    private static final int TOP = 52;
+    private static final int LINE = 10, ICON_ROW = 19;
     private static Tab lastTab = Tab.TOWN;
 
     private final ColonyView view;
     private EditBox nameBox;
+    private boolean renaming;
     private Tab tab = lastTab;
+    /** how far the list is scrolled, in pixels */
     private int scroll;
     private final List<Row> rows = new ArrayList<>();
 
-    private record Row(FormattedCharSequence text, int color, int indent) {}
+    /**
+     * A line in the list: text, its colour, how far it's indented, and an icon before it (a 16 by 16 sprite, which
+     * makes the row taller, or a 9 by 9 one by name); {@code heading} draws it as a heading with a divider.
+     */
+    private record Row(FormattedCharSequence text, int color, int indent, ResourceLocation icon, String small, boolean heading, int height) {}
 
     public TownHallScreen(ColonyView view) {
         super(Component.literal(view.name()));
@@ -47,83 +59,110 @@ public class TownHallScreen extends Screen {
     }
 
     private int w() {
-        return Math.min(380, width - 20);
+        return Math.min(400, width - 40);
     }
 
     private int left() {
         return (width - w()) / 2;
     }
 
+    private int top() {
+        return 54;
+    }
+
     private int bottom() {
-        return height - 30;
+        return height - 36;
     }
 
     @Override
     protected void init() {
         int x = left(), w = w();
         boolean manage = view.viewerRank().atLeast(Rank.OFFICER);
-        nameBox = new EditBox(font, x, 6, w - 70, 18, Component.literal("Town name"));
-        nameBox.setMaxLength(32);
-        nameBox.setValue(view.name());
-        nameBox.setEditable(manage);
-        addRenderableWidget(nameBox);
-        Button rename = Button.builder(Component.literal("Rename"), b -> PacketDistributor.sendToServer(
-                new ColonyActionPayload(view.id(), ColonyActionPayload.Action.RENAME, nameBox.getValue()))).bounds(x + w - 66, 5, 66, 20).build();
-        rename.active = manage;
-        addRenderableWidget(rename);
-        int tw = (w - 3 * 4) / 4;
+        if (renaming) {
+            nameBox = new EditBox(font, width / 2 - 80, 8, 160, 16, Component.literal("Town name"));
+            nameBox.setMaxLength(32);
+            nameBox.setValue(view.name());
+            addRenderableWidget(nameBox);
+            setInitialFocus(nameBox);
+            addRenderableWidget(StadButton.of(Component.literal("Save"), b -> {
+                PacketDistributor.sendToServer(new ColonyActionPayload(view.id(), ColonyActionPayload.Action.RENAME, nameBox.getValue()));
+                renaming = false;
+                rebuildWidgets();
+            }).bounds(width / 2 + 84, 7, 40, 18).build());
+        } else if (manage) {
+            addRenderableWidget(StadButton.of(Component.literal("Rename"), b -> {
+                renaming = true;
+                rebuildWidgets();
+            }).bounds(x + w - 52, 8, 52, 16).tooltip(Tooltip.create(Component.literal("Give the town a new name."))).build());
+        }
+        int tw = (w - 3 * 3) / 4;
         for (Tab t : Tab.values()) {
-            String label = t.label + (t == Tab.CITIZENS && view.citizens().stream().anyMatch(ColonyView.Citizen::problem) ? " (!)" : "");
-            Button b = Button.builder(Component.literal(label), btn -> {
+            boolean trouble = t == Tab.CITIZENS && view.citizens().stream().anyMatch(ColonyView.Citizen::problem);
+            StadButton b = StadButton.of(Component.literal(t.label + (trouble ? " (!)" : "")), btn -> {
                 tab = t;
                 lastTab = t;
                 scroll = 0;
                 rebuildWidgets();
-            }).bounds(x + t.ordinal() * (tw + 4), 28, tw, 18).build();
-            b.active = t != tab;
+            }).bounds(x + t.ordinal() * (tw + 3), top() - 22, tw, 20).icon(t.sprite()).build().tab(t == tab);
             addRenderableWidget(b);
         }
-        int bw = (w - 3 * 4) / 4, by = height - 25;
-        Button storage = Button.builder(Component.literal("Storage"), b -> PacketDistributor.sendToServer(
-                new ColonyActionPayload(view.id(), ColonyActionPayload.Action.OPEN_STORAGE, ""))).bounds(x, by, bw, 20)
-                .tooltip(Tooltip.create(Component.literal("The town hall's storage: building materials, food, tools and swords go here."))).build();
+        int bw = (w - 3 * 4) / 4, by = height - 28;
+        StadButton storage = StadButton.of(Component.literal("Storage"), b -> PacketDistributor.sendToServer(
+                        new ColonyActionPayload(view.id(), ColonyActionPayload.Action.OPEN_STORAGE, ""))).bounds(x, by, bw, 20)
+                .tooltip(Tooltip.create(Component.literal("The town hall's storage: building materials, food, seeds, saplings, tools and swords go here.")))
+                .build();
         storage.active = view.viewerRank().atLeast(Rank.MEMBER);
         addRenderableWidget(storage);
         boolean owner = view.viewerRank() == Rank.OWNER;
-        Button stance = Button.builder(Component.literal(view.open() ? "Open to war" : "Peaceful").withStyle(view.open() ? ChatFormatting.RED
-                : ChatFormatting.GREEN), b -> PacketDistributor.sendToServer(new ColonyActionPayload(view.id(), ColonyActionPayload.Action.STANCE, "")))
+        StadButton stance = StadButton.of(Component.literal(view.open() ? "Open to war" : "Peaceful").withStyle(view.open() ? ChatFormatting.RED
+                        : ChatFormatting.GREEN), b -> PacketDistributor.sendToServer(new ColonyActionPayload(view.id(), ColonyActionPayload.Action.STANCE, "")))
                 .bounds(x + bw + 4, by, bw, 20).tooltip(Tooltip.create(Component.literal(
                         "Peaceful towns can't be raided by players. Open towns can declare war on, and be raided by, other open towns."
                                 + " Going back to peaceful takes a while.")))
                 .build();
         stance.active = owner;
         addRenderableWidget(stance);
-        Button poach = Button.builder(Component.literal(view.poaching() ? "Poaching: on" : "Poaching: off"),
+        StadButton poach = StadButton.of(Component.literal(view.poaching() ? "Poaching: on" : "Poaching: off"),
                         b -> PacketDistributor.sendToServer(new ColonyActionPayload(view.id(), ColonyActionPayload.Action.POACHING, "")))
                 .bounds(x + 2 * (bw + 4), by, bw, 20).tooltip(Tooltip.create(Component.literal(
                         "Whether rival towns may lure your unhappy citizens away.")))
                 .build();
         poach.active = owner;
         addRenderableWidget(poach);
-        addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose()).bounds(x + 3 * (bw + 4), by, bw, 20).build());
+        addRenderableWidget(StadButton.of(Component.literal("Done"), b -> onClose()).bounds(x + 3 * (bw + 4), by, bw, 20).build());
         buildRows();
     }
 
+    // ---- the rows -----------------------------------------------------------------------------------------------
+
+    private int textWidth() {
+        return w() - 16;
+    }
+
     private void heading(String text) {
-        if (!rows.isEmpty()) {
-            rows.add(new Row(FormattedCharSequence.EMPTY, 0, 0));
-        }
-        rows.add(new Row(Component.literal(text).withStyle(ChatFormatting.GOLD).getVisualOrderText(), 0xFFFFFF, 0));
+        rows.add(new Row(Component.literal(text).getVisualOrderText(), Theme.GOLD, 0, null, null, true, rows.isEmpty() ? 14 : 18));
     }
 
     private void text(String text, int color) {
-        text(text, color, 0);
+        text(text, color, 0, null);
     }
 
-    private void text(String text, int color, int indent) {
-        for (FormattedCharSequence line : font.split(Component.literal(text), w() - indent)) {
-            rows.add(new Row(line, color, indent));
+    private void text(String text, int color, int indent, String small) {
+        int pad = small != null ? 12 : 0;
+        boolean first = true;
+        for (FormattedCharSequence line : font.split(Component.literal(text), textWidth() - indent - pad)) {
+            rows.add(new Row(line, color, indent + pad, null, first ? small : null, false, LINE));
+            first = false;
         }
+    }
+
+    /** A row with a 16 by 16 icon and a line of text beside it. */
+    private void iconRow(ResourceLocation icon, Component text) {
+        rows.add(new Row(font.split(text, textWidth() - 20).getFirst(), Theme.TEXT, 20, icon, null, false, ICON_ROW));
+    }
+
+    private void gap() {
+        rows.add(new Row(FormattedCharSequence.EMPTY, 0, 0, null, null, false, 5));
     }
 
     private void buildRows() {
@@ -138,36 +177,40 @@ public class TownHallScreen extends Screen {
 
     private void town() {
         long homed = view.citizens().stream().filter(ColonyView.Citizen::home).count();
-        text("Founded by " + view.owner() + " · you are " + view.viewerRank().id(), 0xAAAAAA);
-        text(view.citizens().size() + " citizens · " + view.beds() + " beds (" + Math.max(0, view.beds() - homed) + " free) · land: "
-                + view.radius() + " blocks around the hall", 0xAAAAAA);
-        text(view.standing(), 0xDDDD99);
+        iconRow(Theme.icon("people"), Component.literal(view.citizens().size() + " citizens").withColor(Theme.TEXT)
+                .append(Component.literal("  ·  " + view.beds() + " beds, " + Math.max(0, view.beds() - homed) + " free  ·  land " + view.radius()
+                        + " blocks round the hall").withColor(Theme.MUTED)));
+        text("Founded by " + view.owner() + " · you're " + (view.viewerRank() == Rank.OWNER ? "its owner" : "a " + view.viewerRank().id()),
+                Theme.MUTED);
+        text(view.standing(), 0xFFDDD099);
         if (!view.war().isEmpty()) {
-            text(view.war(), 0xFF6666);
+            text(view.war(), Theme.BAD, 0, "warn");
         }
         long done = view.steps().stream().filter(ColonyView.Step::done).count();
-        heading("Next steps (" + done + " of " + view.steps().size() + " done)");
+        heading("Next steps  " + done + "/" + view.steps().size());
         boolean first = true;
         for (ColonyView.Step s : view.steps()) {
             if (s.done()) {
-                text("✔ " + s.text(), 0x669966, 0);
+                text(s.text(), 0xFF6E8F64, 0, "check");
             } else {
-                text((first ? "➜ " : "• ") + s.text(), first ? 0xFFFF77 : 0xCCCCCC, 0);
+                text(s.text(), first ? 0xFFFFE98A : Theme.TEXT, 0, first ? "star" : null);
                 first = false;
             }
         }
-        long stuck = view.citizens().stream().filter(ColonyView.Citizen::problem).count();
-        if (stuck > 0) {
+        List<ColonyView.Citizen> stuck = view.citizens().stream().filter(ColonyView.Citizen::problem).toList();
+        if (!stuck.isEmpty()) {
             heading("Can't work");
-            view.citizens().stream().filter(ColonyView.Citizen::problem).limit(6)
-                    .forEach(c -> text(c.name().split(" ")[0] + (c.job().isEmpty() ? "" : " (" + c.job() + ")") + ": " + c.status(), 0xFF8877));
-            if (stuck > 6) {
-                text("...and " + (stuck - 6) + " more (see Citizens)", 0x999999);
+            stuck.stream().limit(6).forEach(c -> {
+                iconRow(Theme.job(c.job()), Component.literal(c.name().split(" ")[0]).withColor(Theme.TEXT));
+                text(c.status(), Theme.BAD, 20, null);
+            });
+            if (stuck.size() > 6) {
+                text("...and " + (stuck.size() - 6) + " more (see Citizens)", Theme.FAINT);
             }
         }
         if (!view.needs().isEmpty()) {
             heading("The town needs");
-            view.needs().forEach(n -> text(n, 0xDDBB77));
+            view.needs().forEach(n -> text(n, 0xFFDDBB77, 0, "warn"));
         }
         heading("Leaders");
         StringBuilder leaders = new StringBuilder();
@@ -177,81 +220,108 @@ public class TownHallScreen extends Screen {
             }
             leaders.append(m.name()).append(" (").append(m.rank().id()).append(')');
         }
-        text(leaders.toString(), 0xCCCCCC);
+        text(leaders.toString(), Theme.TEXT);
         if (!view.recentOrders().isEmpty()) {
             heading("Recent orders");
-            view.recentOrders().forEach(o -> text(o, 0x999999));
+            view.recentOrders().forEach(o -> text(o, Theme.MUTED));
         }
     }
 
     private void citizens() {
         if (view.citizens().isEmpty()) {
-            text("Nobody lives here yet. Place beds on the town's land and newcomers will come.", 0x888888);
+            text("Nobody lives here yet. Place beds on the town's land and newcomers will come.", Theme.MUTED);
             return;
         }
-        text("Right-click a citizen to talk to them and give them a job.", 0x888888);
+        text("Right-click a citizen to talk to them and give them a job.", Theme.FAINT);
         for (ColonyView.Citizen c : view.citizens()) {
-            rows.add(new Row(FormattedCharSequence.EMPTY, 0, 0));
-            int happy = c.happiness() >= 60 ? 0x77DD77 : c.happiness() >= 35 ? 0xDDDD77 : 0xDD7777;
-            text(c.name() + (c.job().isEmpty() ? "" : " · " + c.job()) + "   " + c.happiness() + "% happy · food " + c.hunger() + " · rest " + c.rest()
-                    + (c.home() ? "" : " · homeless"), happy);
-            text(c.status(), c.problem() ? 0xFF8877 : 0xAAAAAA, 8);
+            gap();
+            int happy = c.happiness() >= 60 ? Theme.GOOD : c.happiness() >= 35 ? Theme.WARN : Theme.BAD;
+            iconRow(Theme.job(c.job()), Component.literal(c.name()).withColor(Theme.TEXT)
+                    .append(Component.literal(c.job().isEmpty() ? "  no job" : "  " + c.job()).withColor(Theme.MUTED))
+                    .append(Component.literal("   " + c.happiness() + "% happy").withColor(happy))
+                    .append(Component.literal(" · food " + c.hunger() + " · rest " + c.rest() + (c.home() ? "" : " · homeless")).withColor(Theme.FAINT)));
+            text(c.status(), c.problem() ? Theme.BAD : Theme.MUTED, 20, c.problem() ? "warn" : null);
         }
     }
 
     private void jobs() {
-        text("What each job does and needs, and whether the town has it. Right-click a citizen to give them a job.", 0x888888);
+        text("What each job does and needs, and whether the town has it. Right-click a citizen to give them a job.", Theme.FAINT);
         for (ColonyView.Job j : view.jobs()) {
-            rows.add(new Row(FormattedCharSequence.EMPTY, 0, 0));
+            gap();
             String name = j.job().substring(0, 1).toUpperCase() + j.job().substring(1);
-            text(name + " · " + (j.workers().isEmpty() ? "nobody" : String.join(", ", j.workers())), 0xFFDD88);
-            text(j.does(), 0xBBBBBB, 8);
-            text("Needs: " + j.needs(), 0x999999, 8);
-            text(j.problem().isEmpty() ? "✔ The town has what it needs" : "✘ " + j.problem(), j.problem().isEmpty() ? 0x77CC77 : 0xFF8877, 8);
+            iconRow(Theme.job(j.job()), Component.literal(name).withColor(Theme.GOLD)
+                    .append(Component.literal("   " + (j.workers().isEmpty() ? "nobody yet" : String.join(", ", j.workers()))).withColor(Theme.MUTED)));
+            text(j.does(), Theme.TEXT, 20, null);
+            text("Needs: " + j.needs(), Theme.MUTED, 20, null);
+            if (j.problem().isEmpty()) {
+                text("The town has what it needs", Theme.GOOD, 20, "check");
+            } else {
+                text(j.problem(), Theme.BAD, 20, "cross");
+            }
         }
     }
 
     private void buildings() {
         if (view.buildings().isEmpty()) {
-            text("Nothing planned yet. Right-click the ground with Building Plans (two paper and a coal) to plan a building or a field,"
-                    + " or tell your builder what you'd like.", 0x888888);
+            text("Nothing planned yet. Right-click the ground with Building Plans (two paper and a coal) to plan a building or a field, design"
+                    + " one at the architect's table, or tell your builder what you'd like.", Theme.MUTED);
         }
-        view.buildings().forEach(b -> text(b, 0xCCCCCC));
+        view.buildings().forEach(b -> text(b, Theme.TEXT));
         if (!view.needs().isEmpty()) {
             heading("The town needs");
-            view.needs().forEach(n -> text(n, 0xDDBB77));
+            view.needs().forEach(n -> text(n, 0xFFDDBB77, 0, "warn"));
         }
     }
 
-    private int visibleRows() {
-        return Math.max(1, (bottom() - TOP) / LINE);
+    private int total() {
+        return rows.stream().mapToInt(Row::height).sum();
+    }
+
+    // ---- drawing ------------------------------------------------------------------------------------------------
+
+    @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        int x = left();
+        Theme.panel(g, x - 14, 2, w() + 28, height - 4);
+        Theme.inset(g, x - 4, top() - 2, w() + 8, bottom() - top() + 6);
+        if (!renaming) {
+            Theme.header(g, font, title, width / 2, 8);
+        }
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
-        int x = left();
-        scroll = Math.max(0, Math.min(scroll, rows.size() - visibleRows()));
-        g.fill(x - 6, TOP - 4, x + w() + 8, bottom() + 2, 0xA0000000);
-        g.enableScissor(x, TOP, x + w(), bottom());
-        int y = TOP;
-        for (int i = scroll; i < rows.size() && y < bottom(); i++) {
-            Row r = rows.get(i);
-            g.drawString(font, r.text(), x + r.indent(), y, r.color());
-            y += LINE;
+        int x = left() + 4, view = bottom() - top();
+        scroll = Math.max(0, Math.min(scroll, total() - view));
+        g.enableScissor(left(), top(), left() + w(), bottom() + 2);
+        int y = top() + 2 - scroll;
+        for (Row r : rows) {
+            if (y + r.height() >= top() && y < bottom()) {
+                if (r.heading()) {
+                    int ty = y + r.height() - 11;
+                    g.drawString(font, r.text(), x, ty, r.color());
+                    Theme.divider(g, x + font.width(r.text()) + 6, ty + 2, Math.max(0, textWidth() - font.width(r.text()) - 6));
+                } else if (r.icon() != null) {
+                    Theme.icon(g, r.icon(), x, y + 1);
+                    g.drawString(font, r.text(), x + r.indent(), y + 5, r.color());
+                } else {
+                    if (r.small() != null) {
+                        Theme.small(g, r.small(), x + r.indent() - 12, y);
+                    }
+                    g.drawString(font, r.text(), x + r.indent(), y, r.color());
+                }
+            }
+            y += r.height();
         }
         g.disableScissor();
-        if (rows.size() > visibleRows()) {
-            int track = bottom() - TOP;
-            int bar = Math.max(10, track * visibleRows() / rows.size());
-            int at = TOP + (track - bar) * scroll / Math.max(1, rows.size() - visibleRows());
-            g.fill(x + w() + 3, at, x + w() + 5, at + bar, 0x88FFFFFF);
-        }
+        Theme.scrollbar(g, left() + w() - 6, top(), bottom() - top(), scroll, view, total());
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        scroll -= (int) Math.signum(scrollY) * 3;
+        scroll -= (int) Math.signum(scrollY) * 24;
         return true;
     }
 

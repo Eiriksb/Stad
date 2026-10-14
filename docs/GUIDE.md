@@ -92,6 +92,7 @@ where the shaft starts above the ground, they put the top steps in first.
 **Building Plans** (two paper and a coal): right-click the ground to choose a building and a style, see where it
 goes, and plan it. Builders won't build on open water; they fill in a dip, a slope or a puddle under a building.
 **Fields** are in the plans too: a 9 by 9 field round a water hole, which the farmers make (nothing for the builders).
+Design bigger ones, pens and groves at the architect's table (below).
 **Or talk to your builder**: "a small stone cottage with two bedrooms and a chimney". They draw it
 up, a ghost of it appears nearby, and you change it as you talk until you say "build it".
 
@@ -114,6 +115,15 @@ the block list). To start from a generated building, open **Generate ▾**, pick
 **Build in it** takes you to the drafting world, an empty void with just a copy of the site, to build it yourself in
 creative; a grid marks where you can build. Press **B** when you're done and **Keep it**: what you built becomes the design, and you're back at the table
 with your own things (nothing there is real, and nothing comes back with you). The builders then build it for real.
+
+**Farms, pens and groves** are designed at the table too: click the kind (top left) until it says **Field**, **Pen**
+or **Grove**, and open **Lay out ▾**. For a field choose the crop (or mixed), water in rows or holes, a fence, a path and
+lamps; for a pen the animals and a shelter; for a grove the trees and how far apart. **Lay it out** fills the site,
+and you can change it by hand like a building (the hotbar has farmland, water, crops, fences and saplings). Plan it:
+the builders level it and put up the fence, and then the farmer tills and sows it, the shepherd leads the animals in
+through the gate, or the lumberjack plants the saplings (put seeds, carrots, potatoes or saplings in the town hall).
+
+![A field designed at the table, and the builder and farmer making it](farms.png)
 
 Built a house yourself? Stand in it and tell a citizen "this is your home now". The **scan wand** (an amethyst shard
 on top of two sticks) saves your buildings into **My pack**.

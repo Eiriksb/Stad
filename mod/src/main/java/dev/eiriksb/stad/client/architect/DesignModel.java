@@ -29,7 +29,7 @@ public final class DesignModel {
     public final int sx, sy, sz;
     public final Map<Integer, BlockState> design = new HashMap<>();
     public final Map<Integer, String> markers = new HashMap<>();
-    public String name = "", type = "stad:home", spec = "", door = "north";
+    public String name = "", type = "stad:home", spec = "", yard = "", door = "north";
     public int floorY = -1;
     /** what's round the site (farmland, trees, water, a pen) */
     public java.util.Set<String> near = java.util.Set.of();
@@ -46,6 +46,7 @@ public final class DesignModel {
         name = d.name();
         type = d.type();
         spec = d.spec();
+        yard = d.yard();
         door = d.door();
         floorY = d.floorY();
         design.clear();
@@ -111,7 +112,11 @@ public final class DesignModel {
             if (s.isAir() || s.getBlock() instanceof LiquidBlock || s.equals(land(e.getKey()))) {
                 continue;
             }
-            Item item = s.getBlock().asItem();
+            ResourceLocation t = ResourceLocation.tryParse(type);
+            if (t != null && dev.eiriksb.stad.architect.Yards.worked(t, s)) {
+                continue; // the farmer or lumberjack makes that
+            }
+            Item item = Placement.itemFor(s);
             int n = Placement.cost(s, item);
             if (n > 0) {
                 m.merge(item, n, Integer::sum);

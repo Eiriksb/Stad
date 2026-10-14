@@ -45,7 +45,7 @@ public final class StadRegistries {
                     .build("raider"));
 
     public static final DeferredBlock<TownHallBlock> TOWN_HALL = BLOCKS.registerBlock("town_hall", TownHallBlock::new,
-            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(3.0f, 1200.0f).sound(SoundType.WOOD));
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(3.0f, 1200.0f).sound(SoundType.WOOD).noOcclusion());
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TownHallBlockEntity>> TOWN_HALL_ENTITY =
             BLOCK_ENTITIES.register("town_hall", () -> BlockEntityType.Builder.of(TownHallBlockEntity::new, TOWN_HALL.get()).build(null));
@@ -54,7 +54,7 @@ public final class StadRegistries {
 
     public static final DeferredBlock<dev.eiriksb.stad.block.ArchitectTableBlock> ARCHITECT_TABLE = BLOCKS.registerBlock("architect_table",
             dev.eiriksb.stad.block.ArchitectTableBlock::new,
-            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD));
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(2.5f).sound(SoundType.WOOD).noOcclusion());
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<dev.eiriksb.stad.block.ArchitectTableBlockEntity>> ARCHITECT_TABLE_ENTITY =
             BLOCK_ENTITIES.register("architect_table", () -> BlockEntityType.Builder.of(dev.eiriksb.stad.block.ArchitectTableBlockEntity::new,

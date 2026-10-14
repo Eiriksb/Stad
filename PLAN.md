@@ -557,6 +557,41 @@ ground under a building, fetch from warehouses, and refuse open water. Lumberjac
 there are no trees; shepherds lead in animals from just outside town; cooks also cook what's in the town hall. A
 citizen with no job takes a first one more willingly (they came looking for work).
 
+### 6.11 Farms at the architect's table, and Stad's own look
+
+**Land as well as buildings.** The table's kinds include **field**, **pen** and **grove**. For these, Lay out ▾
+replaces the building options with land options (a `Yard`, kept with the project like a building's spec, so changing
+one redraws it with the hand edits on top):
+- **Field**: levelled at the site's ground (dirt filled in below, everything cleared above), farmland round water
+  channels along the long side (or a hole in each 9 by 9), as few as keep every plot within four blocks of water, spread
+  evenly; the crop on top (one, or mixed strips); a fence with a gate on the door's side, a path round the inside and
+  lamps on the corner posts if asked for. Needs: farmland, and no dry plot.
+- **Pen**: levelled, a fence with a gate, and for 8 by 8 or bigger a shelter (slab roof on posts over a hay bale) and a
+  cauldron of water, two blocks from the fence so nothing jumps out. Needs: a fence that shuts in some ground (checked
+  level by level: an enclosed patch an animal can stand on, next to the design's fence) and a gate.
+- **Grove**: saplings on a grid 3 to 6 apart, on the land as it is (dirt put under where it isn't), optionally a path
+  through the middle. Needs: four saplings; nicer with two blocks between them.
+
+**The land is for the workers.** Planning one turns its farmland into `stad:plot` markers (`stad:plot_carrots` when the
+design has a crop on it), its water into `stad:water`, its saplings into `stad:sapling_<tree>` and the middle of a pen
+into `stad:pen_<animals>`; markers that are land don't make the builder clear their spot. The builders build the rest
+(fence, path, shelter, the dirt that levels it); a field or grove with nothing else is done at once. The farmer digs
+every water marker, tills every plot and sows each with its crop, fetching it from the stores first; the lumberjack
+plants grove spots first (with the sapling asked for), and fells the grown trees (a grove's trees aren't "inside a
+building"); the shepherd leads loose animals of a pen's kind in through its gate (opening and closing it), and a pair
+from outside when the pen has fewer than two. The 9 by 9 field of §6.10 is the same thing with only markers. Water is
+allowed in designs now (it has no item). Ground blocks a survival player can't pick up (grass, path, farmland) cost
+dirt.
+
+**Stad's own look.** Screens share a theme (`client/ui/Theme`, `StadButton`): walnut panels with brass trim round dark
+felt, brass title plates, wells for lists, wood buttons and tabs, brass scroll bars, and 16 by 16 icons for every job
+and the town hall's tabs, 9 by 9 ones for inline states. They're GUI sprites (nine-sliced where they stretch). The art is
+made by script so it can be redone, and kept as sources so it can be changed by hand: `tools/art/textures.py` draws every
+texture as named layers, `paint.py` runs in Krita (kritarunner) and saves each as a layered `.kra` in `art/krita` and a
+PNG in the assets; `models.py` drives Blockbench over its debugging port to build the block models (the architect's
+table as a drafting table, the town hall as a panelled desk with a ledger) and saves each as a `.bbmodel` in
+`art/blockbench`, a Java block model and a preview. Both blocks face the player who places them.
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).

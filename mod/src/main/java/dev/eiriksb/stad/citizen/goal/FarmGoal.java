@@ -145,6 +145,17 @@ public class FarmGoal extends WorkGoal {
         }
         List<BlockPos> bare = farmland.stream().filter(f -> level.getBlockState(f.above()).isAir()).toList();
         if (!bare.isEmpty()) {
+            // a plot designed for a crop gets it, when the town has it: fetch it rather than sow something else
+            BlockPos next = bare.stream().min(nearest).get();
+            String want = wants(colony, next);
+            fetching = null;
+            if (want != null && !pocketed(seedFor(want))) {
+                ColonyStorage.Box box = seedStore(level, colony, seedFor(want));
+                if (box != null) {
+                    fetching = seedFor(want);
+                    return new Task(Kind.FETCH, box.pos());
+                }
+            }
             if (hasSeeds()) {
                 return new Task(Kind.SOW, bare.stream().min(nearest).get());
             }
@@ -203,9 +214,9 @@ public class FarmGoal extends WorkGoal {
     /** The next thing a field needs: the water hole first, then clearing and tilling each plot. */
     private Task fieldWork(ServerLevel level, List<Building> fields, Comparator<BlockPos> nearest) {
         for (Building f : fields.stream().sorted(Comparator.comparingDouble(f -> Fields.centre(f).distSqr(citizen.blockPosition()))).toList()) {
-            BlockPos water = Fields.water(f);
-            if (!level.getFluidState(water).isSource()) {
-                return new Task(Kind.WATER, water);
+            Optional<BlockPos> water = Fields.waters(f).stream().filter(w -> !level.getFluidState(w).isSource()).min(nearest);
+            if (water.isPresent()) {
+                return new Task(Kind.WATER, water.get());
             }
             Optional<BlockPos> clear = Fields.plots(f).stream().filter(p -> inTheWay(level, p.above())).min(nearest);
             if (clear.isPresent()) {
@@ -241,7 +252,7 @@ public class FarmGoal extends WorkGoal {
         return switch (t.kind) {
             case HARVEST -> ripe(level, t.pos);
             case SOW -> level.getBlockState(t.pos).is(Blocks.FARMLAND) && level.getBlockState(t.pos.above()).isAir() && hasSeeds();
-            case FETCH -> !hasSeeds();
+            case FETCH -> fetching != null ? !pocketed(fetching) : !hasSeeds();
             case CLEAR -> inTheWay(level, t.pos);
             case TILL -> needsTilling(level, t.pos);
             case WATER -> !level.getFluidState(t.pos).isSource();
@@ -264,6 +275,28 @@ public class FarmGoal extends WorkGoal {
     }
 
     /** Where in the town's stores there are seeds (wheat seeds first, then potatoes, carrots, beetroot). */
+    /** the seed they're fetching for plots that ask for it, or null */
+    private net.minecraft.world.item.Item fetching;
+
+    private boolean pocketed(net.minecraft.world.item.Item item) {
+        for (int i = 0; i < citizen.inventory().getContainerSize(); i++) {
+            if (citizen.inventory().getItem(i).is(item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private ColonyStorage.Box seedStore(ServerLevel level, Colony colony, net.minecraft.world.item.Item seed) {
+        for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
+            ColonyStorage.Box b = s.find(st -> st.is(seed));
+            if (b != null) {
+                return b;
+            }
+        }
+        return null;
+    }
+
     private ColonyStorage.Box seedStore(ServerLevel level, Colony colony) {
         for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
             ColonyStorage.Box b = s.find(st -> st.is(Items.WHEAT_SEEDS));
@@ -311,7 +344,7 @@ public class FarmGoal extends WorkGoal {
         cooldown = pace(12);
         switch (task.kind) {
             case HARVEST -> harvest(level, at);
-            case SOW -> sow(level, at);
+            case SOW -> sow(level, colony, at);
             case FETCH -> fetch(level, colony);
             case CLEAR -> dig(level, at);
             case TILL -> till(level, task.pos);
@@ -352,29 +385,64 @@ public class FarmGoal extends WorkGoal {
         worked(1);
     }
 
-    private void sow(ServerLevel level, BlockPos crop) {
+    /** The seed for a crop a plot asks for ("carrots": a carrot). */
+    private static net.minecraft.world.item.Item seedFor(String crop) {
+        return switch (crop) {
+            case "carrots" -> Items.CARROT;
+            case "potatoes" -> Items.POTATO;
+            case "beetroots" -> Items.BEETROOT_SEEDS;
+            default -> Items.WHEAT_SEEDS;
+        };
+    }
+
+    /** What the plot at {@code farmland} asks for, if a field designed at the table says. */
+    private String wants(Colony colony, BlockPos farmland) {
+        for (Building f : Fields.of(colony)) {
+            String c = Fields.crops(f).get(farmland);
+            if (c != null) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    private void sow(ServerLevel level, Colony colony, BlockPos crop) {
         if (!level.getBlockState(crop).isAir() || !level.getBlockState(crop.below()).is(Blocks.FARMLAND)) {
             return;
         }
+        String want = wants(colony, crop.below());
+        int pick = -1;
         for (int i = 0; i < citizen.inventory().getContainerSize(); i++) {
             ItemStack s = citizen.inventory().getItem(i);
-            if (isSeed(s)) {
-                level.setBlock(crop, ((BlockItem) s.getItem()).getBlock().defaultBlockState(), 3);
-                s.shrink(1);
-                level.playSound(null, crop, SoundEvents.CROP_PLANTED, SoundSource.BLOCKS, 0.8f, 1.0f);
-                return;
+            if (isSeed(s) && (pick < 0 || want != null && s.is(seedFor(want)))) {
+                pick = i;
             }
+        }
+        if (pick >= 0) {
+            ItemStack s = citizen.inventory().getItem(pick);
+            level.setBlock(crop, ((BlockItem) s.getItem()).getBlock().defaultBlockState(), 3);
+            s.shrink(1);
+            level.playSound(null, crop, SoundEvents.CROP_PLANTED, SoundSource.BLOCKS, 0.8f, 1.0f);
         }
     }
 
     private void fetch(ServerLevel level, Colony colony) {
         int want = SEEDS;
-        for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
-            for (ItemStack got : s.takeUpTo(st -> st.is(Items.WHEAT_SEEDS), want)) {
-                want -= got.getCount();
-                pocket(got);
+        java.util.Set<net.minecraft.world.item.Item> asked = new java.util.LinkedHashSet<>();
+        if (fetching != null) {
+            asked.add(fetching);
+        }
+        fields(colony).forEach(f -> Fields.crops(f).values().forEach(c -> asked.add(seedFor(c))));
+        asked.add(Items.WHEAT_SEEDS);
+        for (net.minecraft.world.item.Item seed : asked) {
+            for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
+                for (ItemStack got : s.takeUpTo(st -> st.is(seed), want)) {
+                    want -= got.getCount();
+                    pocket(got);
+                }
             }
         }
+        fetching = null;
         for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
             if (want <= 0) {
                 break;

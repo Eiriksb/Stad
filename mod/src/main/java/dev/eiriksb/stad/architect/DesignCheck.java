@@ -72,6 +72,7 @@ public final class DesignCheck {
         }
         c.markers.addAll(markers.values());
         c.height = hi >= lo ? hi - lo + 1 : 0;
+        land(c, cells, touched, sx, sy, sz);
         Enclosure open = enclosure(cells, touched, sx, sy, sz, true);
         if (open.rooms) {
             c.walls = c.roof = true;
@@ -82,6 +83,108 @@ public final class DesignCheck {
             c.entrance = false;
         }
         return c;
+    }
+
+    /**
+     * What matters for fields, pens and groves: farmland left dry (no water within four blocks on its level or the one
+     * above, as the game has it), saplings too close together, and whether a fence the design put up shuts in some
+     * ground an animal can stand on (each level on its own: animals can't climb over a fence).
+     */
+    private static void land(Contents c, BlockState[] cells, boolean[] touched, int sx, int sy, int sz) {
+        boolean fences = false;
+        for (int i = 0; i < cells.length; i++) {
+            BlockState s = cells[i];
+            int x = i % sx, z = (i / sx) % sz, y = i / (sx * sz);
+            if (s.is(net.minecraft.world.level.block.Blocks.FARMLAND) && !wet(cells, x, y, z, sx, sy, sz)) {
+                c.dry++;
+            } else if (s.is(net.minecraft.tags.BlockTags.SAPLINGS) && touched[i] && crowded(cells, x, y, z, sx, sy, sz)) {
+                c.crowded++;
+            }
+            fences |= touched[i] && fence(s);
+        }
+        c.penned = fences && penned(cells, touched, sx, sy, sz);
+    }
+
+    private static boolean wet(BlockState[] cells, int x, int y, int z, int sx, int sy, int sz) {
+        for (int dy = 0; dy <= 1; dy++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                for (int dx = -4; dx <= 4; dx++) {
+                    int nx = x + dx, ny = y + dy, nz = z + dz;
+                    if (nx >= 0 && nz >= 0 && nx < sx && nz < sz && ny < sy
+                            && cells[(ny * sz + nz) * sx + nx].getFluidState().is(net.minecraft.tags.FluidTags.WATER)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean crowded(BlockState[] cells, int x, int y, int z, int sx, int sy, int sz) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                for (int dx = -2; dx <= 2; dx++) {
+                    int nx = x + dx, ny = y + dy, nz = z + dz;
+                    if ((dx != 0 || dz != 0) && nx >= 0 && ny >= 0 && nz >= 0 && nx < sx && ny < sy && nz < sz
+                            && cells[(ny * sz + nz) * sx + nx].is(net.minecraft.tags.BlockTags.SAPLINGS)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    static boolean fence(BlockState s) {
+        return s.getBlock() instanceof net.minecraft.world.level.block.FenceBlock || s.getBlock() instanceof net.minecraft.world.level.block.WallBlock
+                || s.getBlock() instanceof FenceGateBlock;
+    }
+
+    private static boolean penned(BlockState[] cells, boolean[] touched, int sx, int sy, int sz) {
+        for (int y = 1; y < sy; y++) {
+            boolean[] out = new boolean[sx * sz];
+            ArrayDeque<Integer> q = new ArrayDeque<>();
+            for (int z = 0; z < sz; z++) {
+                for (int x = 0; x < sx; x++) {
+                    if ((x == 0 || z == 0 || x == sx - 1 || z == sz - 1) && passable(cells[(y * sz + z) * sx + x])) {
+                        out[z * sx + x] = true;
+                        q.add(z * sx + x);
+                    }
+                }
+            }
+            while (!q.isEmpty()) {
+                int i = q.poll(), x = i % sx, z = i / sx;
+                for (int[] d : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+                    int nx = x + d[0], nz = z + d[1];
+                    if (nx >= 0 && nz >= 0 && nx < sx && nz < sz && !out[nz * sx + nx] && passable(cells[(y * sz + nz) * sx + nx])) {
+                        out[nz * sx + nx] = true;
+                        q.add(nz * sx + nx);
+                    }
+                }
+            }
+            int inside = 0;
+            boolean byFence = false;
+            for (int z = 0; z < sz; z++) {
+                for (int x = 0; x < sx; x++) {
+                    int i = (y * sz + z) * sx + x;
+                    if (out[z * sx + x] || !passable(cells[i]) || passable(cells[((y - 1) * sz + z) * sx + x])) {
+                        continue;
+                    }
+                    inside++;
+                    for (int[] d : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+                        int nx = x + d[0], nz = z + d[1];
+                        if (nx >= 0 && nz >= 0 && nx < sx && nz < sz) {
+                            int n = (y * sz + nz) * sx + nx;
+                            byFence |= touched[n] && fence(cells[n]);
+                        }
+                    }
+                }
+            }
+            if (inside >= 4 && byFence) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private record Enclosure(boolean rooms, boolean entrance) {}

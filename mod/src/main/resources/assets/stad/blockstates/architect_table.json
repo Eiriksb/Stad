@@ -1,5 +1,8 @@
 {
   "variants": {
-    "": { "model": "stad:block/architect_table" }
+    "facing=south": { "model": "stad:block/architect_table" },
+    "facing=west": { "model": "stad:block/architect_table", "y": 90 },
+    "facing=north": { "model": "stad:block/architect_table", "y": 180 },
+    "facing=east": { "model": "stad:block/architect_table", "y": 270 }
   }
 }

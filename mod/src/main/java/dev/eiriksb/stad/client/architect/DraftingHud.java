@@ -1,5 +1,6 @@
 package dev.eiriksb.stad.client.architect;
 
+import dev.eiriksb.stad.client.ui.StadButton;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -70,9 +71,7 @@ public final class DraftingHud {
             return;
         }
         String text = "Designing" + (site.name().isEmpty() ? "" : " " + site.name()) + "  ·  " + FINISH.getTranslatedKeyMessage().getString() + ": finish";
-        int w = mc.font.width(text), x = (g.guiWidth() - w) / 2;
-        g.fill(x - 4, 3, x + w + 4, 15, 0x80000000);
-        g.drawString(mc.font, text, x, 5, 0xFFD27F, false);
+        dev.eiriksb.stad.client.ui.Theme.header(g, mc.font, Component.literal(text), g.guiWidth() / 2, 3);
     }
 
     @SubscribeEvent
@@ -134,11 +133,11 @@ public final class DraftingHud {
         @Override
         protected void init() {
             int cx = width / 2, y = height / 2 - 10;
-            addRenderableWidget(Button.builder(Component.literal("Keep it"), b -> command("stad build done"))
+            addRenderableWidget(StadButton.of(Component.literal("Keep it"), b -> command("stad build done"))
                     .bounds(cx - 118, y, 76, 20).build());
-            addRenderableWidget(Button.builder(Component.literal("Throw away"), b -> command("stad build cancel"))
+            addRenderableWidget(StadButton.of(Component.literal("Throw away"), b -> command("stad build cancel"))
                     .bounds(cx - 38, y, 76, 20).build());
-            addRenderableWidget(Button.builder(Component.literal("Keep building"), b -> onClose())
+            addRenderableWidget(StadButton.of(Component.literal("Keep building"), b -> onClose())
                     .bounds(cx + 42, y, 76, 20).build());
         }
 
@@ -150,11 +149,18 @@ public final class DraftingHud {
         }
 
         @Override
+        public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+            super.renderBackground(g, mouseX, mouseY, partialTick);
+            int cx = width / 2, y = height / 2 - 10;
+            dev.eiriksb.stad.client.ui.Theme.panel(g, cx - 130, y - 40, 260, 72);
+            dev.eiriksb.stad.client.ui.Theme.header(g, font, Component.literal("Done designing?"), cx, y - 34);
+        }
+
+        @Override
         public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
             super.render(g, mouseX, mouseY, partialTick);
             int cx = width / 2, y = height / 2 - 10;
-            g.drawCenteredString(font, "Done designing?", cx, y - 26, 0xFFD27F);
-            g.drawCenteredString(font, "Keep it makes what you built the table's design.", cx, y - 14, 0xC0C0C0);
+            g.drawCenteredString(font, "Keep it makes what you built the table's design.", cx, y - 13, dev.eiriksb.stad.client.ui.Theme.TEXT);
         }
 
         @Override

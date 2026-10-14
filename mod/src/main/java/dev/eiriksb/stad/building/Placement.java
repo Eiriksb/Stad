@@ -56,7 +56,7 @@ public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Ste
             if (state.isAir()) {
                 clear.add(new Step(pos, state, Items.AIR, 0));
             } else if (!(state.getBlock() instanceof LiquidBlock)) {
-                Item item = state.getBlock().asItem();
+                Item item = itemFor(state);
                 build.add(new Step(pos, state, item, cost(state, item)));
             }
         }
@@ -98,6 +98,20 @@ public record Placement(BlockPos origin, Rotation rotation, Vec3i size, List<Ste
     }
 
     /** Items it takes: the second half of beds and doors comes with the first, double slabs take two. */
+    /**
+     * The item it takes to put {@code state} down: its own, except for ground a survival player can't pick up as it is
+     * (grass, a path, farmland, podzol, mycelium), which takes dirt; the builder makes it what it should be.
+     */
+    public static Item itemFor(BlockState state) {
+        net.minecraft.world.level.block.Block b = state.getBlock();
+        if (b == net.minecraft.world.level.block.Blocks.GRASS_BLOCK || b == net.minecraft.world.level.block.Blocks.DIRT_PATH
+                || b == net.minecraft.world.level.block.Blocks.FARMLAND || b == net.minecraft.world.level.block.Blocks.PODZOL
+                || b == net.minecraft.world.level.block.Blocks.MYCELIUM) {
+            return Items.DIRT;
+        }
+        return b.asItem();
+    }
+
     public static int cost(BlockState state, Item item) {
         if (item == Items.AIR) {
             return 0;

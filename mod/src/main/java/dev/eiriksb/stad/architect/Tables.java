@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import dev.eiriksb.stad.Stad;
 import dev.eiriksb.stad.block.ArchitectTableBlockEntity;
 import dev.eiriksb.stad.building.Blueprint;
+import dev.eiriksb.stad.building.BuildingDef;
 import dev.eiriksb.stad.building.ColonyStorage;
 import dev.eiriksb.stad.building.Outlines;
 import dev.eiriksb.stad.building.Placement;
@@ -95,8 +96,8 @@ public final class Tables {
 
     /** Whether a design may put {@code s} somewhere: air (clear it) or a block a survival player could place. */
     public static boolean allowed(BlockState s) {
-        if (s.isAir()) {
-            return true;
+        if (s.isAir() || s.is(Blocks.WATER) && s.getFluidState().isSource()) {
+            return true; // water for fields, ponds and moats (it has no item of its own)
         }
         Block b = s.getBlock();
         return b.asItem() != Items.AIR && !(b instanceof GameMasterBlock) && !FORBIDDEN.contains(b);
@@ -104,8 +105,9 @@ public final class Tables {
 
     /** The kinds of building the table offers. */
     public static List<ResourceLocation> types() {
-        List<ResourceLocation> t = new ArrayList<>(Requirements.types());
+        List<ResourceLocation> t = new ArrayList<>(Requirements.types().stream().filter(r -> !Yard.is(r)).toList());
         t.add(ResourceLocation.fromNamespaceAndPath("stad", "building"));
+        t.addAll(List.of(BuildingDef.FIELD, BuildingDef.PEN, BuildingDef.GROVE));
         return t;
     }
 
@@ -187,9 +189,9 @@ public final class Tables {
         if (p.hasSite()) {
             s.terrain = capture(level, p);
             s.near = dev.eiriksb.stad.building.Surroundings.of(level, siteBox(p));
-            if (p.spec != null) {
+            if (p.generatedFrom()) {
                 int sy = p.sy;
-                if (Fit.generate(p, s.terrain) == null && p.sy != sy) {
+                if (p.regenerate(s.terrain) == null && p.sy != sy) {
                     s.terrain = capture(level, p);
                     be.get().setChanged();
                 }
@@ -264,7 +266,8 @@ public final class Tables {
             mk[i++] = e.getKey();
             mn.add(e.getValue());
         }
-        return new TablePayloads.Design(p.name, p.type.toString(), p.spec == null ? "" : p.spec.toJson(), p.door.getSerializedName(), p.floorY,
+        return new TablePayloads.Design(p.name, p.type.toString(), p.spec == null ? "" : p.spec.toJson(), p.yard == null ? "" : p.yard.toJson(),
+                p.door.getSerializedName(), p.floorY,
                 keys, states, mk, mn);
     }
 
@@ -333,7 +336,7 @@ public final class Tables {
             }
             if (name.isEmpty()) {
                 p.markers.remove(key);
-            } else if (Blueprint.MARKERS.contains(name)) {
+            } else if (Blueprint.isMarker(name)) {
                 p.markers.put(key, name);
             }
         }
@@ -371,10 +374,12 @@ public final class Tables {
                     p.edits.putAll(p.design());
                     p.generated.clear();
                     p.spec = null;
+                    p.yard = null;
                     update(player, s, p, "It's all hand edits now: generating again starts afresh.", false);
                 }
                 case START_OVER -> {
                     p.spec = null;
+                    p.yard = null;
                     p.edits.clear();
                     p.markers.clear();
                     p.generated.clear();
@@ -451,9 +456,37 @@ public final class Tables {
             return;
         }
         JsonObject o = JsonParser.parseString(json).getAsJsonObject();
-        BuildSpec spec = Fit.prepare(BuildSpec.parse(o.get("spec").toString()), p.type);
         Direction door = Direction.byName(o.has("door") ? o.get("door").getAsString() : "north");
-        regenerate(player, s, p, spec, door != null && door.getAxis().isHorizontal() ? door : Direction.NORTH, null);
+        door = door != null && door.getAxis().isHorizontal() ? door : Direction.NORTH;
+        if (Yard.is(p.type)) {
+            yard(player, s, p, Yard.parse(o.has("yard") ? o.get("yard").toString() : ""), door);
+            return;
+        }
+        BuildSpec spec = Fit.prepare(BuildSpec.parse(o.get("spec").toString()), p.type);
+        regenerate(player, s, p, spec, door, null);
+    }
+
+    /** Generates a field, pen or grove in the site. */
+    private static void yard(ServerPlayer player, Session s, Project p, Yard yard, Direction door) {
+        Yard old = p.yard;
+        Direction oldDoor = p.door;
+        p.yard = yard;
+        p.door = door;
+        p.spec = null;
+        if (p.name.equals(new Project().name) || p.name.equals("Building") || List.of("Field", "Pen", "Grove").contains(p.name)) {
+            p.name = Fit.defaultName(p.type);
+        }
+        String problem = yard.generate(p, s.terrain);
+        if (problem != null) {
+            p.yard = old;
+            p.door = oldDoor;
+            if (old != null) {
+                old.generate(p, s.terrain);
+            }
+            status(player, s, problem, true);
+            return;
+        }
+        update(player, s, p, Yards.describe(p) + (p.edits.isEmpty() ? "" : " Your hand edits are on top."), false);
     }
 
     private static void regenerate(ServerPlayer player, Session s, Project p, BuildSpec spec, Direction door, String done) {
@@ -537,9 +570,11 @@ public final class Tables {
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE, maxX = -1, maxY = -1, maxZ = -1;
         Map<BlockPos, BlockState> cells = new LinkedHashMap<>();
         int floor = forPack && p.floorY >= 0 ? p.floorY : 0;
+        Map<Integer, String> marks = new java.util.HashMap<>(p.markers);
+        marks.putAll(Yards.land(p, d)); // a field's farmland and water, a grove's saplings: the workers make those
         for (Map.Entry<Integer, BlockState> e : d.entrySet()) {
             int x = Project.kx(e.getKey()), y = Project.ky(e.getKey()), z = Project.kz(e.getKey());
-            if (!p.inside(e.getKey()) || y < floor) {
+            if (!p.inside(e.getKey()) || y < floor || Yards.worked(p, e.getValue())) {
                 continue;
             }
             if (world != null) {
@@ -550,7 +585,7 @@ public final class Tables {
             }
             cells.put(new BlockPos(x, y, z), e.getValue());
         }
-        for (Map.Entry<Integer, String> m : p.markers.entrySet()) {
+        for (Map.Entry<Integer, String> m : marks.entrySet()) {
             if (p.inside(m.getKey()) && Project.ky(m.getKey()) >= floor) {
                 cells.putIfAbsent(new BlockPos(Project.kx(m.getKey()), Project.ky(m.getKey()), Project.kz(m.getKey())), null);
             }
@@ -576,7 +611,7 @@ public final class Tables {
             }
         }
         List<Blueprint.Marker> markers = new ArrayList<>();
-        for (Map.Entry<Integer, String> m : p.markers.entrySet()) {
+        for (Map.Entry<Integer, String> m : marks.entrySet()) {
             BlockPos at = new BlockPos(Project.kx(m.getKey()), Project.ky(m.getKey()), Project.kz(m.getKey()));
             if (p.inside(m.getKey()) && at.getY() >= minY) {
                 markers.add(new Blueprint.Marker(at.offset(-minX, -minY, -minZ), m.getValue()));
@@ -621,9 +656,7 @@ public final class Tables {
             return new Said("Choose a site first.", true);
         }
         s.terrain = capture(s.level, p);
-        if (p.spec != null) {
-            Fit.generate(p, s.terrain);
-        }
+        p.regenerate(s.terrain);
         DesignCheck.Result check = DesignCheck.check(p.type, s.terrain, p.sx, p.sy, p.sz, p.design(), p.markers,
                 dev.eiriksb.stad.building.Surroundings.of(s.level, siteBox(p)));
         if (!check.ready()) {
@@ -671,6 +704,14 @@ public final class Tables {
                 Order.Outcome.ACCEPTED, null));
         boolean builder = colony.citizens().stream().anyMatch(c -> Jobs.BUILDER.equals(c.job));
         int items = placement.materials().values().stream().mapToInt(Integer::intValue).sum();
+        if (Yard.is(p.type)) {
+            if (placement.steps().isEmpty()) {
+                planned.status = Building.Status.DONE; // only land: nothing for the builders
+            }
+            Set<String> jobs = new java.util.HashSet<>();
+            colony.citizens().forEach(c -> jobs.add(c.job));
+            return new Said(Yards.planned(p, items, jobs), false);
+        }
         return new Said("Planned the " + p.name + " (" + items + " items" + (replaced.isEmpty() ? "" : ", in place of the "
                 + Design.join(replaced.stream().map(b -> b.name).toList())) + "). " + (builder ? "A builder will start on it."
                 : "Make someone the builder and they'll start on it."), false);
@@ -720,6 +761,14 @@ public final class Tables {
         p.spec = Fit.prepare(spec, p.type);
         p.door = door;
         return Fit.generate(p, capture(level, p));
+    }
+
+    /** For tests: lays out a project's field, pen or grove without a screen. */
+    public static String generate(ServerLevel level, Project p, Yard yard, Direction door) {
+        p.yard = yard;
+        p.spec = null;
+        p.door = door;
+        return yard.generate(p, capture(level, p));
     }
 
     /** For tests: the blueprint and origin a project would be planned with. */

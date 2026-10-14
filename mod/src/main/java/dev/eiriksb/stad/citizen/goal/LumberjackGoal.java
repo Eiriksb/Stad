@@ -50,6 +50,20 @@ public class LumberjackGoal extends WorkGoal {
             CLAIMS.put(citizen.getUUID(), new Claim(tree, now));
             return true;
         }
+        // a grove designed at the table: its spots are planted first (planting's quick; the trees can wait)
+        boolean saplings = hasSapling() || saplingsInStores(level, colony);
+        if (plantAt != null && groveTree != null && saplings && groveSpotFree(level, plantAt)) {
+            return true;
+        }
+        if (saplings && (tree == null || !level.getBlockState(tree).is(BlockTags.LOGS))) {
+            java.util.Map.Entry<BlockPos, String> spot = groveSpot(level, colony);
+            if (spot != null) {
+                plantAt = spot.getKey();
+                groveTree = spot.getValue();
+                return true;
+            }
+        }
+        groveTree = null;
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         CLAIMS.forEach((who, c) -> {
             if (!who.equals(citizen.getUUID()) && now - c.at() < CLAIM_TICKS) {
@@ -72,10 +86,32 @@ public class LumberjackGoal extends WorkGoal {
             return true;
         }
         plantAt = null;
-        if ((hasSapling() || saplingsInStores(level, colony)) && young(level, colony) < GROVE) {
+        if (saplings && young(level, colony) < GROVE && dev.eiriksb.stad.building.Groves.of(colony).isEmpty()) {
             plantAt = plantSpot(level, colony);
         }
         return plantAt != null;
+    }
+
+    /** the tree a grove's spot wants ("" for any), while planting one; null when planting somewhere of their own */
+    private String groveTree;
+
+    /** The nearest free spot in the town's groves, and the tree it wants. */
+    private java.util.Map.Entry<BlockPos, String> groveSpot(ServerLevel level, Colony colony) {
+        java.util.Map.Entry<BlockPos, String> best = null;
+        for (java.util.Map.Entry<BlockPos, String> e : dev.eiriksb.stad.building.Groves.spots(colony).entrySet()) {
+            if (level.isLoaded(e.getKey()) && groveSpotFree(level, e.getKey())
+                    && (best == null || e.getKey().distSqr(citizen.blockPosition()) < best.getKey().distSqr(citizen.blockPosition()))) {
+                best = e;
+            }
+        }
+        return best;
+    }
+
+    /** A grove's spot with nothing growing on it yet: open, on dirt, dry. */
+    private static boolean groveSpotFree(ServerLevel level, BlockPos p) {
+        BlockState s = level.getBlockState(p);
+        return (s.isAir() || s.canBeReplaced() && !s.is(BlockTags.SAPLINGS)) && level.getFluidState(p).isEmpty()
+                && level.getBlockState(p.below()).is(BlockTags.DIRT);
     }
 
     /** how many saplings they keep growing at once when there are no trees */
@@ -185,6 +221,22 @@ public class LumberjackGoal extends WorkGoal {
             return;
         }
         cooldown = pace(20);
+        if (groveTree != null && !groveTree.isEmpty()) { // the kind this grove's spot asks for, when the town has it
+            java.util.function.Predicate<ItemStack> kind = x -> net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(x.getItem()).getPath()
+                    .equals(groveTree + "_sapling");
+            boolean have = false;
+            for (int i = 0; i < citizen.inventory().getContainerSize(); i++) {
+                have |= kind.test(citizen.inventory().getItem(i));
+            }
+            if (!have) {
+                for (ItemStack st : ColonyStorage.deliveries(level, colony).takeUpTo(kind, 4)) {
+                    pocket(st);
+                }
+                for (ItemStack st : ColonyStorage.supply(level, colony).takeUpTo(kind, 4)) {
+                    pocket(st);
+                }
+            }
+        }
         if (!hasSapling()) {
             for (ItemStack st : ColonyStorage.deliveries(level, colony).takeUpTo(x -> x.is(ItemTags.SAPLINGS), 4)) {
                 pocket(st);
@@ -195,9 +247,18 @@ public class LumberjackGoal extends WorkGoal {
                 }
             }
         }
+        boolean grove = groveTree != null;
+        int pick = -1;
         for (int i = 0; i < citizen.inventory().getContainerSize(); i++) {
             ItemStack st = citizen.inventory().getItem(i);
-            if (st.is(ItemTags.SAPLINGS) && st.getItem() instanceof BlockItem bi && plantable(level, plantAt)) {
+            if (st.is(ItemTags.SAPLINGS) && (pick < 0 || grove && !groveTree.isEmpty()
+                    && net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(st.getItem()).getPath().equals(groveTree + "_sapling"))) {
+                pick = i;
+            }
+        }
+        for (int i = Math.max(0, pick); i <= pick; i++) {
+            ItemStack st = citizen.inventory().getItem(i);
+            if (st.is(ItemTags.SAPLINGS) && st.getItem() instanceof BlockItem bi && (grove ? groveSpotFree(level, plantAt) : plantable(level, plantAt))) {
                 if (!level.getBlockState(plantAt).isAir()) {
                     level.removeBlock(plantAt, false);
                 }

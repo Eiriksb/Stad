@@ -31,18 +31,19 @@ public final class Guide {
     private static final Map<String, String[]> JOBS = Map.ofEntries(
             Map.entry(Jobs.BUILDER, new String[]{"Builds what you plan, block by block. Makes up the ground under it, and builds what it can"
                     + " while it waits for the rest.", "Something planned (Building Plans, or describe it to them), and its materials in the town hall."}),
-            Map.entry(Jobs.FARMER, new String[]{"Lays out a field, levels and tills it, digs a water hole in the middle, sows it, and harvests"
-                    + " and replants.", "Seeds in the town hall (or they pick them from the grass, slowly), and flat grass or dirt for a field."}),
-            Map.entry(Jobs.LUMBERJACK, new String[]{"Fells the trees on the town's land, top down, and replants. With no trees, plants a grove.",
-                    "Trees on the town's land, or saplings in the town hall."}),
+            Map.entry(Jobs.FARMER, new String[]{"Tills the town's fields, digs their water, sows them and harvests and replants. With no field,"
+                    + " lays out a 9 by 9 one; design bigger ones at the architect's table (Field).",
+                    "Seeds in the town hall (or they pick them from the grass, slowly), and flat grass or dirt for a field."}),
+            Map.entry(Jobs.LUMBERJACK, new String[]{"Fells the trees on the town's land, top down, and replants. Plants the groves you design at"
+                    + " the architect's table (Grove), or a grove of their own when there are no trees.", "Trees on the town's land, or saplings in the town hall."}),
             Map.entry(Jobs.COURIER, new String[]{"Carries what the builders and the town hall need from the warehouse, and empties the"
                     + " workplaces' chests into it.", "A warehouse."}),
             Map.entry(Jobs.GUARD, new String[]{"Patrols the town, and fights monsters and raiders.", "A sword (and armour) in the town hall."}),
             Map.entry(Jobs.COOK, new String[]{"Bakes bread (three wheat to a loaf), cooks meat, fish and potatoes, and brings the food to the"
                     + " town hall. Cooked food fills far more than raw.", "A furnace, smoker or campfire on the town's land, and something to cook."}),
             Map.entry(Jobs.FISHER, new String[]{"Fishes from the shore.", "A pond or river on the town's land (eight blocks of open water or more)."}),
-            Map.entry(Jobs.SHEPHERD, new String[]{"Brings in animals from nearby, shears the sheep, feeds the animals so they breed, and"
-                    + " butchers the extras.", "Sheep, cows, pigs or chickens in or near town, and wheat, carrots or seeds to feed them."}),
+            Map.entry(Jobs.SHEPHERD, new String[]{"Brings in animals from nearby (into a pen, if you design one at the architect's table), shears"
+                    + " the sheep, feeds the animals so they breed, and butchers the extras.", "Sheep, cows, pigs or chickens in or near town, and wheat, carrots or seeds to feed them."}),
             Map.entry(Jobs.MINER, new String[]{"Digs the town's mine deeper, layer by layer, for stone, coal and ore.", "A Mine (from the building plans)."}),
             Map.entry(Jobs.SMITH, new String[]{"Makes the tools the workers are short of, mends worn ones and smelts ore.",
                     "A smithy (anvil, furnace and chest), and cobblestone or iron, and planks."}),
@@ -72,7 +73,7 @@ public final class Guide {
 
     /** What's missing in this town for a job to work, in a few words; null when it has what it needs. */
     public static String problem(ServerLevel level, Colony colony, String job) {
-        List<Building> planned = colony.buildings().stream().filter(b -> !b.done() && !Fields.is(b)).toList();
+        List<Building> planned = colony.buildings().stream().filter(Building::needsBuilding).toList();
         return switch (job) {
             case Jobs.BUILDER -> {
                 if (planned.isEmpty()) {
@@ -125,6 +126,9 @@ public final class Guide {
         out.add(new Step("Feed the town: put food in the town hall, and make a farmer and a cook (with a furnace) to keep it fed.",
                 people.stream().anyMatch(r -> Jobs.FARMER.equals(r.job)) && people.stream().anyMatch(r -> Jobs.COOK.equals(r.job))));
         out.add(new Step("Give everyone a bed: plan houses as the town grows.", people.size() >= 3 && people.stream().allMatch(r -> r.home != null)));
+        out.add(new Step("Design fields, a pen for the animals and a grove at the architect's table (a cartography table with Building Plans"
+                + " on top): pick Field, Pen or Grove as its kind.", colony.buildings().stream().anyMatch(b -> !b.key.equals(Fields.KEY)
+                && dev.eiriksb.stad.architect.Yard.is(b.type()))));
         out.add(new Step("Build workplaces (a farmhouse, lumber camp, kitchen...): workers there work faster and are happier.",
                 people.stream().anyMatch(r -> r.workplace != null) && people.stream().filter(r -> Workplaces.wanted(r.job) != null)
                         .allMatch(r -> Workplaces.of(colony, r).isPresent())));

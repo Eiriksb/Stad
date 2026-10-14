@@ -32,8 +32,42 @@ import java.util.Optional;
 public class TownHallBlock extends BaseEntityBlock {
     public static final MapCodec<TownHallBlock> CODEC = simpleCodec(TownHallBlock::new);
 
+    /** the desk and the book on it */
+    private static final net.minecraft.world.phys.shapes.VoxelShape SHAPE = net.minecraft.world.phys.shapes.Shapes.or(
+            box(1, 0, 1, 15, 13, 15), box(0, 13, 0, 16, 15, 16));
+    public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING =
+            net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING;
+
+    @Override
+    protected void createBlockStateDefinition(net.minecraft.world.level.block.state.StateDefinition.Builder<net.minecraft.world.level.block.Block, BlockState> b) {
+        b.add(FACING);
+    }
+
+    /** It faces whoever places it. */
+    @Override
+    public BlockState getStateForPlacement(net.minecraft.world.item.context.BlockPlaceContext ctx) {
+        return defaultBlockState().setValue(FACING, ctx.getHorizontalDirection().getOpposite());
+    }
+
+    @Override
+    protected BlockState rotate(BlockState state, net.minecraft.world.level.block.Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
+    }
+
+    @Override
+    protected BlockState mirror(BlockState state, net.minecraft.world.level.block.Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
+    }
+
+    @Override
+    protected net.minecraft.world.phys.shapes.VoxelShape getShape(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos,
+                                                                  net.minecraft.world.phys.shapes.CollisionContext ctx) {
+        return SHAPE;
+    }
+
     public TownHallBlock(Properties props) {
         super(props);
+        registerDefaultState(stateDefinition.any().setValue(FACING, net.minecraft.core.Direction.NORTH));
     }
 
     @Override

@@ -1,5 +1,7 @@
 package dev.eiriksb.stad.client.architect;
 
+import dev.eiriksb.stad.client.ui.StadButton;
+import dev.eiriksb.stad.client.ui.Theme;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -8,6 +10,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexSorting;
+import dev.eiriksb.stad.architect.Yard;
 import dev.eiriksb.stad.architect.DesignCheck;
 import dev.eiriksb.stad.architect.Project;
 import dev.eiriksb.stad.architect.Tables;
@@ -35,6 +38,7 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -122,6 +126,10 @@ public class ArchitectScreen extends Screen {
 
     private int typeIndex, style, floors = 1, roof, door, beds = 2;
     private final Set<String> features = new LinkedHashSet<>();
+    /** a field's, pen's or grove's settings ({@link Yard}) */
+    private int crop, water, fence, animal, tree, spacing = Yard.DEFAULT.spacing();
+    private boolean path = Yard.DEFAULT.path(), extra = Yard.DEFAULT.extra();
+    private final List<Button> yardButtons = new ArrayList<>();
 
     private String status = "";
     private boolean statusError;
@@ -173,6 +181,7 @@ public class ArchitectScreen extends Screen {
             center.set(DesignModel.M + model.sx / 2f, DesignModel.M + (model.floorY >= 0 ? model.floorY + 2 : model.sy / 3f), DesignModel.M + model.sz / 2f);
             dist = Math.max(model.sx, Math.max(model.sz, model.sy)) * 1.7f + 6;
             readSpec(model.spec);
+            readYard(model.yard);
         }
         siteOpen = model == null;
         name = model != null ? model.name : open.design().name();
@@ -207,11 +216,54 @@ public class ArchitectScreen extends Screen {
         }
     }
 
+    private void readYard(String json) {
+        if (json == null || json.isEmpty()) {
+            return;
+        }
+        Yard y = Yard.parse(json);
+        crop = Math.max(0, Yard.CROPS.indexOf(y.crop()));
+        water = Math.max(0, Yard.WATERS.indexOf(y.water()));
+        fence = Math.max(0, Yard.FENCES.indexOf(y.fence()));
+        animal = Math.max(0, Yard.ANIMALS.indexOf(y.animal()));
+        tree = Math.max(0, Yard.TREES.indexOf(y.tree()));
+        spacing = y.spacing();
+        path = y.path();
+        extra = y.extra();
+    }
+
+    private Yard yard() {
+        return new Yard(Yard.CROPS.get(crop), Yard.WATERS.get(water), Yard.FENCES.get(fence), path, Yard.ANIMALS.get(animal), Yard.TREES.get(tree),
+                spacing, extra);
+    }
+
+    private String typeId() {
+        return open.types().isEmpty() ? "stad:building" : open.types().get(typeIndex);
+    }
+
+    private boolean yardType() {
+        return Yard.is(typeId());
+    }
+
     private TablePayloads.Style currentStyle() {
         return open.styles().isEmpty() ? new TablePayloads.Style("Plain", "oak", "none", "spruce", "oak") : open.styles().get(style);
     }
 
     private void defaultHotbar() {
+        Block[] land = switch (typeId()) {
+            case "stad:field" -> new Block[]{Blocks.FARMLAND, Blocks.WATER, Blocks.WHEAT, Blocks.CARROTS, Blocks.POTATOES, Blocks.DIRT_PATH,
+                    fenceBlock(), Blocks.OAK_FENCE_GATE, Blocks.LANTERN};
+            case "stad:pen" -> new Block[]{fenceBlock(), Blocks.OAK_FENCE_GATE, Blocks.HAY_BLOCK, Blocks.WATER_CAULDRON, Blocks.GRASS_BLOCK,
+                    Blocks.SPRUCE_SLAB, Blocks.LANTERN, Blocks.DIRT_PATH, Blocks.WATER};
+            case "stad:grove" -> new Block[]{Blocks.OAK_SAPLING, Blocks.BIRCH_SAPLING, Blocks.SPRUCE_SAPLING, Blocks.CHERRY_SAPLING,
+                    Blocks.ACACIA_SAPLING, Blocks.DIRT, Blocks.GRASS_BLOCK, Blocks.DIRT_PATH, Blocks.LANTERN};
+            default -> null;
+        };
+        if (land != null) {
+            for (int i = 0; i < 9; i++) {
+                hotbar[i] = land[i].defaultBlockState();
+            }
+            return;
+        }
         TablePayloads.Style st = currentStyle();
         Materials.Material walls = Materials.getOr(st.walls(), "oak"), roofM = Materials.getOr(st.roof(), "spruce"),
                 floorM = Materials.getOr(st.floor(), "oak");
@@ -223,10 +275,23 @@ public class ArchitectScreen extends Screen {
         }
     }
 
+    private Block fenceBlock() {
+        String f = Yard.FENCES.get(fence);
+        Block b = f.equals("cobblestone") ? Blocks.COBBLESTONE_WALL
+                : BuiltInRegistries.BLOCK.get(ResourceLocation.withDefaultNamespace((f.equals("none") ? "oak" : f) + "_fence"));
+        return b == Blocks.AIR ? Blocks.OAK_FENCE : b;
+    }
+
+    /** What to show for a block in a slot: water as a bucket (it has no item of its own). */
+    static ItemStack icon(Block b) {
+        return new ItemStack(b == Blocks.WATER ? Items.WATER_BUCKET : b == Blocks.WATER_CAULDRON ? Items.CAULDRON : b.asItem());
+    }
+
     @Override
     protected void init() {
         toolButtons.clear();
         featureButtons.clear();
+        yardButtons.clear();
         editOnly.clear();
         styleButton = floorsButton = roofButton = doorButton = bedsButton = startOverButton = null;
         describeBox = null;
@@ -248,7 +313,7 @@ public class ArchitectScreen extends Screen {
         for (int i = 0; i < tools.size(); i++) {
             Tool t = Tool.values()[i];
             int[] s = toolSpots.get(i);
-            Button b = addRenderableWidget(Button.builder(Component.literal(t.label), btn -> chooseTool(t)).bounds(s[0], toolsTop + s[1] * 18, s[2], 16)
+            Button b = addRenderableWidget(StadButton.of(Component.literal(t.label), btn -> chooseTool(t)).bounds(s[0], toolsTop + s[1] * 18, s[2], 16)
                     .tooltip(Tooltip.create(Component.literal(t.hint))).build());
             toolButtons.add(b);
             editOnly.add(b);
@@ -256,7 +321,7 @@ public class ArchitectScreen extends Screen {
         for (int i = 0; i < edits.size(); i++) {
             String l = edits.get(i);
             int[] s = editSpots.get(i);
-            Button b = addRenderableWidget(Button.builder(Component.literal(l), btn -> {
+            Button b = addRenderableWidget(StadButton.of(Component.literal(l), btn -> {
                 switch (l) {
                     case "Blocks..." -> setPicking(!picking);
                     case "Mirror X" -> mirrorX = !mirrorX;
@@ -288,15 +353,21 @@ public class ArchitectScreen extends Screen {
         nameBox.setResponder(v -> name = v);
         nameBox.setTooltip(Tooltip.create(Component.literal("The building's name")));
         addRenderableWidget(nameBox);
-        typeButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+        typeButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
+            boolean wasYard = yardType();
             typeIndex = (typeIndex + (hasShiftDown() ? open.types().size() - 1 : 1)) % open.types().size();
             send(TablePayloads.Action.Kind.TYPE, open.types().get(typeIndex));
             if (model != null) {
                 model.type = open.types().get(typeIndex);
             }
             dirtyCheck = true;
+            if (wasYard != yardType() || yardType()) {
+                defaultHotbar();
+                rebuildWidgets();
+            }
             refreshLabels();
-        }).bounds(88, 3, 80, 16).tooltip(Tooltip.create(Component.literal("What kind of building it is: click for the next kind, shift-click for the one before."))).build());
+        }).bounds(88, 3, 80, 16).tooltip(Tooltip.create(Component.literal("What it is: a house or workplace, or land (a field, a pen for animals,"
+                + " a grove of trees). Click for the next kind, shift-click for the one before."))).build());
         int rx = width - 4;
         rx = topButton(rx, "Build in it", "Build it yourself, in creative, in the drafting world: a copy of the site with nothing else round it. "
                 + "What you build becomes the design. The real site isn't touched, and nothing comes back with you.", b -> {
@@ -310,17 +381,21 @@ public class ArchitectScreen extends Screen {
             send(TablePayloads.Action.Kind.PLAN, "");
         });
         rx = topButton(rx, "Save", "Keep the design in My pack, to build again anywhere.", b -> send(TablePayloads.Action.Kind.SAVE, nameBox.getValue()));
-        Button more = addRenderableWidget(Button.builder(Component.literal(drawer ? "Generate ▴" : "Generate ▾"), b -> {
+        Button more = addRenderableWidget(StadButton.of(Component.literal(drawer ? "Generate ▴" : "Generate ▾"), b -> {
             drawer = !drawer;
             rebuildWidgets();
         }).tooltip(Tooltip.create(Component.literal("Generate a building to start from, change the site, or start over."))).bounds(rx - 64, 3, 62, 16).build());
         more.active = model != null;
+        if (yardType()) {
+            more.setMessage(Component.literal(drawer ? "Lay out ▴" : "Lay out ▾"));
+            more.setTooltip(Tooltip.create(Component.literal("Lay out a " + word(typeId()) + " to fit the site, change the site, or start over.")));
+        }
         // the layer controls, top right of the view
         int lx = viewRight() - 22;
-        if (model != null && !picking) {
-            addRenderableWidget(Button.builder(Component.literal("▲"), b -> setCut(cut + 1)).bounds(lx, TOP + 4, 18, 16)
+        if (model != null && !picking && !siteOpen) {
+            addRenderableWidget(StadButton.of(Component.literal("▲"), b -> setCut(cut + 1)).bounds(lx, TOP + 4, 18, 16)
                     .tooltip(Tooltip.create(Component.literal("Show a layer more (Shift+scroll, Page Up)"))).build());
-            addRenderableWidget(Button.builder(Component.literal("▼"), b -> setCut(cut - 1)).bounds(lx, TOP + 34, 18, 16)
+            addRenderableWidget(StadButton.of(Component.literal("▼"), b -> setCut(cut - 1)).bounds(lx, TOP + 34, 18, 16)
                     .tooltip(Tooltip.create(Component.literal("Show a layer less, to see inside (Shift+scroll, Page Down)"))).build());
         }
         if (drawer) {
@@ -328,7 +403,7 @@ public class ArchitectScreen extends Screen {
         }
         // a new site: two corners
         if (siteOpen && open.canEdit()) {
-            int cx = viewRight() / 2 - 100, cy = Math.max(TOP + 40, vh / 2 - 20);
+            int cx = viewRight() / 2 - 100, cy = siteY();
             cornerA = new EditBox(font, cx, cy, 98, 16, Component.literal("First corner"));
             cornerB = new EditBox(font, cx + 102, cy, 98, 16, Component.literal("Opposite corner"));
             List<BlockPos> c = open.corners();
@@ -340,7 +415,7 @@ public class ArchitectScreen extends Screen {
             cornerB.setHint(Component.literal("x y z").withStyle(ChatFormatting.DARK_GRAY));
             addRenderableWidget(cornerA);
             addRenderableWidget(cornerB);
-            addRenderableWidget(Button.builder(Component.literal("Use these corners"), b ->
+            addRenderableWidget(StadButton.of(Component.literal("Use these corners"), b ->
                     send(TablePayloads.Action.Kind.SITE, cornerA.getValue() + " " + cornerB.getValue())).bounds(cx + 40, cy + 22, 120, 18).build());
         }
         if (picking) {
@@ -362,11 +437,105 @@ public class ArchitectScreen extends Screen {
         refreshLabels();
     }
 
+    /** The drawer for a field, pen or grove: its settings, and laying it out. */
+    private int initYardDrawer(int px, int pw, int y) {
+        int half = (pw - 2) / 2;
+        String t = typeId();
+        List<Object[]> rows = new ArrayList<>(); // label key, tooltip, action, full width
+        if (t.equals("stad:field")) {
+            rows.add(new Object[]{"crop", "What the farmers sow. Mixed sows a different crop in each strip; you can also put crops on by hand.",
+                    (Runnable) () -> crop = (crop + 1) % Yard.CROPS.size(), true});
+            rows.add(new Object[]{"water", "Rows: channels nine blocks apart, along the field. Holes: one in the middle of each 9 by 9. Every plot has"
+                    + " to be within four blocks of water.", (Runnable) () -> water = (water + 1) % Yard.WATERS.size(), false});
+            rows.add(new Object[]{"fence", "A fence round it keeps animals off the crops.", (Runnable) () -> {
+                fence = (fence + 1) % Yard.FENCES.size();
+                defaultHotbar();
+            }, false});
+            rows.add(new Object[]{"path", "A path round the inside of the fence, to walk on.", (Runnable) () -> path = !path, false});
+            rows.add(new Object[]{"lamps", "Lanterns on the corner posts.", (Runnable) () -> extra = !extra, false});
+        } else if (t.equals("stad:pen")) {
+            rows.add(new Object[]{"animal", "Which animals the shepherd brings into this pen.", (Runnable) () -> animal = (animal + 1) % Yard.ANIMALS.size(), true});
+            rows.add(new Object[]{"fence", "What the pen is fenced with.", (Runnable) () -> {
+                fence = (fence + 1) % (Yard.FENCES.size() - 1); // a pen has to have a fence
+                defaultHotbar();
+            }, false});
+            rows.add(new Object[]{"extra", "A roofed shelter with a hay bale, and a cauldron of water (for a pen 8 by 8 or bigger).",
+                    (Runnable) () -> extra = !extra, false});
+        } else {
+            rows.add(new Object[]{"tree", "Which saplings the lumberjack plants. Put saplings in the town hall for them.",
+                    (Runnable) () -> tree = (tree + 1) % Yard.TREES.size(), true});
+            rows.add(new Object[]{"spacing", "Blocks from one sapling to the next: further apart, the trees grow bigger.",
+                    (Runnable) () -> spacing = spacing >= Yard.MAX_SPACING ? Yard.MIN_SPACING : spacing + 1, false});
+            rows.add(new Object[]{"path", "A path through the middle.", (Runnable) () -> path = !path, false});
+        }
+        rows.add(new Object[]{"door", "Which side the gate (or the way in) is on.", (Runnable) () -> door = (door + 1) % 4, false});
+        int col = 0;
+        for (Object[] r : rows) {
+            boolean full = (Boolean) r[3];
+            if (full && col == 1) {
+                y += 20;
+                col = 0;
+            }
+            Runnable action = (Runnable) r[2];
+            Button b = addRenderableWidget(StadButton.of(Component.empty(), btn -> {
+                action.run();
+                refreshLabels();
+            }).bounds(full ? px : px + col * (half + 2), y, full ? pw : half, 18).tooltip(Tooltip.create(Component.literal((String) r[1]))).build());
+            b.setMessage(Component.literal((String) r[0])); // the key, until refreshLabels names it
+            yardButtons.add(b);
+            if (full || col == 1) {
+                y += 20;
+                col = 0;
+            } else {
+                col = 1;
+            }
+        }
+        if (col == 1) {
+            y += 20;
+        }
+        String help = switch (t) {
+            case "stad:field" -> "Farmland and water are for the farmers to make; the builders level the ground and put up the fence and path.";
+            case "stad:pen" -> "The builders put up the fence. The shepherd leads animals in through the gate and looks after them there.";
+            default -> "The lumberjack plants a sapling on each spot, and fells the trees once they've grown.";
+        };
+        editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Lay it out"), b -> generate())
+                .tooltip(Tooltip.create(Component.literal("Fill the site with a " + word(t) + " from these settings. Your own changes stay on top. "
+                        + help)))
+                .bounds(px, y, half, 18).build()));
+        editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Flatten"), b -> send(TablePayloads.Action.Kind.FLATTEN, ""))
+                .tooltip(Tooltip.create(Component.literal("Make what was laid out plain blocks, so laying it out again starts afresh.")))
+                .bounds(px + half + 2, y, half, 18).build()));
+        y += 22;
+        drawerHelp = font.split(Component.literal(help), pw);
+        return y;
+    }
+
+    private List<net.minecraft.util.FormattedCharSequence> drawerHelp = List.of();
+
     /** The drawer on the right: generating a building to start from, asking for a change, the site. */
     private void initDrawer() {
         int px = viewRight() + 4, pw = DRAWER - 8, y = TOP + 4;
         int half = (pw - 2) / 2, third = (pw - 4) / 3;
-        styleButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+        drawerHelp = List.of();
+        if (yardType()) {
+            y = initYardDrawer(px, pw, y);
+            if (y + 2 + drawerHelp.size() * 10 + 4 + 22 + 24 > vh - 21) {
+                drawerHelp = List.of(); // no room: it's in the button's tooltip too
+            }
+            drawerInfoY = y + 2 + drawerHelp.size() * 10 + (drawerHelp.isEmpty() ? 0 : 4);
+            int by = Math.max(drawerInfoY + 24, vh - 21);
+            editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Change site"), b -> {
+                siteOpen = !siteOpen;
+                rebuildWidgets();
+            }).bounds(px, by, half, 18).build()));
+            startOverButton = addRenderableWidget(StadButton.of(Component.literal("Reset"), b -> startOver())
+                    .tooltip(Tooltip.create(Component.literal("Clear the whole design: the site goes back to how it stands."))).bounds(px + half + 2, by, half, 18).build());
+            editOnly.add(startOverButton);
+            boolean gen = open.canEdit() && model != null;
+            yardButtons.forEach(b -> b.active = gen);
+            return;
+        }
+        styleButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
             if (!open.styles().isEmpty()) {
                 style = (style + 1) % open.styles().size();
                 defaultHotbar();
@@ -374,27 +543,27 @@ public class ArchitectScreen extends Screen {
             refreshLabels();
         }).bounds(px, y, pw, 18).build());
         y += 20;
-        floorsButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+        floorsButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
             floors = floors % BuildSpec.MAX_FLOORS + 1;
             refreshLabels();
         }).bounds(px, y, half, 18).build());
-        roofButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+        roofButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
             roof = (roof + 1) % BuildSpec.ROOFS.size();
             refreshLabels();
         }).bounds(px + half + 2, y, half, 18).build());
         y += 20;
-        doorButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+        doorButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
             door = (door + 1) % 4;
             refreshLabels();
         }).bounds(px, y, half, 18).build());
-        bedsButton = addRenderableWidget(Button.builder(Component.empty(), b -> {
+        bedsButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
             beds = (beds + 1) % (BuildSpec.MAX_BEDS + 1);
             refreshLabels();
         }).bounds(px + half + 2, y, half, 18).build());
         y += 20;
         for (int i = 0; i < BuildSpec.FEATURES.size(); i++) {
             String f = BuildSpec.FEATURES.get(i);
-            featureButtons.add(addRenderableWidget(Button.builder(Component.empty(), b -> {
+            featureButtons.add(addRenderableWidget(StadButton.of(Component.empty(), b -> {
                 if (!features.remove(f)) {
                     features.add(f);
                 }
@@ -402,10 +571,10 @@ public class ArchitectScreen extends Screen {
             }).bounds(px + i * (third + 2), y, third, 18).build()));
         }
         y += 20;
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Generate"), b -> generate())
+        editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Generate"), b -> generate())
                 .tooltip(Tooltip.create(Component.literal("Fill the site with a building from these settings. Your own changes stay on top.")))
                 .bounds(px, y, half, 18).build()));
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Flatten"), b -> send(TablePayloads.Action.Kind.FLATTEN, ""))
+        editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Flatten"), b -> send(TablePayloads.Action.Kind.FLATTEN, ""))
                 .tooltip(Tooltip.create(Component.literal("Make the generated building plain blocks, so generating again starts afresh.")))
                 .bounds(px + half + 2, y, half, 18).build()));
         y += 22;
@@ -416,15 +585,15 @@ public class ArchitectScreen extends Screen {
         describeBox.setValue(describeText);
         describeBox.setResponder(v -> describeText = v);
         addRenderableWidget(describeBox);
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Ask"), b -> describe()).bounds(px + pw - 28, y - 1, 28, 18).build()));
+        editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Ask"), b -> describe()).bounds(px + pw - 28, y - 1, 28, 18).build()));
         y += 20;
         drawerInfoY = y + 2;
         int by = Math.max(y + 24, vh - 21);
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal("Change site"), b -> {
+        editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Change site"), b -> {
             siteOpen = !siteOpen;
             rebuildWidgets();
         }).bounds(px, by, half, 18).build()));
-        startOverButton = addRenderableWidget(Button.builder(Component.literal("Reset"), b -> startOver())
+        startOverButton = addRenderableWidget(StadButton.of(Component.literal("Reset"), b -> startOver())
                 .tooltip(Tooltip.create(Component.literal("Clear the whole design: the site goes back to how it stands."))).bounds(px + half + 2, by, half, 18).build());
         editOnly.add(startOverButton);
         boolean gen = open.canEdit() && model != null;
@@ -438,7 +607,7 @@ public class ArchitectScreen extends Screen {
     /** A button in the top bar, right to left: returns where the next one ends. */
     private int topButton(int right, String label, String tip, Button.OnPress press) {
         int w = font.width(label) + 12;
-        editOnly.add(addRenderableWidget(Button.builder(Component.literal(label), press).tooltip(Tooltip.create(Component.literal(tip)))
+        editOnly.add(addRenderableWidget(StadButton.of(Component.literal(label), press).tooltip(Tooltip.create(Component.literal(tip)))
                 .bounds(right - w, 3, w, 16).build()));
         return right - w - 2;
     }
@@ -475,8 +644,23 @@ public class ArchitectScreen extends Screen {
             mirrorZButton.setMessage(Component.literal("Mirror Z").withStyle(mirrorZ ? ChatFormatting.YELLOW : ChatFormatting.WHITE));
         }
         if (typeButton != null) {
-            String type = open.types().isEmpty() ? "stad:building" : open.types().get(typeIndex);
-            typeButton.setMessage(Component.literal(capital(word(type))));
+            String type = typeId();
+            typeButton.setMessage(Component.literal(capital(word(type))).withStyle(Yard.is(type) ? ChatFormatting.GREEN : ChatFormatting.WHITE));
+        }
+        for (Button b : yardButtons) {
+            String key = b.getMessage().getString().split(":")[0].toLowerCase(Locale.ROOT).strip();
+            b.setMessage(Component.literal(switch (key) {
+                case "crop" -> "Crop: " + capital(Yard.CROPS.get(crop));
+                case "water" -> "Water: " + Yard.WATERS.get(water);
+                case "fence" -> "Fence: " + Yard.FENCES.get(fence).replace('_', ' ');
+                case "path" -> "Path: " + (path ? "yes" : "no");
+                case "extra", "lamps", "shelter" -> (typeId().equals("stad:pen") ? "Shelter: " : "Lamps: ") + (extra ? "yes" : "no");
+                case "animal", "animals" -> "Animals: " + Yard.ANIMALS.get(animal);
+                case "tree", "trees" -> "Trees: " + Yard.TREES.get(tree).replace('_', ' ');
+                case "spacing" -> "Spacing: " + spacing;
+                case "door", "gate", "way in" -> (typeId().equals("stad:grove") ? "Way in: " : "Gate: ") + DOORS[door].getSerializedName();
+                default -> b.getMessage().getString();
+            }));
         }
         if (styleButton == null) {
             return;
@@ -541,7 +725,11 @@ public class ArchitectScreen extends Screen {
     private void generate() {
         flushName();
         JsonObject o = new JsonObject();
-        o.add("spec", specJson());
+        if (yardType()) {
+            o.add("yard", com.google.gson.JsonParser.parseString(yard().toJson()));
+        } else {
+            o.add("spec", specJson());
+        }
         o.addProperty("door", DOORS[door].getSerializedName());
         send(TablePayloads.Action.Kind.GENERATE, o.toString());
         setStatus("Generating...", false);
@@ -767,7 +955,7 @@ public class ArchitectScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.fillGradient(0, 0, vw, vh, 0xFF7FA7D0, 0xFFC9DCEC);
-        g.fill(0, vh, width, height, 0xF0202020);
+        Theme.panel(g, -6, vh, width + 12, height - vh + 6);
         hover = dragButton < 0 && !picking && inView(mouseX, mouseY) ? pick(mouseX, mouseY) : null;
         if (model != null) {
             try {
@@ -777,9 +965,9 @@ public class ArchitectScreen extends Screen {
                 setStatus("The 3D view failed to draw: " + e.getMessage(), true);
             }
         }
-        g.fillGradient(0, 0, vw, TOP, 0x90000000, 0x00000000);
+        Theme.panel(g, -6, -6, vw + 12, TOP + 6);
         if (drawer) {
-            g.fill(viewRight(), TOP, vw, vh, 0xE0181818);
+            Theme.panel(g, viewRight(), TOP - 1, vw - viewRight() + 6, vh - TOP + 2);
         }
         if (siteOpen) {
             drawSitePanel(g);
@@ -898,7 +1086,7 @@ public class ArchitectScreen extends Screen {
     private void drawViewText(GuiGraphics g) {
         long now = System.currentTimeMillis();
         boolean statusShown = !status.isEmpty() && now - statusAt <= (statusError ? 14000 : 8000);
-        if (!statusShown && now - openedAt < 12000) {
+        if (!statusShown && now - openedAt < 12000 && !siteOpen) {
             g.drawString(font, font.plainSubstrByWidth("Drag: turn · Scroll: zoom · Middle-drag: pan · Shift+scroll: layers", viewRight() - 60),
                     4, TOP + 4, 0xFFFFFF, true);
         }
@@ -930,22 +1118,32 @@ public class ArchitectScreen extends Screen {
         }
     }
 
+    /** Where the site's corner boxes go, down the view (the panel round them starts 58 above). */
+    private int siteY() {
+        return Math.max(TOP + 62, vh / 2 - 20);
+    }
+
     private void drawSitePanel(GuiGraphics g) {
-        int cx = vw / 2, cy = Math.max(40, vh / 2 - 20);
-        g.fill(cx - 130, cy - 54, cx + 130, cy + 46, 0xD0101010);
-        g.drawCenteredString(font, "Choose the site", cx, cy - 48, 0xFFD27F);
+        int cx = viewRight() / 2, cy = siteY();
+        Theme.panel(g, cx - 136, cy - 58, 272, 112);
+        Theme.header(g, font, Component.literal("Choose the site"), cx, cy - 52);
         List<FormattedCharSequence> lines = font.split(Component.literal(open.canEdit()
                 ? "Mark two corners with the scan wand and right-click the table with it, or type the corners here. "
                 + "At most " + Project.MAX_SIDE + " by " + Project.MAX_SIDE + " blocks, on the town's land."
                 : "An officer has to choose the site: mark two corners with the scan wand and right-click the table with it."), 250);
         for (int i = 0; i < Math.min(3, lines.size()); i++) {
-            g.drawCenteredString(font, lines.get(i), cx, cy - 36 + i * 10, 0xD0D0D0);
+            g.drawCenteredString(font, lines.get(i), cx, cy - 36 + i * 10, Theme.TEXT);
         }
     }
 
     /** The site and what the design takes, under the drawer's buttons. */
     private void drawDrawer(GuiGraphics g) {
         int px = viewRight() + 4, y = drawerInfoY;
+        int hy = y - drawerHelp.size() * 10 - 4;
+        for (net.minecraft.util.FormattedCharSequence line : drawerHelp) {
+            g.drawString(font, line, px, hy, 0x909090);
+            hy += 10;
+        }
         if (model != null) {
             g.drawString(font, "Site " + model.sx + " × " + model.sz + ", " + model.sy + " high", px, y, 0xA0A0A0);
             y += 11;
@@ -977,9 +1175,10 @@ public class ArchitectScreen extends Screen {
         List<String> missing = check.missing();
         String line = check.ready() ? "✔ Ready to be a " + type : "✘ A " + type + " needs " + dev.eiriksb.stad.planner.Design.join(missing);
         line = font.plainSubstrByWidth(line, viewRight() - 12);
-        int y = vh - 24, w = font.width(line);
-        g.fill(2, y - 2, w + 8, y + 10, 0x90000000);
-        g.drawString(font, line, 5, y, check.ready() ? 0x7FFF7F : 0xFF9F7F);
+        int y = vh - 24, w = font.width(line) + 12;
+        g.fill(2, y - 3, w + 9, y + 11, 0xB0140D09);
+        Theme.small(g, check.ready() ? "check" : "cross", 4, y);
+        g.drawString(font, line.substring(2), 16, y, check.ready() ? Theme.GOOD : Theme.BAD);
         if (mouseX >= 2 && mouseX < w + 8 && mouseY >= y - 2 && mouseY < y + 10) {
             List<Component> rows = new ArrayList<>();
             rows.add(Component.literal("To be a " + type + ":").withStyle(ChatFormatting.GOLD));
@@ -1001,18 +1200,17 @@ public class ArchitectScreen extends Screen {
         List<FormattedCharSequence> lines = font.split(Component.literal(status), w);
         int n = Math.min(3, lines.size());
         int x = (viewRight() - w) / 2, y = TOP + 4;
-        g.fill(x - 4, y - 3, x + w + 4, y + n * 10 + 2, 0xC0000000);
+        Theme.panel(g, x - 8, y - 6, w + 16, n * 10 + 11);
         for (int i = 0; i < n; i++) {
-            g.drawCenteredString(font, lines.get(i), x + w / 2, y + i * 10, statusError ? 0xFF8080 : 0x9FE0FF);
+            g.drawCenteredString(font, lines.get(i), x + w / 2, y + i * 10, statusError ? Theme.BAD : 0xFFBFE6FF);
         }
     }
 
     private void drawHotbar(GuiGraphics g, int mouseX, int mouseY) {
         for (int i = 0; i < 9; i++) {
             int x = 4 + i * SLOT, y = hotbarY;
-            g.fill(x, y, x + SLOT - 1, y + SLOT - 1, i == slot ? 0xFFE0C060 : 0xFF404040);
-            g.fill(x + 1, y + 1, x + SLOT - 2, y + SLOT - 2, 0xFF202020);
-            g.renderItem(new ItemStack(hotbar[i].getBlock().asItem()), x + 1, y + 1);
+            Theme.blit(g, i == slot ? Theme.SLOT_SELECTED : Theme.SLOT, x, y, SLOT, SLOT);
+            g.renderItem(icon(hotbar[i].getBlock()), x + 1, y + 1);
         }
         int hovered = slotAt(mouseX, mouseY);
         if (hovered >= 0) {
@@ -1040,6 +1238,7 @@ public class ArchitectScreen extends Screen {
                     out.add(b);
                 }
             }
+            out.add(Blocks.WATER);
             out.sort((a, b) -> a.getName().getString().compareToIgnoreCase(b.getName().getString()));
             allBlocks = out;
         }
@@ -1110,7 +1309,7 @@ public class ArchitectScreen extends Screen {
                 g.fill(x, y, x + SLOT, y + SLOT, 0x60FFFFFF);
                 hovered = b;
             }
-            g.renderItem(new ItemStack(b.asItem()), x + 1, y + 1);
+            g.renderItem(icon(b), x + 1, y + 1);
         }
         g.drawString(font, font.plainSubstrByWidth(pickList.size() + " blocks · click one for slot " + (slot + 1), vw - searchBox.getWidth() - 20),
                 searchBox.getWidth() + 14, 12, 0xA0A0A0);
@@ -1335,6 +1534,11 @@ public class ArchitectScreen extends Screen {
 
     private void pickBlock(BlockPos cell) {
         BlockState s = model.at(cell.getX(), cell.getY(), cell.getZ());
+        if (s.is(Blocks.WATER)) {
+            hotbar[slot] = Blocks.WATER.defaultBlockState();
+            setStatus("Picked Water.", false);
+            return;
+        }
         if (s.isAir() || !(s.getBlock().asItem() instanceof BlockItem bi)) {
             return;
         }

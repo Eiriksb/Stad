@@ -1,5 +1,6 @@
 package dev.eiriksb.stad.client;
 
+import dev.eiriksb.stad.client.ui.StadButton;
 import dev.eiriksb.stad.net.EditorPayload;
 import dev.eiriksb.stad.net.EditorSavePayload;
 import dev.eiriksb.stad.pack.Roles;
@@ -61,7 +62,7 @@ public class PackEditorScreen extends Screen {
         nameBox.setValue(name);
         nameBox.setResponder(v -> name = v);
         addRenderableWidget(nameBox);
-        addRenderableWidget(Button.builder(typeLabel(), b -> {
+        addRenderableWidget(StadButton.of(typeLabel(), b -> {
             type = (type + 1) % editor.types().size();
             b.setMessage(typeLabel());
         }).bounds(x + W - 110, 23, 110, 20).build());
@@ -69,7 +70,7 @@ public class PackEditorScreen extends Screen {
         for (int i = start; i < Math.min(editor.rows().size(), start + perPage()); i++) {
             int index = i;
             int y = TOP + (i - start) * ROW;
-            addRenderableWidget(Button.builder(roleLabel(index), b -> {
+            addRenderableWidget(StadButton.of(roleLabel(index), b -> {
                 Roles.Role[] all = Roles.Role.values();
                 Roles.Role now = Roles.Role.of(roles.get(index)).orElse(Roles.Role.DECOR);
                 roles.set(index, all[(now.ordinal() + 1) % all.length].id());
@@ -77,13 +78,13 @@ public class PackEditorScreen extends Screen {
             }).bounds(x + W - 96, y, 96, 20).build());
         }
         int by = height - 28;
-        Button prev = addRenderableWidget(Button.builder(Component.literal("<"), b -> turn(-1)).bounds(x, by, 20, 20).build());
-        Button next = addRenderableWidget(Button.builder(Component.literal(">"), b -> turn(1)).bounds(x + 24, by, 20, 20).build());
+        Button prev = addRenderableWidget(StadButton.of(Component.literal("<"), b -> turn(-1)).bounds(x, by, 20, 20).build());
+        Button next = addRenderableWidget(StadButton.of(Component.literal(">"), b -> turn(1)).bounds(x + 24, by, 20, 20).build());
         prev.active = page > 0;
         next.active = page < pages() - 1;
-        addRenderableWidget(Button.builder(Component.literal(editor.editable() ? "Save" : "Save a copy").withStyle(ChatFormatting.GREEN), b -> save())
+        addRenderableWidget(StadButton.of(Component.literal(editor.editable() ? "Save" : "Save a copy").withStyle(ChatFormatting.GREEN), b -> save())
                 .bounds(x + W - 186, by, 90, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose()).bounds(x + W - 90, by, 90, 20).build());
+        addRenderableWidget(StadButton.of(Component.literal("Cancel"), b -> onClose()).bounds(x + W - 90, by, 90, 20).build());
     }
 
     private void turn(int by) {
@@ -122,10 +123,16 @@ public class PackEditorScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        dev.eiriksb.stad.client.ui.Theme.panel(g, left() - 12, 2, W + 24, height - 4);
+    }
+
+    @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         int x = left();
-        g.drawString(font, Component.literal("Pack editor").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), x, 10, 0xFFFFFF);
+        g.drawString(font, Component.literal("Pack editor").withStyle(ChatFormatting.BOLD), x, 10, dev.eiriksb.stad.client.ui.Theme.GOLD);
         g.drawString(font, editor.sizeX() + " x " + editor.sizeZ() + ", " + editor.sizeY() + " high" + (editor.editable() ? "" : " · from another pack"),
                 x + 90, 10, 0x888888);
         int y = 48;

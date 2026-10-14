@@ -1,5 +1,7 @@
 package dev.eiriksb.stad.client;
 
+import dev.eiriksb.stad.client.ui.StadButton;
+import dev.eiriksb.stad.client.ui.Theme;
 import dev.eiriksb.stad.net.CitizenLinePayload;
 import dev.eiriksb.stad.net.CitizenScreenPayload;
 import net.minecraft.ChatFormatting;
@@ -63,7 +65,7 @@ public class CitizenChatScreen extends Screen {
         input.setEditable(view.canTalk());
         addRenderableWidget(input);
         setInitialFocus(input);
-        Button send = addRenderableWidget(Button.builder(Component.literal("Say"), b -> send()).bounds(x + W - 56, by - 1, 56, 20).build());
+        Button send = addRenderableWidget(StadButton.of(Component.literal("Say"), b -> send()).bounds(x + W - 56, by - 1, 56, 20).build());
         send.active = view.canTalk();
         // the orders and shortcuts, in rows above the text box
         int ay = by - 24;
@@ -74,7 +76,7 @@ public class CitizenChatScreen extends Screen {
                 ax = x;
                 ay -= 22;
             }
-            Button.Builder bb = Button.builder(Component.literal(a.label()).withStyle(s -> s.withColor(a.color())), btn -> act(a))
+            StadButton.Builder bb = StadButton.of(Component.literal(a.label()).withStyle(s -> s.withColor(a.color())), btn -> act(a))
                     .bounds(ax, ay, w, 20);
             if (!a.tooltip().isEmpty()) {
                 bb.tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(a.tooltip())));
@@ -88,7 +90,7 @@ public class CitizenChatScreen extends Screen {
         for (String a : view.about()) {
             about.addAll(font.split(Component.literal(a), W));
         }
-        historyTop = 22 + 12 + about.size() * LINE + 8;
+        historyTop = 40 + about.size() * LINE + 10;
     }
 
     /** who they are and how they're doing, wrapped to the screen */
@@ -138,25 +140,39 @@ public class CitizenChatScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
+        int x = left();
+        Theme.panel(g, x - 12, 2, W + 24, height - 4);
+        Theme.header(g, font, Component.literal(view.name()), width / 2, 7);
+        Theme.inset(g, x - 4, historyTop - 4, W + 8, historyBottom - historyTop + 8);
+    }
+
+    @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
         int x = left();
-        g.drawString(font, Component.literal(view.name()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), x, 10, 0xFFFFFF);
-        String mood = "Happiness " + view.happiness() + "% · food " + view.hunger() + "/20 · rest " + view.rest() + "/20";
-        int moodColor = view.happiness() >= 60 ? 0x77DD77 : view.happiness() >= 35 ? 0xDDDD77 : 0xDD7777;
-        g.drawString(font, mood, x + W - font.width(mood), 10, moodColor);
-        int y = 24;
+        int moodColor = view.happiness() >= 60 ? Theme.GOOD : view.happiness() >= 35 ? Theme.WARN : Theme.BAD;
+        int mx = x;
+        Theme.small(g, "heart", mx, 27);
+        g.drawString(font, view.happiness() + "% happy", mx + 12, 28, moodColor);
+        mx += 12 + font.width(view.happiness() + "% happy") + 12;
+        Theme.small(g, "food", mx, 27);
+        g.drawString(font, "food " + view.hunger() + "/20", mx + 12, 28, Theme.MUTED);
+        mx += 12 + font.width("food " + view.hunger() + "/20") + 12;
+        Theme.small(g, "moon", mx, 27);
+        g.drawString(font, "rest " + view.rest() + "/20", mx + 12, 28, Theme.MUTED);
+        int y = 40;
         for (FormattedCharSequence a : about) {
-            g.drawString(font, a, x, y, 0xAAAAAA);
+            g.drawString(font, a, x, y, Theme.MUTED);
             y += LINE;
         }
         // the conversation, newest at the bottom, wrapped
-        g.fill(x - 4, historyTop - 4, x + W + 4, historyBottom + 2, 0x66000000);
         List<FormattedCharSequence> wrapped = new ArrayList<>();
         List<Integer> colors = new ArrayList<>();
         for (CitizenScreenPayload.Line l : lines) {
-            Component c = Component.literal(l.speaker() + ": ").withStyle(l.fromPlayer() ? ChatFormatting.AQUA : ChatFormatting.GOLD)
-                    .append(Component.literal(l.text()).withStyle(ChatFormatting.WHITE));
+            Component c = Component.literal(l.speaker() + ": ").withColor(l.fromPlayer() ? 0x8FC8E8 : Theme.GOLD & 0xFFFFFF)
+                    .append(Component.literal(l.text()).withColor(Theme.TEXT & 0xFFFFFF));
             for (FormattedCharSequence s : font.split(c, W)) {
                 wrapped.add(s);
                 colors.add(0xFFFFFF);
@@ -170,7 +186,7 @@ public class CitizenChatScreen extends Screen {
         int start = Math.max(0, end - rows);
         if (lines.isEmpty()) {
             g.drawString(font, Component.literal(view.canTalk() ? "You haven't talked yet. Type below, or speak with your voice chat key while"
-                    + " looking at them." : "They aren't talking right now.").withStyle(ChatFormatting.DARK_GRAY), x, historyTop, 0x888888);
+                    + " looking at them." : "They aren't talking right now."), x, historyTop, Theme.FAINT);
         }
         int ly = historyBottom - (end - start) * LINE;
         for (int i = start; i < end; i++) {

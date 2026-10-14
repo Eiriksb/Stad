@@ -32,17 +32,15 @@ public final class Fields {
             "A field round a water hole. Farmers level it, till it, dig the water and sow it with seeds from the town hall;"
                     + " there's nothing for the builders to do.", List.of("field"), blueprint(), null);
 
+    /** A 9 by 9 of plots round a water hole: only markers, since the farmers make all of it. */
     private static Blueprint blueprint() {
-        List<Blueprint.Entry> entries = new ArrayList<>();
+        List<Blueprint.Marker> markers = new ArrayList<>();
         for (int x = 0; x < SIZE; x++) {
             for (int z = 0; z < SIZE; z++) {
-                BlockPos p = new BlockPos(x, 0, z);
-                entries.add(new Blueprint.Entry(p, x == SIZE / 2 && z == SIZE / 2 ? Blocks.WATER.defaultBlockState()
-                        : Blocks.FARMLAND.defaultBlockState().setValue(FarmBlock.MOISTURE, FarmBlock.MAX_MOISTURE)));
-                entries.add(new Blueprint.Entry(p.above(), Blocks.AIR.defaultBlockState()));
+                markers.add(new Blueprint.Marker(new BlockPos(x, 0, z), x == SIZE / 2 && z == SIZE / 2 ? "stad:water" : "stad:plot"));
             }
         }
-        return new Blueprint(new Vec3i(SIZE, 2, SIZE), entries);
+        return new Blueprint(new Vec3i(SIZE, 2, SIZE), List.of(), markers);
     }
 
     public static boolean is(Building b) {
@@ -53,37 +51,38 @@ public final class Fields {
         return colony.buildings().stream().filter(Fields::is).toList();
     }
 
-    /** The ground level of a field (where the farmland goes). */
-    public static int level(Building field) {
-        return field.origin.getY();
+    /** Where the field's water goes: one hole in the middle of a plain field, channels in one designed at the table. */
+    public static List<BlockPos> waters(Building field) {
+        return field.placement().map(p -> p.markers("stad:water")).orElse(List.of());
     }
 
+    /** The first of its water holes (the middle, for a plain field). */
     public static BlockPos water(Building field) {
-        BoundingBox b = bounds(field);
-        return new BlockPos(b.minX() + SIZE / 2, level(field), b.minZ() + SIZE / 2);
+        List<BlockPos> w = waters(field);
+        return w.isEmpty() ? centre(field) : w.getFirst();
     }
 
     public static BlockPos centre(Building field) {
-        return water(field);
+        BoundingBox b = bounds(field);
+        return new BlockPos((b.minX() + b.maxX()) / 2, plots(field).stream().findFirst().map(BlockPos::getY).orElse(b.minY()), (b.minZ() + b.maxZ()) / 2);
     }
 
     public static BoundingBox bounds(Building field) {
-        return new BoundingBox(field.origin.getX(), field.origin.getY(), field.origin.getZ(),
-                field.origin.getX() + SIZE - 1, field.origin.getY() + 1, field.origin.getZ() + SIZE - 1);
+        return field.placement().map(Placement::bounds).orElseGet(() -> new BoundingBox(field.origin.getX(), field.origin.getY(),
+                field.origin.getZ(), field.origin.getX() + SIZE - 1, field.origin.getY() + 1, field.origin.getZ() + SIZE - 1));
     }
 
-    /** Every spot of a field where farmland goes (all but the water). */
+    /** Every spot of a field where farmland goes. */
     public static List<BlockPos> plots(Building field) {
-        List<BlockPos> out = new ArrayList<>();
-        BlockPos w = water(field);
-        for (int x = 0; x < SIZE; x++) {
-            for (int z = 0; z < SIZE; z++) {
-                BlockPos p = field.origin.offset(x, 0, z);
-                if (!p.equals(w)) {
-                    out.add(p);
-                }
-            }
-        }
+        return field.placement().map(p -> p.markers().stream().filter(m -> m.name().startsWith("stad:plot")).map(Blueprint.Marker::pos).toList())
+                .orElse(List.of());
+    }
+
+    /** The crop each plot that asks for one wants ("carrots"...): the rest take whatever seeds there are. */
+    public static java.util.Map<BlockPos, String> crops(Building field) {
+        java.util.Map<BlockPos, String> out = new java.util.HashMap<>();
+        field.placement().ifPresent(p -> p.markers().stream().filter(m -> m.name().startsWith("stad:plot_"))
+                .forEach(m -> out.put(m.pos(), m.name().substring("stad:plot_".length()))));
         return out;
     }
 

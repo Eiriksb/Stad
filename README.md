@@ -8,6 +8,8 @@ bedrooms and a chimney"), and lead them well, or they'll refuse your orders, str
 Talking, memory, voices and the AI runtime come from [They Will Talk](https://github.com/Eiriksb/they-will-talk),
 which Stad requires. Everything runs locally on your own GPU. No cloud, no API keys.
 
+![The town hall, the architect's table and the town hall block](docs/look.png)
+
 > **Status:** 0.1.0, the first release (all eleven milestones of [PLAN.md](PLAN.md) done). New players: start with the
 > [guide](docs/GUIDE.md); what's in this release is in the [changelog](CHANGELOG.md).
 >
@@ -162,6 +164,16 @@ porch and make the roof hip"). The drawer also has **Change site** and **Reset**
 **Plan it here** plans it on the site for the builders (what the design leaves out of the site stays as it is; a
 finished building on the site is redesigned in place). Officers edit; other members can watch. Broken, the table keeps
 its project.
+
+**Fields, pens and groves.** The table designs land too: pick **Field**, **Pen** or **Grove** as the kind and open
+**Lay out ▾**. A field is farmland round water channels or holes (every plot within four blocks of water), sown with a
+crop or mixed strips, with a fence, a path round the inside and lamps if you like. A pen is a fenced yard with a gate,
+for sheep, cows, pigs or chickens, with a shelter, a hay bale and a cauldron of water. A grove is saplings of one kind
+(or mixed) in rows three to six blocks apart, with a path through it. Change them by hand like a building (water and
+crops can be placed in designs); the checklist says whether every plot has water, the fence shuts the animals in and
+the saplings have room. Planned, the builders level the ground and put up the fence, path and shelter, and the land is
+the workers': the farmer digs the water, tills and sows each plot with its crop, the lumberjack plants each spot with
+its sapling and fells the trees, and the shepherd leads the animals in through the gate.
 
 **Build in it** (top right) takes you to the drafting world to build it yourself, in creative: an empty void with a
 copy of the site, the design and the land round it, as the table shows it, in the real place's biomes (so the grass,
@@ -349,6 +361,17 @@ player) and `/stad dev ui <player> <script>`: clicks, drags, keys and screenshot
 (`click x y [button]; drag x1 y1 x2 y2; scroll x y n; key pgdn; type text; wait ticks; shot name`, in GUI
 coordinates; in the world `hold item; look yaw pitch; use; attack; drop`; screenshots land in `run/client/screenshots`),
 for trying things out from the console.
+
+**Art.** The textures are drawn in code and painted in Krita, and the block models are built in Blockbench, so both can
+be redone by script or opened and changed by hand: `art/krita/` has a layered `.kra` for every texture and
+`art/blockbench/` a `.bbmodel` and a preview for every model.
+
+```bash
+tools/art/paint.sh [name...]                    # paint the textures (tools/art/textures.py) in Krita: .kra + PNG
+blockbench --remote-debugging-port=9333 &       # then build the models (tools/art/models.py) in Blockbench:
+python3 tools/art/models.py [name...]           #   .bbmodel, the Java block model, and a preview render
+python3 tools/art/textures.py sheet.png         # every texture on one sheet, to look at
+```
 
 The dev runs share TWT's AI runtime (`../they-will-talk/runtime`), so models installed for TWT work here too. The dev
 server needs `online-mode=false` in `run/server/server.properties` for the offline dev clients to join.

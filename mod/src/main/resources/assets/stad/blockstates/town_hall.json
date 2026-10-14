@@ -1,5 +1,8 @@
 {
   "variants": {
-    "": { "model": "stad:block/town_hall" }
+    "facing=south": { "model": "stad:block/town_hall" },
+    "facing=west": { "model": "stad:block/town_hall", "y": 90 },
+    "facing=north": { "model": "stad:block/town_hall", "y": 180 },
+    "facing=east": { "model": "stad:block/town_hall", "y": 270 }
   }
 }

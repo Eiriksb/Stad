@@ -106,6 +106,23 @@ public final class Requirements {
         type(BuildingDef.SCHOOL,
                 block("a lectern", net.minecraft.world.level.block.Blocks.LECTERN),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        TYPES.put(BuildingDef.FIELD, List.of( // fields, pens and groves are land, not buildings: no walls or roof
+                new Need("farmland (at least four blocks)", c -> c.count(net.minecraft.world.level.block.Blocks.FARMLAND) >= 4
+                        || c.markerLike("stad:plot"), true),
+                new Need("water near all the farmland (within four blocks)", c -> c.dry == 0, true),
+                new Need("a fence round it, to keep animals out", c -> c.count(s -> s.getBlock() instanceof net.minecraft.world.level.block.FenceBlock
+                        || s.getBlock() instanceof net.minecraft.world.level.block.WallBlock) >= 8, false)));
+        TYPES.put(BuildingDef.PEN, List.of(
+                new Need("a fence all round", c -> c.penned && c.count(s -> s.getBlock() instanceof net.minecraft.world.level.block.FenceBlock
+                        || s.getBlock() instanceof net.minecraft.world.level.block.WallBlock) >= 8, true),
+                new Need("a gate", c -> c.count(s -> s.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) > 0, true),
+                new Need("water to drink (a cauldron of water or a pond)", c -> c.count(net.minecraft.world.level.block.Blocks.WATER_CAULDRON) > 0
+                        || c.count(net.minecraft.world.level.block.Blocks.WATER) > 0, false),
+                new Need("a hay bale", c -> c.count(net.minecraft.world.level.block.Blocks.HAY_BLOCK) > 0, false)));
+        TYPES.put(BuildingDef.GROVE, List.of(
+                new Need("saplings where the trees go (at least four)", c -> c.count(s -> s.is(net.minecraft.tags.BlockTags.SAPLINGS)) >= 4
+                        || c.markerLike("stad:sapling"), true),
+                new Need("room between the saplings (two blocks)", c -> c.crowded == 0, false)));
         type(WORKSHOP,
                 new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true),
                 new Need("a workstation (a smithing table, stonecutter, loom, anvil...)", c -> c.has(Contents.Thing.WORKSTATION), true),
