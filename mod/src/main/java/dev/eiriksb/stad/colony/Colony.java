@@ -27,7 +27,10 @@ public final class Colony {
     private String name;
     public final ResourceKey<Level> dimension;
     public final BlockPos center;
-    public final int radius;
+    /** how far its land reaches now ({@link Growth}: it grows with the town's homes) */
+    public int radius;
+    /** how far it reached when it was founded */
+    public final int baseRadius;
     public final long founded;
     private UUID owner;
     private final Map<UUID, Rank> ranks = new LinkedHashMap<>();
@@ -50,11 +53,16 @@ public final class Colony {
     private Runnable onChange = () -> {};
 
     Colony(int id, String name, ResourceKey<Level> dimension, BlockPos center, int radius, long founded, UUID owner, String ownerName) {
+        this(id, name, dimension, center, radius, radius, founded, owner, ownerName);
+    }
+
+    Colony(int id, String name, ResourceKey<Level> dimension, BlockPos center, int radius, int baseRadius, long founded, UUID owner, String ownerName) {
         this.id = id;
         this.name = name;
         this.dimension = dimension;
         this.center = center;
         this.radius = radius;
+        this.baseRadius = baseRadius;
         this.founded = founded;
         this.owner = owner;
         ranks.put(owner, Rank.OWNER);
@@ -298,6 +306,7 @@ public final class Colony {
         t.putString("Dimension", dimension.location().toString());
         t.put("Center", NbtUtils.writeBlockPos(center));
         t.putInt("Radius", radius);
+        t.putInt("BaseRadius", baseRadius);
         t.putLong("Founded", founded);
         t.putUUID("Owner", owner);
         t.putLong("LastArrival", lastArrival);
@@ -341,7 +350,7 @@ public final class Colony {
         ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(t.getString("Dimension")));
         UUID owner = t.getUUID("Owner");
         Colony c = new Colony(t.getInt("Id"), t.getString("Name"), dim, NbtUtils.readBlockPos(t, "Center").orElse(BlockPos.ZERO),
-                t.getInt("Radius"), t.getLong("Founded"), owner, "?");
+                t.getInt("Radius"), t.contains("BaseRadius") ? t.getInt("BaseRadius") : t.getInt("Radius"), t.getLong("Founded"), owner, "?");
         c.lastArrival = t.getLong("LastArrival");
         c.ranks.clear();
         for (Tag tag : t.getList("Members", Tag.TAG_COMPOUND)) {

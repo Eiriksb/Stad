@@ -9,7 +9,8 @@
    `/twt dashboard`, and click **Install recommended** on the Models page. Until it's installed, citizens live and work
    but don't talk.
 3. Craft a **town hall**: three bookshelves on top, planks, a bell and planks in the middle, three planks below. Place
-   it where your town's middle should be. Its land reaches 48 blocks round it.
+   it where your town's middle should be. Its land reaches 32 blocks round it at first, and grows by 4 with every home
+   finished on it, up to 96 (never into another town's land).
 
 ## Your first hour
 
@@ -222,7 +223,9 @@ change:
 
 | Setting | Default | |
 |---|---|---|
-| `colonies.claimRadius` | 48 | how far a town's land reaches |
+| `colonies.claimRadius` | 32 | how far a new town's land reaches |
+| `colonies.landPerHome` | 4 | how many blocks the land grows with each home finished on it |
+| `colonies.maxRadius` | 96 | how far a town's land can grow to |
 | `colonies.arrivalMinutes` | 5 | minutes between newcomers |
 | `colonies.leadership` | NORMAL | LOYAL (they always obey), NORMAL, HARSH |
 | `jobs.herdSize` | 6 | animals of each kind the shepherd keeps |

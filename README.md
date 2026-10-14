@@ -237,6 +237,10 @@ the far side of town when there's nowhere to hide. Afterwards the whole town rem
 of them"), your standing rises if you saw them through it (and drops if you weren't there), and anything broken
 becomes a repair order the builders do first. `mobRaids` in the config: off, easy, normal or hard.
 
+**Your land grows.** A new town's land reaches 32 blocks round its town hall, and every home finished on it adds 4
+more, up to 96 (`claimRadius`, `landPerHome`, `maxRadius`). It stops where another town's land begins, and never
+shrinks. The town hall says how far it reaches and how it'll grow.
+
 **Your land is protected.** Only a town's people can build, dig, or open chests and beds on its land.
 
 **War is opt-in.** Every town starts **peaceful** and can't be attacked by players. Its founder can make it **open to

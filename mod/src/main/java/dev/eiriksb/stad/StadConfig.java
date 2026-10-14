@@ -15,8 +15,16 @@ public final class StadConfig {
     }
 
     public static final ModConfigSpec.IntValue CLAIM_RADIUS = B
-            .comment("How far (in blocks) a town hall's land reaches.")
-            .defineInRange("claimRadius", 48, 16, 256);
+            .comment("How far (in blocks) a new town hall's land reaches. It grows with the town's homes (landPerHome).")
+            .defineInRange("claimRadius", 32, 16, 256);
+
+    public static final ModConfigSpec.IntValue LAND_PER_HOME = B
+            .comment("How many blocks a town's land grows with each home finished on it (0: it doesn't grow).")
+            .defineInRange("landPerHome", 4, 0, 64);
+
+    public static final ModConfigSpec.IntValue MAX_RADIUS = B
+            .comment("How far (in blocks) a town's land can grow to at most.")
+            .defineInRange("maxRadius", 96, 16, 512);
 
     public static final ModConfigSpec.IntValue MAX_COLONIES_PER_PLAYER = B
             .comment("How many towns one player may found (0: no limit).")

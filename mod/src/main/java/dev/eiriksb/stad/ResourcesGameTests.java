@@ -185,6 +185,41 @@ public final class ResourcesGameTests {
         });
     }
 
+    // ---- the town's land ------------------------------------------------------------------------------------------
+
+    /** Each finished home grows the town's land, but not into another town's. */
+    @GameTest(template = "lot", batch = "res_growth")
+    public static void landGrowsWithHomes(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        ServerLevel level = helper.getLevel();
+        Colony colony = found(helper, owner);
+        int per = StadConfig.LAND_PER_HOME.get();
+        var cottage = BuildingPacks.get(net.minecraft.resources.ResourceLocation.parse("stad:medieval/cottage")).orElseThrow();
+        helper.assertTrue(!dev.eiriksb.stad.colony.Growth.update(level, colony, ColonyManager.get(level.getServer()).all()), "no homes, no growth");
+        for (int i = 0; i < 2; i++) {
+            colony.addBuilding(cottage.key(), cottage.name(), helper.absolutePos(new BlockPos(2 + 8 * i, G - 1, 2)), Rotation.NONE, 0).status
+                    = Building.Status.DONE;
+        }
+        dev.eiriksb.stad.colony.Growth.update(level, colony, ColonyManager.get(level.getServer()).all());
+        int room = dev.eiriksb.stad.colony.Growth.room(colony, ColonyManager.get(level.getServer()).all());
+        helper.assertTrue(colony.radius == Math.min(16 + 2 * per, room), "two homes: " + colony.radius + " (room " + room + ")");
+        helper.assertTrue(colony.contains(level.dimension(), colony.center.offset(colony.radius - 1, 0, 0)), "the new land is the town's");
+        // a neighbour: the land stops at theirs
+        BlockPos near = colony.center.offset(16 + 2 * per + 20, 0, 0);
+        ColonyManager.Founding other = ColonyManager.get(level.getServer()).found(level, near, java.util.UUID.randomUUID(), "Neighbour", 16);
+        helper.assertTrue(other.colony() != null, "a neighbour: " + other.problem());
+        for (int i = 0; i < 10; i++) {
+            colony.addBuilding(cottage.key(), cottage.name(), helper.absolutePos(new BlockPos(2, G - 1, 10)), Rotation.NONE, 0).status
+                    = Building.Status.DONE;
+        }
+        dev.eiriksb.stad.colony.Growth.update(level, colony, ColonyManager.get(level.getServer()).all());
+        long gap = (long) Math.sqrt(colony.center.distSqr(near)) - colony.radius - other.colony().radius;
+        helper.assertTrue(gap >= 0, "grew into the neighbour's land: " + colony.radius + ", gap " + gap);
+        ColonyManager.get(level.getServer()).dissolve(level.getServer(), other.colony());
+        cleanUp(helper, colony, owner);
+        helper.succeed();
+    }
+
     // ---- the gatherer ---------------------------------------------------------------------------------------------
 
     @GameTest(template = "lot", batch = "res_gather", timeoutTicks = 4000)

@@ -127,6 +127,12 @@
   carry, the courier puts what's on the wrong shelf on the right one, and when the town hall is nearly full takes what
   it doesn't need (not its food, tools or what the builders are waiting for) to the warehouse.
 
+**Towns that grow**
+- A town's land starts smaller (32 blocks round the town hall) and grows by 4 blocks with every home finished on it,
+  up to 96, stopping where another town's land begins. Members are told when it grows, citizens can roam the new
+  land at once, and the town hall says how far it reaches and how it'll grow. Towns founded before keep their land
+  and grow from there.
+
 **Placing buildings by hand**
 - **Preview** in the building plans now shows the whole building, see-through, where it would go, instead of an
   outline, and you can move it before planning it, much like placing a Create schematic: the arrow keys move it,

@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** What the town hall screen shows, as sent to one player. */
-public record ColonyView(int id, String name, String owner, BlockPos center, int radius, int beds, Rank viewerRank, String standing,
+public record ColonyView(int id, String name, String owner, BlockPos center, int radius, String growth, int beds, Rank viewerRank, String standing,
                          List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> needs, List<String> recentOrders,
                          boolean open, boolean poaching, String war, List<Step> steps, List<Job> jobs) {
     public record Member(String name, Rank rank) {}
@@ -73,7 +73,12 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         List<Step> steps = dev.eiriksb.stad.colony.Guide.steps(level, c).stream().map(x -> new Step(x.text(), x.done())).toList();
         List<Job> jobs = dev.eiriksb.stad.colony.Guide.jobs(level, c).stream()
                 .map(j -> new Job(j.job(), j.does(), j.needs(), j.problem() == null ? "" : j.problem(), j.workers())).toList();
-        return new ColonyView(c.id, c.name(), c.ownerName(), c.center, c.radius, Homes.beds(level, c).size(), c.rank(viewer.getUUID()),
+        int wanted = dev.eiriksb.stad.colony.Growth.wanted(c), per = dev.eiriksb.stad.StadConfig.LAND_PER_HOME.get();
+        String growth = per == 0 ? "" : c.radius >= dev.eiriksb.stad.StadConfig.MAX_RADIUS.get() ? "It's grown as far as it can."
+                : wanted > c.radius && dev.eiriksb.stad.colony.Growth.room(c, dev.eiriksb.stad.colony.ColonyManager.get(level.getServer()).all()) <= c.radius
+                ? "It can't grow any further: another town's land is in the way."
+                : "It grows " + per + " blocks with each new home (up to " + dev.eiriksb.stad.StadConfig.MAX_RADIUS.get() + ").";
+        return new ColonyView(c.id, c.name(), c.ownerName(), c.center, c.radius, growth, Homes.beds(level, c).size(), c.rank(viewer.getUUID()),
                 standing.toString(), members, citizens, buildings, needs, orders, c.politics.open(), c.politics.poaching, String.join("; ", wars),
                 steps, jobs);
     }
@@ -92,6 +97,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         buf.writeUtf(owner);
         buf.writeBlockPos(center);
         buf.writeVarInt(radius);
+        buf.writeUtf(growth);
         buf.writeVarInt(beds);
         buf.writeEnum(viewerRank);
         buf.writeUtf(standing);
@@ -129,7 +135,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
     }
 
     static ColonyView read(FriendlyByteBuf buf) {
-        return new ColonyView(buf.readVarInt(), buf.readUtf(), buf.readUtf(), buf.readBlockPos(), buf.readVarInt(), buf.readVarInt(),
+        return new ColonyView(buf.readVarInt(), buf.readUtf(), buf.readUtf(), buf.readBlockPos(), buf.readVarInt(), buf.readUtf(), buf.readVarInt(),
                 buf.readEnum(Rank.class),
                 buf.readUtf(),
                 buf.readList(b -> new Member(b.readUtf(), b.readEnum(Rank.class))),

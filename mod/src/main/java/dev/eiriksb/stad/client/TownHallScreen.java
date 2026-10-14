@@ -214,6 +214,9 @@ public class TownHallScreen extends Screen {
         iconRow(Theme.icon("people"), Component.literal(view.citizens().size() + " citizens").withColor(Theme.TEXT)
                 .append(Component.literal("  ·  " + view.beds() + " beds, " + Math.max(0, view.beds() - homed) + " free  ·  land " + view.radius()
                         + " blocks round the hall").withColor(Theme.MUTED)));
+        if (!view.growth().isEmpty()) {
+            text("The town's land: " + view.growth(), Theme.MUTED);
+        }
         text("Founded by " + view.owner() + " · you're " + (view.viewerRank() == Rank.OWNER ? "its owner" : "a " + view.viewerRank().id()),
                 Theme.MUTED);
         text(view.standing(), 0xFFDDD099);
