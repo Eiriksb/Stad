@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * What the architect's table generates for land rather than a building (PLAN.md §6.11): a field round water channels,
- * a fenced pen for animals, or a grove of saplings. Like a building's spec it's kept with the project, so changing an
+ * a fenced pen for animals, a grove of saplings, a quarry, a dock, a guard post, a wall, market stalls or a road. Like a building's spec it's kept with the project, so changing an
  * option draws it again with the hand edits on top. The workers make the land part (the farmer tills and sows, the
  * lumberjack plants); the builders put up the fence, the path and the rest.
  *
@@ -37,9 +37,12 @@ import java.util.Locale;
  * @param depth   quarry: how deep the miner digs it
  * @param wall    wall: logs, stone_bricks or cobblestone
  * @param height  wall: how high
+ * @param paving  stalls and road: dirt_path, gravel, cobblestone, stone_bricks or planks
+ * @param awning  stalls: the colour of the stalls' roofs (or striped, red and white)
+ * @param width   road: how wide
  */
 public record Yard(String crop, String water, String fence, boolean path, String animal, String tree, int spacing, boolean extra,
-                   int depth, String wall, int height) {
+                   int depth, String wall, int height, String paving, String awning, int width) {
     public static final List<String> CROPS = List.of("wheat", "carrots", "potatoes", "beetroots", "mixed");
     public static final List<String> WATERS = List.of("rows", "holes");
     public static final List<String> FENCES = List.of("oak", "spruce", "birch", "dark_oak", "cobblestone", "none");
@@ -49,19 +52,22 @@ public record Yard(String crop, String water, String fence, boolean path, String
     public static final List<Integer> DEPTHS = List.of(8, 16, 24, 32, 48);
     public static final List<String> WALLS = List.of("logs", "stone_bricks", "cobblestone");
     public static final int MIN_HEIGHT = 2, MAX_HEIGHT = 5;
+    public static final List<String> PAVINGS = List.of("dirt_path", "gravel", "cobblestone", "stone_bricks", "planks");
+    public static final List<String> AWNINGS = List.of("striped", "red", "yellow", "blue", "green", "white");
+    public static final int MIN_WIDTH = 1, MAX_WIDTH = 4;
 
-    public static final Yard DEFAULT = new Yard("wheat", "rows", "oak", true, "sheep", "oak", 4, true, 16, "logs", 3);
+    public static final Yard DEFAULT = new Yard("wheat", "rows", "oak", true, "sheep", "oak", 4, true, 16, "logs", 3, "dirt_path", "striped", 3);
 
     /** The land kinds, and the job each is for. */
     public static final List<ResourceLocation> KINDS = List.of(BuildingDef.FIELD, BuildingDef.PEN, BuildingDef.GROVE, BuildingDef.QUARRY,
-            BuildingDef.DOCK, BuildingDef.POST, BuildingDef.WALL);
+            BuildingDef.DOCK, BuildingDef.POST, BuildingDef.WALL, BuildingDef.STALLS, BuildingDef.ROAD);
 
     /** Whether a kind of building is land the table generates with a {@link Yard} rather than a {@link dev.eiriksb.stad.planner.BuildSpec}. */
     public static boolean is(ResourceLocation type) {
         return KINDS.contains(type);
     }
 
-    /** Who works it: "farmer" for a field... */
+    /** Who works it: "farmer" for a field... (null for a road: it's everyone's) */
     public static String job(ResourceLocation type) {
         return switch (type.getPath()) {
             case "field" -> "farmer";
@@ -69,8 +75,19 @@ public record Yard(String crop, String water, String fence, boolean path, String
             case "grove" -> "lumberjack";
             case "quarry" -> "miner";
             case "dock" -> "fisher";
+            case "stalls" -> "merchant";
+            case "road" -> null;
             default -> "guard";
         };
+    }
+
+    /**
+     * Whether a marker is one the table put there when it laid out a {@code type} (and so goes when it's laid out again,
+     * or the kind changes). A road's {@code stad:road} markers are where it was drawn: they stay.
+     */
+    public static boolean laidOut(ResourceLocation type, String marker) {
+        return marker.startsWith("stad:quarry") || marker.equals("stad:fish") || marker.equals("stad:post")
+                || type.equals(BuildingDef.STALLS) && marker.equals("stad:work");
     }
 
     /** For tests: the same with another fence. */
@@ -80,7 +97,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
 
     /** The same, with another fence (a pen has to have one). */
     Yard withFence(String f) {
-        return new Yard(crop, water, f, path, animal, tree, spacing, extra, depth, wall, height);
+        return new Yard(crop, water, f, path, animal, tree, spacing, extra, depth, wall, height, paving, awning, width);
     }
 
     public static boolean is(String type) {
@@ -101,6 +118,9 @@ public record Yard(String crop, String water, String fence, boolean path, String
         o.addProperty("depth", depth);
         o.addProperty("wall", wall);
         o.addProperty("height", height);
+        o.addProperty("paving", paving);
+        o.addProperty("awning", awning);
+        o.addProperty("width", width);
         return o.toString();
     }
 
@@ -117,7 +137,9 @@ public record Yard(String crop, String water, String fence, boolean path, String
                     : DEFAULT.spacing, o.has("extra") ? o.get("extra").getAsBoolean() : DEFAULT.extra,
                     o.has("depth") && DEPTHS.contains(o.get("depth").getAsInt()) ? o.get("depth").getAsInt() : DEFAULT.depth,
                     pick(o, "wall", WALLS, DEFAULT.wall),
-                    o.has("height") ? Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, o.get("height").getAsInt())) : DEFAULT.height);
+                    o.has("height") ? Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, o.get("height").getAsInt())) : DEFAULT.height,
+                    pick(o, "paving", PAVINGS, DEFAULT.paving), pick(o, "awning", AWNINGS, DEFAULT.awning),
+                    o.has("width") ? Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, o.get("width").getAsInt())) : DEFAULT.width);
         } catch (RuntimeException e) {
             return DEFAULT;
         }
@@ -191,12 +213,16 @@ public record Yard(String crop, String water, String fence, boolean path, String
         if (!p.hasSite()) {
             return "There's nothing to generate.";
         }
-        int min = p.type.equals(BuildingDef.PEN) || p.type.equals(BuildingDef.QUARRY) || p.type.equals(BuildingDef.WALL) ? 5 : 3;
+        int min = p.type.equals(BuildingDef.ROAD) ? 1 : p.type.equals(BuildingDef.PEN) || p.type.equals(BuildingDef.QUARRY)
+                || p.type.equals(BuildingDef.WALL) || p.type.equals(BuildingDef.STALLS) ? 5 : 3;
         if (p.sx < min || p.sz < min) {
             return "The site is too small: make it at least " + min + " by " + min + " blocks.";
         }
         p.generated.clear();
-        p.markers.values().removeIf(m -> m.startsWith("stad:quarry") || m.equals("stad:fish") || m.equals("stad:post"));
+        p.markers.values().removeIf(m -> laidOut(p.type, m));
+        if (p.type.equals(BuildingDef.ROAD)) {
+            return road(p, terrain);
+        }
         if (p.type.equals(BuildingDef.QUARRY)) {
             return quarry(p, terrain);
         }
@@ -220,9 +246,11 @@ public record Yard(String crop, String water, String fence, boolean path, String
         if (p.floorY + 4 > p.sy) {
             return "There isn't room above the ground: lower the site's bottom corner.";
         }
-        level(p, terrain, p.type.equals(BuildingDef.FIELD));
+        level(p, terrain, !p.type.equals(BuildingDef.PEN));
         if (p.type.equals(BuildingDef.FIELD)) {
             field(p);
+        } else if (p.type.equals(BuildingDef.STALLS)) {
+            stalls(p);
         } else {
             pen(p);
         }
@@ -647,6 +675,185 @@ public record Yard(String crop, String water, String fence, boolean path, String
         return null;
     }
 
+    // ---- the merchant's, and everyone's ------------------------------------------------------------------------
+
+    /** The block a paving name lays: a dirt path, gravel, cobblestone, stone bricks or planks (of the fence's wood). */
+    private BlockState pavingState() {
+        return switch (paving) {
+            case "gravel" -> Blocks.GRAVEL.defaultBlockState();
+            case "cobblestone" -> Blocks.COBBLESTONE.defaultBlockState();
+            case "stone_bricks" -> Blocks.STONE_BRICKS.defaultBlockState();
+            case "planks" -> woodState("planks");
+            default -> Blocks.DIRT_PATH.defaultBlockState();
+        };
+    }
+
+    /** Whether a block is road paving (what {@link #PAVINGS} lay, any wood's planks). */
+    public static boolean paving(BlockState s) {
+        return s.is(Blocks.DIRT_PATH) || s.is(Blocks.GRAVEL) || s.is(Blocks.COBBLESTONE) || s.is(Blocks.STONE_BRICKS) || s.is(BlockTags.PLANKS);
+    }
+
+    /** Whether a block is the ground a road can be laid on (not someone's chest, table or roof): earth, stone, sand, paving. */
+    public static boolean groundLike(BlockState s) {
+        return s.is(BlockTags.DIRT) || s.is(BlockTags.SAND) || s.is(BlockTags.BASE_STONE_OVERWORLD) || s.is(BlockTags.TERRACOTTA) || paving(s)
+                || s.is(Blocks.CLAY) || s.is(Blocks.SNOW_BLOCK) || s.is(Blocks.FARMLAND);
+    }
+
+    /** A stall's roof, at {@code a} (0 to 2) along its front: the awning's colour, or red and white stripes. */
+    private BlockState awningState(int a) {
+        String colour = awning.equals("striped") ? (a % 2 == 0 ? "red" : "white") : awning;
+        Block b = BuiltInRegistries.BLOCK.get(ResourceLocation.withDefaultNamespace(colour + "_wool"));
+        return (b == Blocks.AIR ? Blocks.RED_WOOL : b).defaultBlockState();
+    }
+
+    /**
+     * An open-air market for the merchants: the site levelled and paved, stalls round its edge facing in (three by three:
+     * corner posts, an awning, a barrel at the back, a counter at the front and a spot for the merchant between, marked
+     * {@code stad:work}), a way in on the door's side, and a bell in the middle of the square. With {@code extra}, a
+     * lantern under each awning.
+     */
+    private void stalls(Project p) {
+        int f = p.floorY;
+        BlockState floor = pavingState();
+        for (int x = 0; x < p.sx; x++) {
+            for (int z = 0; z < p.sz; z++) {
+                p.generated.put(Project.key(x, f, z), floor);
+            }
+        }
+        // the square seen from its way in: u across, v from the door's side (0) to the back
+        boolean across = p.door.getAxis() == Direction.Axis.Z;
+        int w = across ? p.sx : p.sz, d = across ? p.sz : p.sx;
+        java.util.function.BiFunction<Integer, Integer, int[]> at = (u, v) -> switch (p.door) {
+            case SOUTH -> new int[]{p.sx - 1 - u, p.sz - 1 - v};
+            case WEST -> new int[]{v, p.sz - 1 - u};
+            case EAST -> new int[]{p.sx - 1 - v, u};
+            default -> new int[]{u, v};
+        };
+        boolean front = d >= 11 && w >= 9, sides = w >= 11;
+        int sideFrom = front ? 3 : 1, sideTo = d - 4;
+        // each stall: where its back-left corner is, and which way u and v run along its front and into the square
+        List<int[]> stalls = new java.util.ArrayList<>(); // u, v, du (along), dv (along), iu (in), iv (in)
+        for (int s0 : starts(0, w - 1)) {
+            stalls.add(new int[]{s0, d - 1, 1, 0, 0, -1});
+        }
+        if (front) {
+            for (int s0 : starts(0, w / 2 - 2)) {
+                stalls.add(new int[]{s0, 0, 1, 0, 0, 1});
+            }
+            for (int s0 : starts(w / 2 + 2, w - 1)) {
+                stalls.add(new int[]{s0, 0, 1, 0, 0, 1});
+            }
+        }
+        if (sides && sideTo - sideFrom >= 2) {
+            for (int s0 : starts(sideFrom, sideTo)) {
+                stalls.add(new int[]{0, s0, 0, 1, 1, 0});
+                stalls.add(new int[]{w - 1, s0, 0, 1, -1, 0});
+            }
+        }
+        BlockState post = fenceState(), counter = slabState().setValue(SlabBlock.TYPE, SlabType.TOP);
+        for (int[] st : stalls) {
+            int[] back = at.apply(st[0] + st[2], st[1] + st[3]), in = at.apply(st[0] + st[2] + st[4], st[1] + st[3] + st[5]);
+            Direction facing = Direction.fromDelta(in[0] - back[0], 0, in[1] - back[1]);
+            for (int a = 0; a < 3; a++) {
+                for (int k = 0; k < 3; k++) {
+                    int[] c = at.apply(st[0] + st[2] * a + st[4] * k, st[1] + st[3] * a + st[5] * k);
+                    boolean corner = a != 1 && k != 1;
+                    BlockState low = corner ? post : a == 1 && k == 0 ? Blocks.BARREL.defaultBlockState()
+                            .setValue(net.minecraft.world.level.block.BarrelBlock.FACING, facing != null ? facing : Direction.UP)
+                            : a == 1 && k == 2 ? counter : Blocks.AIR.defaultBlockState();
+                    p.generated.put(Project.key(c[0], f + 1, c[1]), low);
+                    p.generated.put(Project.key(c[0], f + 2, c[1]), corner ? post : extra && a == 1 && k == 2
+                            ? Blocks.LANTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LanternBlock.HANGING, true)
+                            : Blocks.AIR.defaultBlockState());
+                    p.generated.put(Project.key(c[0], f + 3, c[1]), awningState(a));
+                    if (a == 1 && k == 1) {
+                        p.markers.put(Project.key(c[0], f + 1, c[1]), "stad:work");
+                    }
+                }
+            }
+        }
+        int[] bell = at.apply(w / 2, ((front ? 3 : 0) + d - 4) / 2);
+        p.generated.put(Project.key(bell[0], f + 1, bell[1]), Blocks.BELL.defaultBlockState()
+                .setValue(net.minecraft.world.level.block.BellBlock.FACING, p.door)
+                .setValue(net.minecraft.world.level.block.BellBlock.ATTACHMENT, net.minecraft.world.level.block.state.properties.BellAttachType.FLOOR));
+    }
+
+    /** Where three-wide stalls start along {@code from} to {@code to} (inclusive): as many as fit a block apart, centred. */
+    static List<Integer> starts(int from, int to) {
+        int len = to - from + 1, n = (len + 1) / 4;
+        List<Integer> out = new java.util.ArrayList<>();
+        int first = from + (len - (n * 4 - 1)) / 2;
+        for (int i = 0; i < n; i++) {
+            out.add(first + i * 4);
+        }
+        return out;
+    }
+
+    /**
+     * A road where it was drawn ({@code stad:road} markers, by hand or routed by the table: {@link Routes}), {@code width}
+     * wide: the ground paved on the land as it is, what's growing on it cleared, planks over water. Only the ground: a
+     * column whose top is something else (a chest, the town hall, a roof) is left alone, and so is where the town's
+     * buildings stand ({@link Project#keepOut}). With {@code extra}, lamp posts beside it every eight blocks or so.
+     */
+    private String road(Project p, Grid terrain) {
+        p.floorY = Fit.ground(terrain, p, 0, 0, p.sx, p.sz);
+        java.util.Set<Integer> line = new java.util.HashSet<>();
+        p.markers.forEach((k, m) -> {
+            if (m.equals("stad:road")) {
+                line.add(Project.kx(k) | Project.kz(k) << 6);
+            }
+        });
+        java.util.Set<Integer> cells = new java.util.TreeSet<>();
+        int lo = -(width - 1) / 2, hi = width / 2;
+        for (int c : line) {
+            for (int dx = lo; dx <= hi; dx++) {
+                for (int dz = lo; dz <= hi; dz++) {
+                    int x = (c & 63) + dx, z = (c >> 6) + dz;
+                    if (x >= 0 && z >= 0 && x < p.sx && z < p.sz) {
+                        cells.add(x | z << 6);
+                    }
+                }
+            }
+        }
+        BlockState floor = pavingState(), bridge = woodState("planks");
+        cells.removeAll(p.keepOut); // it stops at the town's buildings
+        for (int c : cells) {
+            int x = c & 63, z = c >> 6, g = top(terrain, p, x, z);
+            if (g < 0) {
+                continue;
+            }
+            BlockState here = land(terrain, x, g, z);
+            if (here.getFluidState().isEmpty() && !groundLike(here)) {
+                continue;
+            }
+            p.generated.put(Project.key(x, g, z), here.getFluidState().isEmpty() ? floor : bridge);
+            for (int y = g + 1; y <= g + 2 && y < p.sy; y++) {
+                if (!land(terrain, x, y, z).isAir()) {
+                    p.generated.put(Project.key(x, y, z), Blocks.AIR.defaultBlockState());
+                }
+            }
+        }
+        if (extra) {
+            List<int[]> lamps = new java.util.ArrayList<>();
+            for (int c : cells) {
+                for (Direction dir : Direction.Plane.HORIZONTAL) {
+                    int x = (c & 63) + dir.getStepX(), z = (c >> 6) + dir.getStepZ();
+                    if (x < 0 || z < 0 || x >= p.sx || z >= p.sz || cells.contains(x | z << 6) || p.keepOut.contains(x | z << 6)
+                            || lamps.stream().anyMatch(l -> (l[0] - x) * (l[0] - x) + (l[1] - z) * (l[1] - z) < 64)) {
+                        continue;
+                    }
+                    int g = top(terrain, p, x, z);
+                    if (g >= 0 && g + 2 < p.sy && land(terrain, x, g, z).getFluidState().isEmpty() && !p.generated.containsKey(Project.key(x, g + 1, z))) {
+                        p.generated.put(Project.key(x, g + 1, z), fenceState());
+                        p.generated.put(Project.key(x, g + 2, z), Blocks.LANTERN.defaultBlockState());
+                        lamps.add(new int[]{x, z});
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     /** A wooden block of the fence's wood ("planks", "log"); spruce for a stone fence or none. */
     private BlockState woodState(String what) {
         String wood = fence.equals("cobblestone") || fence.equals("none") ? "spruce" : fence;
@@ -655,7 +862,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
     }
 
     /** The top of the land in a column of the site (not logs or leaves), or -1. */
-    private static int top(Grid terrain, Project p, int x, int z) {
+    static int top(Grid terrain, Project p, int x, int z) {
         for (int y = p.sy - 1; y >= 0; y--) {
             BlockState s = land(terrain, x, y, z);
             if (!s.getFluidState().isEmpty() || !Fit.open(s) && !s.is(BlockTags.LEAVES) && !s.is(BlockTags.LOGS)) {

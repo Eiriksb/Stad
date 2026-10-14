@@ -57,7 +57,22 @@
   at once.
 - The table won't put a different kind of land in a finished building's place (a quarry over a field); redesigning a
   field as a field still works.
-- Fields, pens, groves and the rest are in a **Farms** tab of the Building Plans when saved into My pack.
+- **Market squares**: an open-air market for the merchants. The site is levelled and paved, with three-by-three stalls
+  round its edge facing in (corner posts, an awning in the colour you choose or red-and-white stripes, a barrel at the
+  back, a counter at the front, a lantern under the awning) and a bell in the middle. A merchant keeps each stall: the
+  square is a merchant's workplace like the market building, and with more than one merchant each takes their own
+  stall.
+- **Roads**, drawn or routed. Pick **Road** as the kind: the table joins up what's in the site at once (the doors and
+  gates of the town's buildings, the town hall, and paths or roads running up to the site's edge) the easiest way over
+  the land, round buildings and anything standing in the way, never up more than a block at a time, along roads that
+  are already there where it can (**Route it** does it again). Or draw it yourself with the **Road** tool: click along
+  the ground and each click draws on from the last; right-click stops, or takes the road off a block. Choose the paving
+  (dirt path, gravel, cobblestone, stone bricks or planks; planks over water), the width (1 to 4) and lamp posts beside
+  it. A road stops at the town's buildings and only paves the ground, so it never runs over a chest, the town hall or
+  a roof. Roads can cross each other and run inside a wall. **Citizens walk about a third faster on the town's roads.**
+- Sites can be up to 64 by 64 now (a generated building still fits in 32), for long roads and big fields.
+- Fields, pens, groves and the rest are in a **Farms** tab of the Building Plans when saved into My pack (market squares
+  and roads in **Town**).
 - **A new look**: the town hall, the citizen's card, the Building Plans, the architect's table and the pack editor are
   dark walnut panels with brass trim, with icons for every job, wood buttons, tabs and scroll bars.
 - **New models**: the architect's table is a drafting table with a blueprint, a roll of plans and an ink pot; the town

@@ -496,11 +496,55 @@ def _wall(l):
     l.set(9, 9, stone)
 
 
+def _stall(l):
+    """A market stall: a striped awning with a scalloped edge, on two posts, over a counter with produce on it."""
+    l.map(0, 1, [
+        "..RRWWRRWWRRWW..",
+        ".RRWWRRWWRRWWRR.",
+        "RRWWRRWWRRWWRRWW",
+        "RRWWRRWWRRWWRRWW",
+        "R.W.R.W.R.W.R.W.",
+        "..P..........P..",
+        "..P..........P..",
+        "..P.aa.gg.oo.P..",
+        ".CCCCCCCCCCCCCC.",
+        ".DDDDDDDDDDDDDD.",
+        ".DdDDDDdDDDDdDD.",
+        ".DDDDDDDDDDDDDD.",
+        ".PP..........PP.",
+    ], {"R": rgb("#c8463c"), "W": rgb("#efe6d6"), "P": rgb("#6b4428"), "C": rgb("#c99a5e"), "D": rgb("#8a5a32"),
+        "d": rgb("#6b4428"), "a": rgb("#d8433a"), "g": rgb("#6fb44a"), "o": rgb("#e8a03a")})
+
+
+def _road(l):
+    """A road winding through grass, seen from above, with a lamp post beside it."""
+    l.map(0, 0, [
+        "gGGGGGGGeppeGGGg",
+        "GGGGGGGGeppeGGGG",
+        "GGGGGGGeppeGGGGG",
+        "GGGGGGeppeGGGGGG",
+        "GGGGGeppeGGGGLGG",
+        "GGGGeppeGGGGGlGG",
+        "GGGeppeGGGGGGlGG",
+        "GGGeppeGGGGGGlGG",
+        "GGGGeppeGGGGGGGG",
+        "GGGGGeppeGGGGGGG",
+        "GGGGGGeppeGGGGGG",
+        "GGGGGGGeppeGGGGG",
+        "GGGGGGGGeppeGGGG",
+        "GGGGGGGGeppeGGGG",
+        "GGGGGGGeppeGGGGG",
+        "gGGGGGGeppeGGGGg",
+    ], {"G": rgb("#5f9a3c"), "g": rgb("#4f8a30"), "p": rgb("#c4a466"), "e": rgb("#8f7444"), "L": rgb("#f0d27a"),
+        "l": rgb("#3a2a1c")})
+
+
 ICONS = {
     "job/builder": _hammer, "job/farmer": _wheat, "job/lumberjack": _axe, "job/courier": _crate, "job/guard": _shield,
     "job/cook": _pot, "job/fisher": _fish, "job/shepherd": _sheep, "job/miner": _pickaxe, "job/smith": _anvil,
     "job/healer": _potion, "job/merchant": _emerald, "job/teacher": _book, "job/none": _question,
     "person": _person, "people": _people, "house": _house, "bell": _bell, "field": _hoe_field, "fence": _fence, "sapling": _sapling, "wall": _wall,
+    "stall": _stall, "road": _road,
 }
 
 

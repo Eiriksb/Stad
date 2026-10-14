@@ -419,6 +419,10 @@ public class CitizenEntity extends PathfinderMob {
             if (tickCount % 100 == 0 && hunger >= 6 && getHealth() < getMaxHealth()) {
                 heal(isSleeping() ? 2 : 1); // well fed, they mend
             }
+            if (tickCount % 10 == 0) {
+                onRoad(level() instanceof net.minecraft.server.level.ServerLevel sl && colony().map(c -> dev.eiriksb.stad.building.Roads.on(sl, c,
+                        BlockPos.containing(getX(), getY() - 0.5, getZ()))).orElse(false));
+            }
             if (tickCount % 100 == 0) {
                 trainedAsGuard(dev.eiriksb.stad.colony.Jobs.GUARD.equals(job().orElse(null)));
                 Tools.tidy(this);
@@ -437,6 +441,22 @@ public class CitizenEntity extends PathfinderMob {
     }
 
     private static final net.minecraft.resources.ResourceLocation GUARD_TRAINING = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("stad", "guard");
+
+    private static final net.minecraft.resources.ResourceLocation ROAD = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("stad", "road");
+
+    /** On the town's roads, they walk faster. */
+    private void onRoad(boolean road) {
+        var speed = getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed == null || speed.hasModifier(ROAD) == road) {
+            return;
+        }
+        if (road) {
+            speed.addTransientModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(ROAD, dev.eiriksb.stad.building.Roads.FASTER,
+                    net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        } else {
+            speed.removeModifier(ROAD);
+        }
+    }
 
     /** Guards are trained fighters: tougher and harder-hitting while they have the job. */
     private void trainedAsGuard(boolean guard) {

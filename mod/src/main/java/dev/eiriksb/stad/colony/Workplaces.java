@@ -45,7 +45,7 @@ public final class Workplaces {
             Map.entry(Jobs.GUARD, List.of(BuildingDef.BARRACKS, BuildingDef.WATCHTOWER)),
             Map.entry(Jobs.SMITH, List.of(BuildingDef.SMITHY)),
             Map.entry(Jobs.HEALER, List.of(BuildingDef.INFIRMARY)),
-            Map.entry(Jobs.MERCHANT, List.of(BuildingDef.MARKET)),
+            Map.entry(Jobs.MERCHANT, List.of(BuildingDef.MARKET, BuildingDef.STALLS)),
             Map.entry(Jobs.TEACHER, List.of(BuildingDef.SCHOOL)));
 
     /** The kinds of building a job works from (empty: none). */
@@ -80,6 +80,8 @@ public final class Workplaces {
             return s -> s.is(Blocks.BREWING_STAND);
         } else if (type.equals(BuildingDef.MARKET)) {
             return s -> s.is(Blocks.BELL);
+        } else if (type.equals(BuildingDef.STALLS)) {
+            return s -> s.is(Blocks.BARREL); // one behind each stall's counter
         } else if (type.equals(BuildingDef.SCHOOL)) {
             return s -> s.is(Blocks.LECTERN);
         } else if (type.equals(BuildingDef.BARRACKS)) {
@@ -169,10 +171,15 @@ public final class Workplaces {
 
     /** Where a worker goes to start their day: a work marker, else the middle of the building's floor. */
     public static BlockPos spot(Building b) {
+        return spot(b, 0);
+    }
+
+    /** The {@code n}th worker's spot: their own work marker when there are several (a stall each at the market). */
+    public static BlockPos spot(Building b, int n) {
         return b.placement().map(p -> {
             List<BlockPos> work = p.markers("stad:work");
             if (!work.isEmpty()) {
-                return work.getFirst();
+                return work.get(Math.floorMod(n, work.size()));
             }
             var box = p.bounds();
             return new BlockPos((box.minX() + box.maxX()) / 2, box.minY() + 1, (box.minZ() + box.maxZ()) / 2);

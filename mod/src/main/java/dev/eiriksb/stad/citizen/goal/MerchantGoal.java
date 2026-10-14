@@ -10,8 +10,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.BellBlock;
 
 /**
- * The merchant (PLAN.md §6.9) keeps the market by day: stands at it, watches for customers, and rings its bell now and
- * then when someone's about. The trading itself is {@link dev.eiriksb.stad.colony.Trading}.
+ * The merchant (PLAN.md §6.9) keeps the market by day: stands at it (at their own stall, at an open-air market),
+ * watches for customers, and rings its bell now and then when someone's about. The trading itself is
+ * {@link dev.eiriksb.stad.colony.Trading}.
  */
 public class MerchantGoal extends WorkGoal {
     private int bellIn = 200;
@@ -32,7 +33,7 @@ public class MerchantGoal extends WorkGoal {
 
     @Override
     protected void work(ServerLevel level, Colony colony) {
-        BlockPos stand = workplace(colony).map(dev.eiriksb.stad.colony.Workplaces::spot).orElse(colony.center.south(3));
+        BlockPos stand = workplace(colony).map(b -> dev.eiriksb.stad.colony.Workplaces.spot(b, stall(colony, b))).orElse(colony.center.south(3));
         if (!approach.tick(citizen, stand, 2.0, 0.6)) {
             return;
         }
@@ -46,6 +47,17 @@ public class MerchantGoal extends WorkGoal {
                 ring(level, colony);
             }
         }
+    }
+
+    /** Which stall is this merchant's: the market's merchants take one each, in the order they came. */
+    private int stall(Colony colony, dev.eiriksb.stad.colony.Building b) {
+        java.util.List<dev.eiriksb.stad.colony.CitizenRecord> all = dev.eiriksb.stad.colony.Workplaces.workers(colony, b);
+        for (int i = 0; i < all.size(); i++) {
+            if (all.get(i).uuid.equals(citizen.getUUID())) {
+                return i;
+            }
+        }
+        return 0;
     }
 
     private void ring(ServerLevel level, Colony colony) {

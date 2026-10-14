@@ -35,8 +35,8 @@ import java.util.Map;
 
 /**
  * In-game tests for land designed at the architect's table (PLAN.md §6.11): a field round water channels that the
- * farmer tills and sows with the crop it asks for, a pen the shepherd leads animals into through its gate, and a grove
- * the lumberjack plants.
+ * farmer tills and sows with the crop it asks for, a pen the shepherd leads animals into through its gate, a grove
+ * the lumberjack plants, a quarry, a dock, a post, a wall, market stalls the merchants keep, and roads (routed or drawn).
  */
 @GameTestHolder(Stad.MOD_ID)
 @PrefixGameTestTemplate(false)
@@ -98,7 +98,7 @@ public final class YardGameTests {
         Colony colony = found(helper, owner);
         Project p = site(helper, 4, 5, 17, 17); // 14 by 13: inside the fence and path, 10 by 9 of farmland round a channel
         p.type = BuildingDef.FIELD;
-        Yard carrots = new Yard("carrots", "rows", "oak", true, "sheep", "oak", 4, true, 16, "logs", 3);
+        Yard carrots = new Yard("carrots", "rows", "oak", true, "sheep", "oak", 4, true, 16, "logs", 3, "dirt_path", "striped", 3);
         helper.assertTrue(Tables.generate(helper.getLevel(), p, carrots, Direction.NORTH) == null, "laid out");
         var check = Tables.check(helper.getLevel(), p);
         helper.assertTrue(check.ready(), "a field: missing " + check.missing());
@@ -190,7 +190,7 @@ public final class YardGameTests {
         Colony colony = found(helper, owner);
         Project p = site(helper, 7, 7, 15, 15);
         p.type = BuildingDef.GROVE;
-        Yard birch = new Yard("wheat", "rows", "none", false, "sheep", "birch", 3, false, 16, "logs", 3);
+        Yard birch = new Yard("wheat", "rows", "none", false, "sheep", "birch", 3, false, 16, "logs", 3, "dirt_path", "striped", 3);
         helper.assertTrue(Tables.generate(helper.getLevel(), p, birch, Direction.NORTH) == null, "laid out");
         long saplings = p.design().values().stream().filter(s -> s.is(Blocks.BIRCH_SAPLING)).count();
         helper.assertTrue(saplings == 9, "a 3 by 3 of birch: " + saplings);
@@ -227,7 +227,7 @@ public final class YardGameTests {
         }
         Project p = site(helper, 7, 7, 13, 13);
         p.type = BuildingDef.QUARRY;
-        Yard q = new Yard("wheat", "rows", "oak", false, "sheep", "oak", 4, false, 8, "logs", 3);
+        Yard q = new Yard("wheat", "rows", "oak", false, "sheep", "oak", 4, false, 8, "logs", 3, "dirt_path", "striped", 3);
         helper.assertTrue(Tables.generate(helper.getLevel(), p, q, Direction.NORTH) == null, "laid out");
         helper.assertTrue(Tables.check(helper.getLevel(), p).ready(), "a quarry: " + Tables.check(helper.getLevel(), p).missing());
         Tables.Said said = Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE));
@@ -315,7 +315,7 @@ public final class YardGameTests {
         helper.assertTrue(over.error() && over.message().contains("can't go in its place"), "not over the field: " + over.message());
         p = site(helper, 6, 6, 14, 14);
         p.type = BuildingDef.WALL;
-        Yard stone = new Yard("wheat", "rows", "oak", false, "sheep", "oak", 4, true, 16, "stone_bricks", 3);
+        Yard stone = new Yard("wheat", "rows", "oak", false, "sheep", "oak", 4, true, 16, "stone_bricks", 3, "dirt_path", "striped", 3);
         helper.assertTrue(Tables.generate(helper.getLevel(), p, stone, Direction.NORTH) == null, "wall laid out");
         var check = Tables.check(helper.getLevel(), p);
         helper.assertTrue(check.ready() && check.rows().stream().allMatch(r -> r.met()), "a wall with a door and posts: " + check.rows());
@@ -331,6 +331,103 @@ public final class YardGameTests {
         helper.assertTrue(colony.buildings().stream().anyMatch(b -> b.is(BuildingDef.FIELD)) && colony.buildings().size() == 2, "the field stays");
         Building w = colony.buildings().stream().filter(b -> b.is(BuildingDef.WALL)).findFirst().orElseThrow();
         helper.assertTrue(w.placement().orElseThrow().markers("stad:post").size() == 4, "a watch spot on each corner");
+        cleanUp(helper, colony, owner);
+        helper.succeed();
+    }
+
+    @GameTest(template = "lot", batch = "yard_stalls", timeoutTicks = 2400)
+    public static void tableLaysOutMarketStallsTheMerchantsKeep(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        Project p = site(helper, 4, 5, 16, 17); // 13 by 13: stalls on every side, a way in on the north
+        p.type = BuildingDef.STALLS;
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, Yard.DEFAULT, Direction.NORTH) == null, "laid out");
+        var check = Tables.check(helper.getLevel(), p);
+        helper.assertTrue(check.ready(), "a market square: " + check.missing());
+        long stalls = p.markers.values().stream().filter("stad:work"::equals).count();
+        helper.assertTrue(stalls == 9, "nine stalls round the square, not " + stalls);
+        helper.assertTrue(p.design().values().stream().anyMatch(st -> st.is(Blocks.BELL)), "a bell in the middle");
+        Tables.Said said = Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE));
+        helper.assertTrue(!said.error() && said.message().contains("merchant"), "planned: " + said.message());
+        Building square = colony.buildings().stream().filter(b -> b.is(BuildingDef.STALLS)).findFirst().orElseThrow();
+        build(helper, square);
+        java.util.List<BlockPos> spots = square.placement().orElseThrow().markers("stad:work");
+        CitizenEntity a = worker(helper, colony, Jobs.MERCHANT, 6, 3), b = worker(helper, colony, Jobs.MERCHANT, 8, 3);
+        helper.succeedWhen(() -> {
+            BlockPos sa = spots.stream().min(java.util.Comparator.comparingDouble(sp -> sp.distSqr(a.blockPosition()))).orElseThrow();
+            BlockPos sb = spots.stream().min(java.util.Comparator.comparingDouble(sp -> sp.distSqr(b.blockPosition()))).orElseThrow();
+            helper.assertTrue(a.blockPosition().closerThan(sa, 2.5) && b.blockPosition().closerThan(sb, 2.5), "not at their stalls: "
+                    + a.blockPosition() + " says " + a.status().text() + ", " + b.blockPosition() + " says " + b.status().text());
+            helper.assertTrue(!sa.equals(sb), "both at the same stall, " + sa);
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "yard_road", timeoutTicks = 400)
+    public static void tableRoutesARoadFromTheTownHallToADoor(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = found(helper, owner);
+        helper.setBlock(new BlockPos(7, G, 5), Blocks.CHEST); // in the way, maybe
+        var cottage = dev.eiriksb.stad.building.BuildingPacks.get(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("stad", "medieval/cottage"))
+                .orElseThrow();
+        Building home = colony.addBuilding(cottage.key(), cottage.name(), helper.absolutePos(new BlockPos(9, G, 8)), net.minecraft.world.level.block.Rotation.NONE,
+                helper.getLevel().getGameTime());
+        build(helper, home);
+        Project p = site(helper, 0, 0, 17, 17);
+        p.type = BuildingDef.ROAD;
+        var route = Tables.route(helper.getLevel(), helper.absolutePos(TABLE), p);
+        helper.assertTrue(route.problem() == null, "routed: " + route.message());
+        helper.assertTrue(route.joined().contains("the town hall") && route.joined().stream().anyMatch(j -> j.contains(cottage.name())),
+                "joins the hall and the cottage: " + route.message());
+        var check = Tables.check(helper.getLevel(), p);
+        helper.assertTrue(check.ready(), "a road: " + check.missing());
+        BlockPos chestAt = helper.absolutePos(new BlockPos(7, G, 5)), min = p.min;
+        helper.assertTrue(p.design().keySet().stream().noneMatch(k -> min.offset(Project.kx(k), Project.ky(k), Project.kz(k)).equals(chestAt)
+                || min.offset(Project.kx(k), Project.ky(k), Project.kz(k)).equals(helper.absolutePos(TABLE))
+                || min.offset(Project.kx(k), Project.ky(k), Project.kz(k)).equals(helper.absolutePos(HALL))), "round the chest, the table and the hall");
+        Tables.Said said = Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE));
+        helper.assertTrue(!said.error(), "planned: " + said.message());
+        Building road = colony.buildings().stream().filter(b -> b.is(BuildingDef.ROAD)).findFirst().orElseThrow();
+        helper.assertTrue(colony.buildings().contains(home), "the cottage stays");
+        build(helper, road);
+        java.util.List<BlockPos> paved = road.placement().orElseThrow().markers("stad:road");
+        helper.assertTrue(paved.size() >= 20 && paved.stream().allMatch(c -> helper.getLevel().getBlockState(c).is(Blocks.DIRT_PATH)
+                || helper.getLevel().getBlockState(c).is(BlockTags.PLANKS)), "paved: " + paved.size());
+        helper.assertTrue(dev.eiriksb.stad.building.Roads.on(helper.getLevel(), colony, paved.get(paved.size() / 2)), "on the town's road");
+        BlockPos stand = paved.get(paved.size() / 2).above();
+        CitizenEntity c = worker(helper, colony, null, 1, 1);
+        c.moveTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
+        double base = c.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED).getBaseValue();
+        helper.succeedWhen(() -> {
+            helper.assertTrue(c.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED) > base * 1.2,
+                    "faster on the road (at " + c.blockPosition() + ")");
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "yard_road_drawn", timeoutTicks = 100)
+    public static void aRoadIsPavedWhereItsDrawn(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = found(helper, owner);
+        Project p = site(helper, 4, 4, 16, 16);
+        p.type = BuildingDef.ROAD;
+        for (int x = 1; x <= 10; x++) { // a line along z = 6, then up to z = 10
+            p.markers.put(Project.key(x, 0, 6), "stad:road");
+        }
+        for (int z = 7; z <= 10; z++) {
+            p.markers.put(Project.key(10, 0, z), "stad:road");
+        }
+        Yard one = Yard.parse("{\"width\": 1, \"extra\": false, \"paving\": \"cobblestone\"}");
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, one, Direction.NORTH) == null, "laid");
+        long cobble = p.design().values().stream().filter(st -> st.is(Blocks.COBBLESTONE)).count();
+        helper.assertTrue(cobble == 14, "one wide, where it was drawn: " + cobble);
+        helper.assertTrue(p.design().get(Project.key(5, 0, 6)).is(Blocks.COBBLESTONE) && p.design().get(Project.key(5, 0, 7)) == null, "on the line");
+        Yard wide = Yard.parse("{\"width\": 3, \"extra\": true}");
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, wide, Direction.NORTH) == null, "laid wider");
+        long path = p.design().values().stream().filter(st -> st.is(Blocks.DIRT_PATH)).count();
+        helper.assertTrue(path > 40, "three wide: " + path);
+        helper.assertTrue(p.design().values().stream().anyMatch(st -> st.is(Blocks.LANTERN)), "lamp posts beside it");
         cleanUp(helper, colony, owner);
         helper.succeed();
     }

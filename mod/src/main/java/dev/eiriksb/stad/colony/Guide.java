@@ -49,7 +49,7 @@ public final class Guide {
                     "A smithy (anvil, furnace and chest), and cobblestone or iron, and planks."}),
             Map.entry(Jobs.HEALER, new String[]{"Treats the ill and the wounded.", "Nothing; an infirmary gives the ill a bed."}),
             Map.entry(Jobs.MERCHANT, new String[]{"Sells the town's spare goods to players and buys what it's short of, for emeralds.",
-                    "Emeralds in the town hall; a market to stand at."}),
+                    "Emeralds in the town hall; a market or a market square (a stall each) to stand at."}),
             Map.entry(Jobs.TEACHER, new String[]{"Teaches the town's children, who grow up quicker to learn.", "A school (with a lectern), and children."}));
 
     public static String does(String job) {

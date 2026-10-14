@@ -86,7 +86,8 @@ public class ArchitectScreen extends Screen {
         REPLACE("Replace", "Click a block to swap every block like it for the one in your hand (right-click: remove them)."),
         COPY("Copy", "Click two corners to copy what's between them."),
         PASTE("Paste", "Click a face to paste what you copied there. R turns it."),
-        MARK("Mark", "Click a space to mark it for the town. Click Mark again for another kind.");
+        MARK("Mark", "Click a space to mark it for the town. Click Mark again for another kind."),
+        ROAD("Road", "Click along the ground: each click draws on from the last. Right-click: stop, or take the road off.");
 
         final String label, hint;
 
@@ -131,6 +132,12 @@ public class ArchitectScreen extends Screen {
     private int crop, water, fence, animal, tree, spacing = Yard.DEFAULT.spacing(), depth = Yard.DEFAULT.depth(), wall,
             wallHeight = Yard.DEFAULT.height();
     private boolean path = Yard.DEFAULT.path(), extra = Yard.DEFAULT.extra();
+    /** a market square's and a road's: what it's paved with, the stalls' awnings, how wide the road is */
+    private int paving, awning, roadWidth = Yard.DEFAULT.width();
+    /** where the road tool's next stretch starts (the last click), or null */
+    private BlockPos roadFrom;
+    /** the tools on the bottom row (the road tool only for a road) */
+    private List<Tool> shownTools = List.of(Tool.values());
     /** the drawer's land settings buttons, and which setting each is */
     private final Map<Button, String> yardButtons = new LinkedHashMap<>();
     /** whether the list of kinds is open */
@@ -189,6 +196,9 @@ public class ArchitectScreen extends Screen {
             readYard(model.yard);
         }
         siteOpen = model == null;
+        if (typeId.equals("stad:road")) {
+            tool = Tool.ROAD;
+        }
         name = model != null ? model.name : open.design().name();
         defaultHotbar();
         status = open.message();
@@ -237,11 +247,14 @@ public class ArchitectScreen extends Screen {
         depth = y.depth();
         wall = Math.max(0, Yard.WALLS.indexOf(y.wall()));
         wallHeight = y.height();
+        paving = Math.max(0, Yard.PAVINGS.indexOf(y.paving()));
+        awning = Math.max(0, Yard.AWNINGS.indexOf(y.awning()));
+        roadWidth = y.width();
     }
 
     private Yard yard() {
         return new Yard(Yard.CROPS.get(crop), Yard.WATERS.get(water), Yard.FENCES.get(fence), path, Yard.ANIMALS.get(animal), Yard.TREES.get(tree),
-                spacing, extra, depth, Yard.WALLS.get(wall), wallHeight);
+                spacing, extra, depth, Yard.WALLS.get(wall), wallHeight, Yard.PAVINGS.get(paving), Yard.AWNINGS.get(awning), roadWidth);
     }
 
     private String typeId() {
@@ -250,6 +263,10 @@ public class ArchitectScreen extends Screen {
 
     private boolean yardType() {
         return Yard.is(typeId());
+    }
+
+    private boolean roadType() {
+        return typeId().equals("stad:road");
     }
 
     private TablePayloads.Style currentStyle() {
@@ -272,6 +289,10 @@ public class ArchitectScreen extends Screen {
                     Blocks.SPRUCE_SLAB, Blocks.SPRUCE_STAIRS, Blocks.BELL, Blocks.TORCH};
             case "stad:wall" -> new Block[]{Blocks.SPRUCE_LOG, Blocks.STONE_BRICKS, Blocks.COBBLESTONE, Blocks.COBBLESTONE_WALL, Blocks.SPRUCE_DOOR,
                     Blocks.SPRUCE_FENCE_GATE, Blocks.LANTERN, Blocks.STONE_BRICK_STAIRS, Blocks.STONE_BRICK_SLAB};
+            case "stad:stalls" -> new Block[]{fenceBlock(), Blocks.BARREL, Blocks.SPRUCE_SLAB, Blocks.RED_WOOL, Blocks.WHITE_WOOL, Blocks.BELL,
+                    Blocks.LANTERN, Blocks.COBBLESTONE, Blocks.FLOWER_POT};
+            case "stad:road" -> new Block[]{Blocks.DIRT_PATH, Blocks.GRAVEL, Blocks.COBBLESTONE, Blocks.STONE_BRICKS, Blocks.SPRUCE_PLANKS,
+                    Blocks.STONE_BRICK_STAIRS, Blocks.STONE_BRICK_SLAB, Blocks.OAK_FENCE, Blocks.LANTERN};
             default -> null;
         };
         if (land != null) {
@@ -313,8 +334,12 @@ public class ArchitectScreen extends Screen {
         describeBox = null;
         vw = width;
         // the bottom: the tools on one row, the hotbar and the editing buttons on the next
+        shownTools = java.util.Arrays.stream(Tool.values()).filter(t -> t != Tool.ROAD || roadType()).toList();
+        if (!shownTools.contains(tool)) {
+            tool = Tool.PLACE;
+        }
         List<String> tools = new ArrayList<>();
-        for (Tool t : Tool.values()) {
+        for (Tool t : shownTools) {
             tools.add(t == Tool.MARK ? "Mark" : t.label);
         }
         List<int[]> toolSpots = flow(tools, 4, 4);
@@ -327,7 +352,7 @@ public class ArchitectScreen extends Screen {
         toolsTop = vh + 3;
         hotbarY = toolsTop + toolRows * 18 + 1;
         for (int i = 0; i < tools.size(); i++) {
-            Tool t = Tool.values()[i];
+            Tool t = shownTools.get(i);
             int[] s = toolSpots.get(i);
             Button b = addRenderableWidget(StadButton.of(Component.literal(t.label), btn -> chooseTool(t)).bounds(s[0], toolsTop + s[1] * 18, s[2], 16)
                     .tooltip(Tooltip.create(Component.literal(t.hint))).build());
@@ -372,8 +397,8 @@ public class ArchitectScreen extends Screen {
         typeButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
             choosingType = !choosingType;
             rebuildWidgets();
-        }).bounds(88, 3, 96, 16).icon(typeIcon(typeId())).tooltip(Tooltip.create(Component.literal("What it is: a home, a workplace for a job,"
-                + " or land for one (a field, a pen, a grove, a quarry, a dock, a guard post, a wall). Click to choose."))).build());
+        }).bounds(88, 3, 100, 16).icon(typeIcon(typeId())).tooltip(Tooltip.create(Component.literal("What it is: a home, a workplace for a job,"
+                + " land for one (a field, a pen, a grove, a quarry, a dock, a guard post, a wall, a market square), or a road. Click to choose."))).build());
         int rx = width - 4;
         rx = topButton(rx, "Build in it", "Build it yourself, in creative, in the drafting world: a copy of the site with nothing else round it. "
                 + "What you build becomes the design. The real site isn't touched, and nothing comes back with you.", b -> {
@@ -470,6 +495,8 @@ public class ArchitectScreen extends Screen {
             case "stad:pen" -> Theme.icon("fence");
             case "stad:grove" -> Theme.icon("sapling");
             case "stad:wall" -> Theme.icon("wall");
+            case "stad:stalls" -> Theme.icon("stall");
+            case "stad:road" -> Theme.icon("road");
             default -> {
                 String job = jobOf(type);
                 yield job != null ? Theme.job(job) : Theme.icon("bell");
@@ -518,6 +545,8 @@ public class ArchitectScreen extends Screen {
                 if (wasYard != yardType() || yardType()) {
                     defaultHotbar();
                 }
+                tool = roadType() ? Tool.ROAD : tool == Tool.ROAD ? Tool.PLACE : tool;
+                roadFrom = null;
                 rebuildWidgets();
             }).bounds(x0 + col * (cw + 4), y0 + rows[col] * 20, cw, 18).icon(typeIcon(t)).tooltip(Tooltip.create(Component.literal(tip))).build();
             addRenderableWidget(b.chosen(index == typeIndex));
@@ -531,7 +560,7 @@ public class ArchitectScreen extends Screen {
     private void drawTypePicker(GuiGraphics g) {
         int cw = pickerColumn(), x0 = pickerX(), y0 = TOP + 16;
         Theme.panel(g, x0 - 8, TOP - 2, 3 * cw + 8 + 16, pickerRows * 20 + 26);
-        String[] heads = {"Homes and the town", "Workplaces", "Land for a job"};
+        String[] heads = {"Homes and the town", "Workplaces", "Land and roads"};
         for (int c = 0; c < 3; c++) {
             g.drawString(font, heads[c], x0 + c * (cw + 4), TOP + 4, Theme.GOLD);
         }
@@ -590,6 +619,19 @@ public class ArchitectScreen extends Screen {
                 rows.add(new Object[]{"extra", "Lanterns at the end of the pier.", (Runnable) () -> extra = !extra, false});
             }
             case "stad:post" -> rows.add(new Object[]{"fence", "What the post is built of.", wood, false});
+            case "stad:stalls" -> {
+                rows.add(new Object[]{"awning", "The colour of the stalls' awnings.", (Runnable) () -> awning = (awning + 1) % Yard.AWNINGS.size(), true});
+                rows.add(new Object[]{"paving", "What the square is paved with.", (Runnable) () -> paving = (paving + 1) % Yard.PAVINGS.size(), true});
+                rows.add(new Object[]{"fence", "The wood of the stalls' posts and counters.", wood, false});
+                rows.add(new Object[]{"extra", "A lantern under each awning.", (Runnable) () -> extra = !extra, false});
+            }
+            case "stad:road" -> {
+                rows.add(new Object[]{"paving", "What the road is paved with (planks over water).", (Runnable) () -> paving = (paving + 1) % Yard.PAVINGS.size(),
+                        true});
+                rows.add(new Object[]{"width", "How wide the road is.", (Runnable) () -> roadWidth = roadWidth >= Yard.MAX_WIDTH ? Yard.MIN_WIDTH
+                        : roadWidth + 1, false});
+                rows.add(new Object[]{"extra", "Lamp posts beside it, every eight blocks or so.", (Runnable) () -> extra = !extra, false});
+            }
             default -> {
                 rows.add(new Object[]{"wall", "Logs make a palisade; stone bricks and cobblestone a stone wall.",
                         (Runnable) () -> wall = (wall + 1) % Yard.WALLS.size(), true});
@@ -598,12 +640,14 @@ public class ArchitectScreen extends Screen {
                 rows.add(new Object[]{"extra", "Watch spots on top of the corners, for the guards to patrol to.", (Runnable) () -> extra = !extra, false});
             }
         }
-        rows.add(new Object[]{"door", switch (t) {
-            case "stad:dock" -> "Which side the shore is on: the pier starts there and runs out over the water.";
-            case "stad:post" -> "Which side the ladder is on.";
-            case "stad:wall" -> "Which side the door in the wall is on.";
-            default -> "Which side the gate (or the way in) is on.";
-        }, (Runnable) () -> door = (door + 1) % 4, false});
+        if (!t.equals("stad:road")) {
+            rows.add(new Object[]{"door", switch (t) {
+                case "stad:dock" -> "Which side the shore is on: the pier starts there and runs out over the water.";
+                case "stad:post" -> "Which side the ladder is on.";
+                case "stad:wall" -> "Which side the door in the wall is on.";
+                default -> "Which side the gate (or the way in) is on.";
+            }, (Runnable) () -> door = (door + 1) % 4, false});
+        }
         int col = 0;
         for (Object[] r : rows) {
             boolean full = (Boolean) r[3];
@@ -634,8 +678,20 @@ public class ArchitectScreen extends Screen {
             case "stad:quarry" -> "The miner digs the pit down a layer at a time, with steps round its edge, for stone, coal and ore.";
             case "stad:dock" -> "The builders build the pier; the fishers fish from the marked spots on it.";
             case "stad:post" -> "The builders build it; the guards patrol to it and keep watch from the top.";
+            case "stad:stalls" -> "The builders pave the square and build the stalls; a merchant keeps each one. Trade with them there.";
+            case "stad:road" -> "Draw it with the Road tool, or Route it to join the doors, the town hall and roads at the site's edge. Citizens"
+                    + " walk faster on it.";
             default -> "The builders build it round whatever is inside. With watch spots, the guards patrol along it.";
         };
+        if (t.equals("stad:road")) {
+            editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Route it"), b -> {
+                send(TablePayloads.Action.Kind.ROUTE, "");
+                setStatus("Routing...", false);
+            }).tooltip(Tooltip.create(Component.literal("Join up what's in the site (the doors of the town's buildings, the town hall, and roads"
+                    + " at its edge) the easiest way over the land, round buildings and hills. It adds to the road drawn so far.")))
+                    .bounds(px, y, pw, 18).build()));
+            y += 20;
+        }
         editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Lay it out"), b -> generate())
                 .tooltip(Tooltip.create(Component.literal("Fill the site with a " + word(t) + " from these settings. Your own changes stay on top. "
                         + help)))
@@ -773,7 +829,7 @@ public class ArchitectScreen extends Screen {
 
     private void refreshLabels() {
         for (int i = 0; i < toolButtons.size(); i++) {
-            Tool t = Tool.values()[i];
+            Tool t = shownTools.get(i);
             String label = t == Tool.MARK && tool == Tool.MARK ? "Mark: " + MARKERS.get(markKind).substring(5) : t.label;
             toolButtons.get(i).setMessage(Component.literal(label).withStyle(t == tool ? ChatFormatting.YELLOW : ChatFormatting.WHITE));
         }
@@ -783,12 +839,12 @@ public class ArchitectScreen extends Screen {
         }
         if (typeButton != null) {
             String type = typeId();
-            typeButton.setMessage(Component.literal(font.plainSubstrByWidth(capital(word(type)), 70)).withStyle(Yard.is(type) ? ChatFormatting.GREEN
+            typeButton.setMessage(Component.literal(font.plainSubstrByWidth(capital(word(type)), 76)).withStyle(Yard.is(type) ? ChatFormatting.GREEN
                     : ChatFormatting.WHITE));
         }
         String t = typeId();
         for (Map.Entry<Button, String> e : yardButtons.entrySet()) {
-            boolean woodOnly = t.equals("stad:dock") || t.equals("stad:post");
+            boolean woodOnly = t.equals("stad:dock") || t.equals("stad:post") || t.equals("stad:stalls");
             e.getKey().setMessage(Component.literal(switch (e.getValue()) {
                 case "crop" -> "Crop: " + capital(Yard.CROPS.get(crop));
                 case "water" -> "Water: " + Yard.WATERS.get(water);
@@ -801,8 +857,11 @@ public class ArchitectScreen extends Screen {
                 case "depth" -> "Depth: " + depth + " layers";
                 case "wall" -> "Wall: " + Yard.WALLS.get(wall).replace('_', ' ');
                 case "height" -> "Height: " + wallHeight;
+                case "paving" -> "Paving: " + Yard.PAVINGS.get(paving).replace('_', ' ');
+                case "awning" -> "Awnings: " + Yard.AWNINGS.get(awning);
+                case "width" -> "Width: " + roadWidth;
                 default -> (switch (t) {
-                    case "stad:grove" -> "Way in: ";
+                    case "stad:grove", "stad:stalls" -> "Way in: ";
                     case "stad:dock" -> "Shore: ";
                     case "stad:post" -> "Ladder: ";
                     case "stad:wall" -> "Door: ";
@@ -926,8 +985,10 @@ public class ArchitectScreen extends Screen {
                 nameBox.setValue(model.name);
                 sentName = model.name;
             }
-            undo.clear();
-            redo.clear();
+            if (!u.keep()) {
+                undo.clear();
+                redo.clear();
+            }
             if (renderer != null) {
                 renderer.markAll();
             }
@@ -1210,6 +1271,11 @@ public class ArchitectScreen extends Screen {
             if (p.getY() > cut) {
                 continue;
             }
+            if (e.getValue().equals("stad:road")) { // where the road was drawn: a mark on the top of the ground
+                LevelRenderer.renderLineBox(pose, lines, p.getX() + 0.35, p.getY() + 1.01, p.getZ() + 0.35, p.getX() + 0.65, p.getY() + 1.03,
+                        p.getZ() + 0.65, 1f, 0.6f, 0.2f, 1f);
+                continue;
+            }
             int c = markerColor(e.getValue());
             LevelRenderer.renderLineBox(pose, lines, p.getX() + 0.25, p.getY() + 0.25, p.getZ() + 0.25, p.getX() + 0.75, p.getY() + 0.75,
                     p.getZ() + 0.75, (c >> 16 & 255) / 255f, (c >> 8 & 255) / 255f, (c & 255) / 255f, 1f);
@@ -1225,6 +1291,12 @@ public class ArchitectScreen extends Screen {
                 LevelRenderer.renderLineBox(pose, lines, Math.min(a.getX(), b.getX()), Math.min(a.getY(), b.getY()), Math.min(a.getZ(), b.getZ()),
                         Math.max(a.getX(), b.getX()) + 1, Math.max(a.getY(), b.getY()) + 1, Math.max(a.getZ(), b.getZ()) + 1,
                         cornerErase ? 1f : 0.3f, cornerErase ? 0.3f : 1f, 0.3f, 1f);
+            }
+            if (tool == Tool.ROAD && roadFrom != null) {
+                for (int[] c : roadLine(roadFrom, target)) {
+                    int g = ground(c[0], c[1]);
+                    LevelRenderer.renderLineBox(pose, lines, c[0] + 0.1, g + 1.0, c[1] + 0.1, c[0] + 0.9, g + 1.08, c[1] + 0.9, 1f, 0.75f, 0.3f, 1f);
+                }
             }
             boolean ok = model.inSite(target.getX(), target.getY(), target.getZ());
             LevelRenderer.renderLineBox(pose, lines, target.getX() - 0.005, target.getY() - 0.005, target.getZ() - 0.005, target.getX() + 1.005,
@@ -1263,14 +1335,16 @@ public class ArchitectScreen extends Screen {
                     4, TOP + 4, 0xFFFFFF, true);
         }
         int lx = viewRight() - 13;
-        String layer = cut >= model.gh() - 1 ? "All" : String.valueOf(cut - DesignModel.M);
-        g.drawCenteredString(font, layer, lx, TOP + 22, 0xFFFFFF);
-        // compass: which way north is on screen
-        int cx = lx - 34, cy = TOP + 26;
-        double r = Math.toRadians(yaw);
-        int nx = (int) Math.round(-Math.sin(r) * 10), ny = (int) Math.round(-Math.cos(r) * 10 * Math.sin(Math.toRadians(Math.max(20, pitch))));
-        g.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFFFFFFFF);
-        g.drawCenteredString(font, "N", cx + nx, cy + ny - 4, 0xFF5555);
+        if (!siteOpen) { // the layer and the compass go with the layer buttons
+            String layer = cut >= model.gh() - 1 ? "All" : String.valueOf(cut - DesignModel.M);
+            g.drawCenteredString(font, layer, lx, TOP + 22, 0xFFFFFF);
+            // compass: which way north is on screen
+            int cx = lx - 34, cy = TOP + 26;
+            double r = Math.toRadians(yaw);
+            int nx = (int) Math.round(-Math.sin(r) * 10), ny = (int) Math.round(-Math.cos(r) * 10 * Math.sin(Math.toRadians(Math.max(20, pitch))));
+            g.fill(cx - 1, cy - 1, cx + 1, cy + 1, 0xFFFFFFFF);
+            g.drawCenteredString(font, "N", cx + nx, cy + ny - 4, 0xFF5555);
+        }
         if (hover != null) {
             BlockPos c = hover.cell();
             BlockState s = model.at(c.getX(), c.getY(), c.getZ());
@@ -1679,6 +1753,7 @@ public class ArchitectScreen extends Screen {
         }
         tool = t;
         corner = null;
+        roadFrom = null;
         toolAt = System.currentTimeMillis();
         refreshLabels();
     }
@@ -1697,11 +1772,26 @@ public class ArchitectScreen extends Screen {
             case REPLACE -> replace(h.cell(), selected());
             case PASTE -> paste(h.cell().relative(h.face()));
             case MARK -> mark(h.cell().relative(h.face()));
+            case ROAD -> road(h.cell());
         }
     }
 
     private void secondary(Hit h) {
         switch (tool) {
+            case ROAD -> {
+                if (roadFrom != null) {
+                    roadFrom = null;
+                    return;
+                }
+                Map<Integer, String> off = new LinkedHashMap<>();
+                model.markers.forEach((k, m) -> {
+                    BlockPos g = DesignModel.grid(k);
+                    if (m.equals("stad:road") && g.getX() == h.cell().getX() && g.getZ() == h.cell().getZ()) {
+                        off.put(k, "");
+                    }
+                });
+                commit(Map.of(), off);
+            }
             case BOX, WALLS, FLOOR, LINE -> corner(h.cell(), true);
             case REPLACE -> replace(h.cell(), DesignModel.air());
             case MARK -> {
@@ -1862,6 +1952,56 @@ public class ArchitectScreen extends Screen {
             }
         }
         commit(changes, Map.of());
+    }
+
+    /** The road tool: a stretch of road from the last click to this one (or the first block of it), on the ground. */
+    private void road(BlockPos cell) {
+        if (!model.inSite(cell.getX(), DesignModel.M, cell.getZ())) {
+            setStatus("That's outside the site.", true);
+            return;
+        }
+        Map<Integer, String> marks = new LinkedHashMap<>();
+        for (int[] c : roadLine(roadFrom != null ? roadFrom : cell, cell)) {
+            int g = ground(c[0], c[1]);
+            if (g >= 0) {
+                marks.put(DesignModel.key(c[0], g, c[1]), "stad:road");
+            }
+        }
+        roadFrom = cell;
+        commit(Map.of(), marks);
+    }
+
+    /** The columns (grid x and z) from {@code a} to {@code b}, a step at a time, sideways or along, never diagonally. */
+    private List<int[]> roadLine(BlockPos a, BlockPos b) {
+        List<int[]> out = new ArrayList<>();
+        int dx = Math.abs(b.getX() - a.getX()), dz = Math.abs(b.getZ() - a.getZ());
+        int sx = Integer.signum(b.getX() - a.getX()), sz = Integer.signum(b.getZ() - a.getZ());
+        int x = a.getX(), z = a.getZ();
+        out.add(new int[]{x, z});
+        for (int ix = 0, iz = 0; ix < dx || iz < dz; ) {
+            if (ix < dx && (iz >= dz || (1 + 2L * ix) * dz < (1 + 2L * iz) * dx)) { // whichever keeps nearer the straight line
+                ix++;
+                x += sx;
+            } else {
+                iz++;
+                z += sz;
+            }
+            out.add(new int[]{x, z});
+        }
+        return out;
+    }
+
+    /** The top of the land in a column of the site (grid y; not trees), or -1, as the table finds it ({@link Yard}). */
+    private int ground(int gx, int gz) {
+        int m = DesignModel.M;
+        for (int gy = m + model.sy - 1; gy >= m; gy--) {
+            BlockState s = model.terrain.get(gx, gy, gz);
+            if (!s.getFluidState().isEmpty() || !dev.eiriksb.stad.architect.Fit.open(s) && !s.is(net.minecraft.tags.BlockTags.LEAVES)
+                    && !s.is(net.minecraft.tags.BlockTags.LOGS)) {
+                return gy;
+            }
+        }
+        return -1;
     }
 
     private void mark(BlockPos p) {

@@ -208,9 +208,36 @@ public final class Tables {
         return new BoundingBox(p.min.getX(), p.min.getY(), p.min.getZ(), p.min.getX() + p.sx - 1, p.min.getY() + p.sy - 1, p.min.getZ() + p.sz - 1);
     }
 
+    /** The site and the land round it as they stand; and where the town's buildings are in it ({@link Project#keepOut}). */
     static Grid capture(ServerLevel level, Project p) {
         int m = Project.MARGIN;
+        p.keepOut.clear();
+        colonyAt(level, p.min).ifPresent(colony -> {
+            for (Building b : colony.buildings()) {
+                if (b.is(BuildingDef.ROAD) || b.placement().isEmpty()) {
+                    continue;
+                }
+                Placement pl = b.placement().get();
+                if (b.ring()) { // a wall: where its blocks are
+                    pl.steps().forEach(st -> keep(p, st.pos().getX(), st.pos().getZ()));
+                    continue;
+                }
+                BoundingBox box = pl.bounds();
+                for (int x = box.minX(); x <= box.maxX(); x++) {
+                    for (int z = box.minZ(); z <= box.maxZ(); z++) {
+                        keep(p, x, z);
+                    }
+                }
+            }
+        });
         return Grid.capture(level, p.min.offset(-m, -m, -m), p.sx + 2 * m, p.sy + 2 * m, p.sz + 2 * m);
+    }
+
+    private static void keep(Project p, int wx, int wz) {
+        int x = wx - p.min.getX(), z = wz - p.min.getZ();
+        if (x >= 0 && z >= 0 && x < p.sx && z < p.sz) {
+            p.keepOut.add(x | z << 6);
+        }
     }
 
     private static TablePayloads.Open openPayload(ServerPlayer player, ServerLevel level, Colony colony, BlockPos pos, Project p, Session s,
@@ -315,6 +342,7 @@ public final class Tables {
         }
         Project p = be.get().project();
         int refused = 0;
+        boolean roadChanged = false;
         for (int i = 0; i < Math.min(e.keys().length, e.states().length); i++) {
             int key = e.keys()[i];
             BlockState st = Block.stateById(e.states()[i]);
@@ -334,6 +362,7 @@ public final class Tables {
             if (key < 0 || !p.inside(key)) {
                 continue;
             }
+            roadChanged |= name.equals("stad:road") || "stad:road".equals(p.markers.get(key));
             if (name.isEmpty()) {
                 p.markers.remove(key);
             } else if (Blueprint.isMarker(name)) {
@@ -341,6 +370,16 @@ public final class Tables {
             }
         }
         be.get().setChanged();
+        if (roadChanged && p.type.equals(BuildingDef.ROAD)) { // the road was drawn: pave it
+            Yard yard = p.yard != null ? p.yard : Yard.DEFAULT;
+            p.yard = yard;
+            String problem = yard.generate(p, s.terrain);
+            if (canSend(player)) {
+                PacketDistributor.sendToPlayer(player, new TablePayloads.Update(s.table, design(p), problem != null ? problem
+                        : refused > 0 ? refused + " blocks weren't allowed in a design." : "", problem != null || refused > 0, true));
+            }
+            return;
+        }
         if (refused > 0) {
             update(player, s, p, refused + (refused == 1 ? " block wasn't" : " blocks weren't") + " allowed in a design.", true);
         }
@@ -397,13 +436,20 @@ public final class Tables {
                     if (t != null && types().contains(t) && !t.equals(p.type)) {
                         ResourceLocation was = p.type;
                         p.type = t;
-                        if (p.hasSite() && Yard.is(t)) {
+                        if (Yard.is(was)) {
+                            p.markers.values().removeIf(m -> Yard.laidOut(was, m) || !t.equals(BuildingDef.ROAD) && m.equals("stad:road"));
+                        }
+                        if (p.hasSite() && t.equals(BuildingDef.ROAD) && !p.markers.containsValue("stad:road")) {
+                            p.floorY = -1;
+                            p.yard = p.yard != null ? p.yard : Yard.DEFAULT;
+                            p.generated.clear();
+                            route(player, s, p, colony, true); // a road joins up what's in the site at once, when there's something
+                        } else if (p.hasSite() && Yard.is(t)) {
                             p.floorY = -1; // each kind finds its own ground (a quarry's isn't a dock's)
                             yard(player, s, p, p.yard != null ? p.yard : Yard.DEFAULT, p.door); // land: laid out for the new kind at once
                         } else if (p.hasSite() && Yard.is(was) && p.yard != null) {
                             p.yard = null;
                             p.generated.clear();
-                            p.markers.values().removeIf(m -> m.startsWith("stad:quarry") || m.equals("stad:fish") || m.equals("stad:post"));
                             if (p.name.equals(Fit.defaultName(was))) {
                                 p.name = Fit.defaultName(t);
                             }
@@ -419,6 +465,7 @@ public final class Tables {
                     Said said = plan(player, s, p, colony);
                     status(player, s, said.message(), said.error());
                 }
+                case ROUTE -> route(player, s, p, colony, false);
                 case FREE_BUILD -> {
                     String problem = FreeBuild.start(player, s.level, s.table, p);
                     if (problem != null) {
@@ -477,6 +524,36 @@ public final class Tables {
         }
         BuildSpec spec = Fit.prepare(BuildSpec.parse(o.get("spec").toString()), p.type);
         regenerate(player, s, p, spec, door, null);
+    }
+
+    /**
+     * Routes a road in the site ({@link Routes}) and lays it. {@code quietly}: only when there are two things or more to
+     * join (choosing a road shouldn't send it to the site's edge on its own); else it just says how to draw one.
+     */
+    private static void route(ServerPlayer player, Session s, Project p, Colony colony, boolean quietly) {
+        if (!p.hasSite()) {
+            return;
+        }
+        Yard yard = p.yard != null ? p.yard : Yard.DEFAULT;
+        if (quietly && Routes.ends(p, s.terrain, colony).size() < 2) {
+            yard(player, s, p, yard, p.door);
+            return;
+        }
+        Routes.Route r = Routes.route(p, s.terrain, colony);
+        if (r.problem() != null) {
+            if (quietly) {
+                yard(player, s, p, yard, p.door);
+            } else {
+                status(player, s, r.problem(), true);
+            }
+            return;
+        }
+        p.yard = yard;
+        if (p.name.equals(new Project().name) || p.name.equals("Building") || Yard.KINDS.stream().anyMatch(k -> Fit.defaultName(k).equals(p.name))) {
+            p.name = Fit.defaultName(p.type);
+        }
+        String problem = yard.generate(p, s.terrain);
+        update(player, s, p, problem != null ? problem : r.message(), problem != null);
     }
 
     /** Generates a field, pen or grove in the site. */
@@ -584,6 +661,14 @@ public final class Tables {
         Map<BlockPos, BlockState> cells = new LinkedHashMap<>();
         int floor = forPack && p.floorY >= 0 ? p.floorY : 0;
         Map<Integer, String> marks = new java.util.HashMap<>(p.markers);
+        marks.values().removeIf("stad:road"::equals); // where the road was drawn: what's kept is where it's paved
+        if (p.type.equals(BuildingDef.ROAD)) {
+            d.forEach((k, st) -> {
+                if (Yard.paving(st)) {
+                    marks.put(k, "stad:road"); // where citizens walk faster (dev.eiriksb.stad.building.Roads)
+                }
+            });
+        }
         marks.putAll(Yards.land(p, d)); // a field's farmland and water, a grove's saplings: the workers make those
         for (Map.Entry<Integer, BlockState> e : d.entrySet()) {
             int x = Project.kx(e.getKey()), y = Project.ky(e.getKey()), z = Project.kz(e.getKey());
@@ -686,7 +771,7 @@ public final class Tables {
         String problem = null;
         List<Building> replaced = new ArrayList<>();
         // a wall goes round what's there: only its own blocks have to keep clear
-        boolean ring = p.type.equals(BuildingDef.WALL);
+        boolean ring = p.type.equals(BuildingDef.WALL) || p.type.equals(BuildingDef.ROAD);
         List<BlockPos> own = ring ? placement.steps().stream().map(Placement.Step::pos).toList() : List.of();
         if (ring ? own.contains(colony.center) : box.isInside(colony.center)) {
             problem = "That would build over the town hall.";
@@ -697,8 +782,12 @@ public final class Tables {
                 continue; // inside a wall is fine
             }
             if (ring) {
-                if (own.stream().anyMatch(other::isInside)) {
-                    problem = "The wall runs through the " + b.name + ": make the site bigger, or move it.";
+                if (p.type.equals(BuildingDef.ROAD) && b.is(BuildingDef.ROAD)) {
+                    continue; // roads can cross and join
+                }
+                if (own.stream().anyMatch(pos -> b.ring() ? b.occupies(pos) : other.isInside(pos))) {
+                    problem = p.type.equals(BuildingDef.ROAD) ? "The road runs through the " + b.name + ": take that bit out, or route it again."
+                            : "The wall runs through the " + b.name + ": make the site bigger, or move it.";
                 }
                 continue;
             }
@@ -794,6 +883,18 @@ public final class Tables {
         p.spec = null;
         p.door = door;
         return yard.generate(p, capture(level, p));
+    }
+
+    /** For tests: routes a road in a project without a screen ({@link Routes}), and lays it. */
+    public static Routes.Route route(ServerLevel level, BlockPos table, Project p) {
+        Colony colony = colonyAt(level, table).orElseThrow();
+        Grid terrain = capture(level, p);
+        Routes.Route r = Routes.route(p, terrain, colony);
+        p.yard = p.yard != null ? p.yard : Yard.DEFAULT;
+        if (r.problem() == null) {
+            p.yard.generate(p, terrain);
+        }
+        return r;
     }
 
     /** For tests: the blueprint and origin a project would be planned with. */

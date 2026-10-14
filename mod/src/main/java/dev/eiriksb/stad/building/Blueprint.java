@@ -49,9 +49,9 @@ public record Blueprint(Vec3i size, List<Entry> entries, List<Marker> markers) {
                 || name.startsWith("stad:quarry") || name.equals("stad:fish") || name.equals("stad:post");
     }
 
-    /** Whether {@code name} is one of our markers. */
+    /** Whether {@code name} is one of our markers (or {@code stad:road}: where a road was drawn at the table, never built). */
     public static boolean isMarker(String name) {
-        return MARKERS.contains(name) || land(name) && name.matches("stad:[a-z_0-9]+");
+        return MARKERS.contains(name) || name.equals("stad:road") || land(name) && name.matches("stad:[a-z_0-9]+");
     }
 
     public Blueprint {

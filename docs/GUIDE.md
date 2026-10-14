@@ -117,7 +117,7 @@ creative; a grid marks where you can build. Press **B** when you're done and **K
 with your own things (nothing there is real, and nothing comes back with you). The builders then build it for real.
 
 **What you design** is chosen from the list behind the kind button (top left): homes and the town's buildings, a
-workplace for every job, and **land for a job**:
+workplace for every job, and **land and roads**:
 
 | Land | For | What it is |
 |---|---|---|
@@ -128,17 +128,30 @@ workplace for every job, and **land for a job**:
 | Dock | fisher | a pier over the water with spots to fish from (point the door at the shore) |
 | Guard post | guard | a platform the guards climb and keep watch from |
 | Wall | guard | a palisade or stone wall round the site, with a door and watch spots on the corners |
+| Market square | merchant | stalls round a paved square with a bell; a merchant keeps each stall |
+| Road | everyone | a paved road, routed for you or drawn by hand; citizens walk faster on it |
 
 ![The list of kinds, and a quarry being dug next to a field](land.png)
 
 For a **field, pen or grove**, open **Lay out ▾**. For a field choose the crop (or mixed), water in rows or holes, a fence, a path and
 lamps; for a pen the animals and a shelter; for a grove the trees and how far apart; for a quarry how deep; for a
-wall what it's made of and how high. **Lay it out** fills the site,
+wall what it's made of and how high; for a market square the awnings, the paving and which side the way in is on.
+**Lay it out** fills the site,
 and you can change it by hand like a building (the hotbar has farmland, water, crops, fences and saplings). Plan it:
 the builders level it and put up the fence, and then the farmer tills and sows it, the shepherd leads the animals in
 through the gate, or the lumberjack plants the saplings (put seeds, carrots, potatoes or saplings in the town hall).
 
 ![A field designed at the table, and the builder and farmer making it](farms.png)
+
+**Roads.** Mark a long site (up to 64 by 64) over the stretch the road should run along and choose **Road**: the table
+joins up the doors and gates of the buildings in it, the town hall and any path that runs up to its edge, the easiest
+way over the land (**Route it** again after you change something). Or draw it with the **Road** tool: click along the
+ground, and each click draws on from the last; right-click to stop, or to take the road off a block. Choose the paving,
+how wide it is and lamp posts, then plan it. A road stops at buildings and only paves the ground. Citizens walk about
+a third faster on the town's roads, so join the busy places up: the town hall, the warehouse, the fields and the
+market. Roads from different sites join where they meet.
+
+![A road routed from the cottage past the town hall to the quarry, and a market square](roads.png)
 
 Built a house yourself? Stand in it and tell a citizen "this is your home now". The **scan wand** (an amethyst shard
 on top of two sticks) saves your buildings into **My pack**.

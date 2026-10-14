@@ -26,7 +26,8 @@ import java.util.Map;
  * into one int ({@link #key}). The generated blocks aren't saved; they're drawn up again from the spec.
  */
 public final class Project {
-    public static final int MAX_SIDE = 32, MAX_HEIGHT = 32, MIN_HEIGHT = 12;
+    /** a site is at most this wide (sites are packed in six bits a side: {@link #key}) */
+    public static final int MAX_SIDE = 64, MAX_HEIGHT = 32, MIN_HEIGHT = 12;
     /** the land shown round the site, faded */
     public static final int MARGIN = 4;
 
@@ -46,6 +47,11 @@ public final class Project {
     public final Map<Integer, String> markers = new HashMap<>();
     /** the generated building's blocks, drawn up from {@link #spec} (not saved) */
     public final Map<Integer, BlockState> generated = new HashMap<>();
+    /**
+     * Columns of the site ({@code x | z << 6}) where the town's other buildings stand, which a road stops at (worked out
+     * when the land is looked at: {@link Tables#capture}; not saved)
+     */
+    public final java.util.Set<Integer> keepOut = new java.util.HashSet<>();
 
     public static int key(int x, int y, int z) {
         return x | z << 6 | y << 12;

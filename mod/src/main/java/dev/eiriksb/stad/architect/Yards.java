@@ -9,10 +9,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Fields, pens and groves at the architect's table (PLAN.md §6.11): what the table says about one, and how its design
- * becomes a planned building. The land in it (farmland, water, the crops and saplings) becomes markers for the
- * farmer and the lumberjack ({@link dev.eiriksb.stad.building.Blueprint#land}); the rest (fences, paths, the dirt that
- * levels it) is left for the builders.
+ * Land at the architect's table (PLAN.md §6.11: fields, pens, groves, quarries, docks, guard posts, walls, market
+ * squares and roads): what the table says about one, and how its design becomes a planned building. The land in it
+ * (farmland, water, the crops and saplings) becomes markers for the farmer and the lumberjack
+ * ({@link dev.eiriksb.stad.building.Blueprint#land}); the rest (fences, paths, the dirt that levels it) is left for the
+ * builders.
  */
 public final class Yards {
     private Yards() {}
@@ -49,6 +50,16 @@ public final class Yards {
         }
         if (p.type.equals(BuildingDef.POST)) {
             return "Drew up a watch post. The guards patrol to it and keep watch from the top.";
+        }
+        if (p.type.equals(BuildingDef.STALLS)) {
+            long stalls = p.markers.values().stream().filter("stad:work"::equals).count();
+            return "Laid out " + a + size + " market square with " + stalls + (stalls == 1 ? " stall" : " stalls") + " round a bell. A merchant"
+                    + " keeps each stall; trade with them there.";
+        }
+        if (p.type.equals(BuildingDef.ROAD)) {
+            long cells = d.values().stream().filter(Yard::paving).count();
+            return cells == 0 ? "No road yet: draw it with the Road tool (click along the ground), or Route it to join up the doors in the site."
+                    : "Paved " + cells + " blocks of road, " + y.width() + " wide. Citizens walk faster on it.";
         }
         long posts = p.markers.values().stream().filter("stad:post"::equals).count();
         return "Drew up " + a + size + " wall, " + y.height() + " high, with a door" + (posts > 0 ? " and " + posts + " watch spots for the guards" : "")
@@ -106,8 +117,12 @@ public final class Yards {
             case "quarry" -> "dig it";
             case "dock" -> "fish from it";
             case "post" -> "keep watch from it";
+            case "stalls" -> "keep the stalls";
             default -> "watch from it";
         };
+        if (p.type.equals(BuildingDef.ROAD)) {
+            return "Planned the " + p.name + " (" + items + " items for the builders). Citizens walk faster on it once it's built.";
+        }
         if (p.type.equals(BuildingDef.WALL) && !p.markers.containsValue("stad:post")) {
             return "Planned the " + p.name + " (" + items + " items for the builders).";
         }

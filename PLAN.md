@@ -557,7 +557,7 @@ ground under a building, fetch from warehouses, and refuse open water. Lumberjac
 there are no trees; shepherds lead in animals from just outside town; cooks also cook what's in the town hall. A
 citizen with no job takes a first one more willingly (they came looking for work).
 
-### 6.11 Farms at the architect's table, and Stad's own look
+### 6.11 Land at the architect's table, and Stad's own look
 
 **Land as well as buildings.** The table's kinds include **field**, **pen** and **grove**. For these, Lay out ▾
 replaces the building options with land options (a `Yard`, kept with the project like a building's spec, so changing
@@ -593,6 +593,25 @@ its own blocks: buildings inside it, beds, trees and plans are unaffected (`Buil
 table's kind button opens a list in three columns (homes and the town, workplaces, land) with the job each is for;
 changing to a kind of land lays it out at once (working out its ground afresh), and a design of another kind of land
 won't replace a finished building in its site.
+
+**Market squares and roads.** Two more kinds the `Yard` draws. A **market square** (`stad:stalls`) is levelled and
+paved; three-by-three stalls stand round its edge facing in (as many as fit a block apart: along the back, along the
+sides when it's 11 wide, along the front either side of the way in when it's 11 deep), each with corner posts, a wool
+awning, a barrel at the back, a top-slab counter at the front and a `stad:work` spot between; a bell stands in the
+middle. It's a merchant's workplace (one slot a stall), and `Workplaces.spot(b, n)` gives the nth worker their own
+stall. A **road** (`stad:road`) is drawn as `stad:road` markers (they're the input, kept when it's laid out again):
+the generator paves each marked column, widened to the road's width, on the land as it is (planks over water), clears
+two blocks above it, and puts lamp posts beside it every eight blocks. It only paves ground-like tops (earth, stone,
+sand, paving) and skips the columns where the town's other buildings stand (`Project.keepOut`, worked out with the
+terrain), so it stops at walls and never paves a chest or the town hall. `Routes` routes one: the ends are the doors
+and gates of the town's buildings in the site (the first cell outside each), the town hall, and runs of path (or the
+town's road) just outside the site's edge; it grows a tree from the first (or from what's drawn already), joining the
+nearest end each time with a Dijkstra over the columns (climbing more than one block is out, buildings with room for
+the road's width are out, water, trees and turns cost more, existing paving less). The screen's **Road** tool draws
+4-connected lines between clicks; the server lays the road again after each change and the player's undo stays. A
+road is a "ring" like a wall (only its own blocks are its); roads may cross roads. Planned, its paved blocks become
+`stad:road` markers, and `Roads` knows the town's finished road blocks: citizens on one get +30% speed. Sites can be
+64 by 64 (positions are packed six bits a side).
 
 **Stad's own look.** Screens share a theme (`client/ui/Theme`, `StadButton`): walnut panels with brass trim round dark
 felt, brass title plates, wells for lists, wood buttons and tabs, brass scroll bars, and 16 by 16 icons for every job

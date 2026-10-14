@@ -61,4 +61,8 @@ public record BuildingDef(ResourceLocation key, String pack, ResourceLocation ty
     public static final ResourceLocation POST = ResourceLocation.fromNamespaceAndPath("stad", "post");
     /** a wall round part of the town, with a door */
     public static final ResourceLocation WALL = ResourceLocation.fromNamespaceAndPath("stad", "wall");
+    /** an open-air market: stalls round a square, where the merchants trade */
+    public static final ResourceLocation STALLS = ResourceLocation.fromNamespaceAndPath("stad", "stalls");
+    /** a road: paving the citizens walk faster on */
+    public static final ResourceLocation ROAD = ResourceLocation.fromNamespaceAndPath("stad", "road");
 }

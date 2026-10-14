@@ -140,6 +140,15 @@ public final class Requirements {
                 new Need("a way in (a door or a gate)", c -> c.has(Contents.Thing.DOOR)
                         || c.count(s -> s.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) > 0, true),
                 new Need("watch spots for the guards", c -> c.marker("stad:post"), false)));
+        TYPES.put(BuildingDef.STALLS, List.of(
+                new Need("stalls, with a spot for each merchant (Lay it out, or mark work spots)", c -> c.marker("stad:work"), true),
+                block("a bell", net.minecraft.world.level.block.Blocks.BELL),
+                new Need("somewhere to keep the wares (a barrel or a chest)", c -> c.has(Contents.Thing.STORAGE), true,
+                        net.minecraft.world.level.block.Blocks.BARREL),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false)));
+        TYPES.put(BuildingDef.ROAD, List.of(
+                new Need("some road (four blocks of paving or more)", c -> c.count(dev.eiriksb.stad.architect.Yard::paving) >= 4, true),
+                new Need("lamps along it", c -> c.has(Contents.Thing.LIGHT), false)));
         type(WORKSHOP,
                 new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true),
                 new Need("a workstation (a smithing table, stonecutter, loom, anvil...)", c -> c.has(Contents.Thing.WORKSTATION), true),
@@ -223,6 +232,12 @@ public final class Requirements {
         if (w.contains("infirmary") || w.contains("hospital") || w.contains("healer") || w.contains("clinic") || w.contains("sickhouse")) {
             return BuildingDef.INFIRMARY;
         }
+        if (w.contains("road") || w.contains("street")) {
+            return BuildingDef.ROAD;
+        }
+        if (w.contains("square")) {
+            return BuildingDef.STALLS;
+        }
         if (w.contains("market") || w.contains("shop") || w.contains("stall") || w.contains("trading")) {
             return BuildingDef.MARKET;
         }
@@ -244,6 +259,7 @@ public final class Requirements {
         return switch (type.getPath()) {
             case "builder_hut" -> "builder's hut";
             case "post" -> "guard post";
+            case "stalls" -> "market square";
             default -> type.getPath().replace('_', ' ');
         };
     }

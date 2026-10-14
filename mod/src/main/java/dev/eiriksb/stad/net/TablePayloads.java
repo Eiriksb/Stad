@@ -121,8 +121,15 @@ public final class TablePayloads {
         }
     }
 
-    /** Server to client: the design changed on the server (generated, described, flattened, or an edit was turned down). */
-    public record Update(BlockPos table, Design design, String message, boolean error) implements CustomPacketPayload {
+    /**
+     * Server to client: the design changed on the server (generated, described, flattened, or an edit was turned down).
+     * {@code keep}: it follows from the player's own edit (a road drawn, and paved), so their undo stays.
+     */
+    public record Update(BlockPos table, Design design, String message, boolean error, boolean keep) implements CustomPacketPayload {
+        public Update(BlockPos table, Design design, String message, boolean error) {
+            this(table, design, message, error, false);
+        }
+
         public static final Type<Update> TYPE = id("table_update");
         public static final StreamCodec<FriendlyByteBuf, Update> CODEC = StreamCodec.of((b, p) -> {
             b.writeBlockPos(p.table);
@@ -132,7 +139,8 @@ public final class TablePayloads {
             }
             b.writeUtf(p.message);
             b.writeBoolean(p.error);
-        }, b -> new Update(b.readBlockPos(), b.readBoolean() ? Design.read(b) : null, b.readUtf(), b.readBoolean()));
+            b.writeBoolean(p.keep);
+        }, b -> new Update(b.readBlockPos(), b.readBoolean() ? Design.read(b) : null, b.readUtf(), b.readBoolean(), b.readBoolean()));
 
         @Override
         public Type<? extends CustomPacketPayload> type() {
@@ -183,7 +191,7 @@ public final class TablePayloads {
 
     /** Client to server: everything else the screen does. */
     public record Action(BlockPos table, Kind kind, String text) implements CustomPacketPayload {
-        public enum Kind { SITE, GENERATE, DESCRIBE, FLATTEN, START_OVER, RENAME, TYPE, SAVE, PLAN, CLOSE, FREE_BUILD }
+        public enum Kind { SITE, GENERATE, DESCRIBE, FLATTEN, START_OVER, RENAME, TYPE, SAVE, PLAN, CLOSE, FREE_BUILD, ROUTE }
 
         public static final Type<Action> TYPE = id("table_action");
         public static final StreamCodec<FriendlyByteBuf, Action> CODEC = StreamCodec.of((b, p) -> {

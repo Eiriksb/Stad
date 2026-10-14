@@ -36,6 +36,9 @@ public class BuildingPlansItem extends Item {
     /** What kind of building it is, for the plans' tabs. */
     static String group(BuildingDef d) {
         net.minecraft.resources.ResourceLocation t = d.type();
+        if (t.equals(BuildingDef.STALLS) || t.equals(BuildingDef.ROAD)) {
+            return "Town";
+        }
         if (dev.eiriksb.stad.architect.Yard.is(t)) {
             return "Farms";
         }
@@ -63,6 +66,12 @@ public class BuildingPlansItem extends Item {
         }
         if (t.equals(BuildingDef.GROVE)) {
             return "Saplings for the lumberjack to plant and fell.";
+        }
+        if (t.equals(BuildingDef.ROAD)) {
+            return "A road: citizens walk faster on it. Draw your own at the architect's table.";
+        }
+        if (t.equals(BuildingDef.STALLS)) {
+            return "An open-air market: a merchant keeps each stall.";
         }
         if (t.equals(BuildingDef.HOME)) {
             return "A home." + sleeps;

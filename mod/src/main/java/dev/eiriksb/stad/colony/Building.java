@@ -96,9 +96,9 @@ public final class Building {
         return key.getPath().startsWith("repair/");
     }
 
-    /** A wall round part of the town: what's inside it isn't the wall's, only its own blocks are. */
+    /** A wall round part of the town, or a road through it: only its own blocks are its, not what's inside its box. */
     public boolean ring() {
-        return is(dev.eiriksb.stad.building.BuildingDef.WALL);
+        return is(dev.eiriksb.stad.building.BuildingDef.WALL) || is(dev.eiriksb.stad.building.BuildingDef.ROAD);
     }
 
     /** Whether it takes up {@code pos} (a wall only where its blocks are). */
