@@ -197,6 +197,16 @@ public final class Colony {
         return b;
     }
 
+    /**
+     * Takes unfinished buildings whose plans are gone (their pack was removed) off the list: nobody can build them, and
+     * they'd hold up the builder. The ones already standing stay. Returns their names.
+     */
+    public List<String> dropLost() {
+        List<Building> lost = buildings.values().stream().filter(b -> !b.done() && b.placement().isEmpty()).toList();
+        lost.forEach(b -> removeBuilding(b.id));
+        return lost.stream().map(b -> b.name).toList();
+    }
+
     public void removeBuilding(int id) {
         if (buildings.remove(id) != null) {
             changed();
@@ -205,12 +215,12 @@ public final class Colony {
 
     /** The building {@code builder} works on: the one they've started, else repairs, else the first nobody has taken. */
     public Optional<Building> workFor(UUID builder) {
-        Optional<Building> mine = buildings.values().stream().filter(b -> !b.done() && builder.equals(b.builder)).findFirst();
+        Optional<Building> mine = buildings.values().stream().filter(b -> !b.done() && b.placement().isPresent() && builder.equals(b.builder)).findFirst();
         if (mine.isPresent()) {
             return mine;
         }
-        Optional<Building> free = buildings.values().stream().filter(b -> !b.done() && b.builder == null && b.isRepair()).findFirst()
-                .or(() -> buildings.values().stream().filter(b -> !b.done() && b.builder == null).findFirst());
+        Optional<Building> free = buildings.values().stream().filter(b -> !b.done() && b.placement().isPresent() && b.builder == null && b.isRepair()).findFirst()
+                .or(() -> buildings.values().stream().filter(b -> !b.done() && b.placement().isPresent() && b.builder == null).findFirst());
         free.ifPresent(b -> {
             b.builder = builder;
             changed();

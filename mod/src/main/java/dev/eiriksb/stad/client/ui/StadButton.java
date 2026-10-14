@@ -63,18 +63,22 @@ public class StadButton extends Button {
         g.blitSprite(sprites.get(active || selectedTab, isHoveredOrFocused()), getX(), getY(), getWidth(), getHeight());
         g.setColor(1, 1, 1, 1);
         int color = (selectedTab ? Theme.GOLD : active ? 0xF4E8CC : 0x8A7F70) & 0xFFFFFF | Mth.ceil(alpha * 255) << 24;
-        if (icon == null) {
-            renderString(g, mc.font, color);
+        // greyed out means greyed out, whatever colour the label has ("Plan it" in green)
+        Component message = active || selectedTab ? getMessage() : Component.literal(getMessage().getString());
+        int tw = mc.font.width(message);
+        boolean hasLabel = !message.getString().isEmpty();
+        int iw = getHeight() >= 18 ? 16 : 12;
+        // the icon and the label when both fit; else the label (it says more) when it fits; else the icon
+        boolean both = icon != null && hasLabel && tw + iw + 10 <= getWidth();
+        if (icon == null || hasLabel && !both && tw + 6 <= getWidth()) {
+            renderScrollingString(g, mc.font, message, getX() + 2, getY(), getX() + getWidth() - 2, getY() + getHeight(), color);
             return;
         }
-        int iw = getHeight() >= 18 ? 16 : 12;
-        int tw = mc.font.width(getMessage());
-        boolean label = !getMessage().getString().isEmpty() && tw + iw + 10 <= getWidth();
-        int x = label ? getX() + (getWidth() - tw - iw - 3) / 2 : getX() + (getWidth() - iw) / 2;
+        int x = both ? getX() + (getWidth() - tw - iw - 3) / 2 : getX() + (getWidth() - iw) / 2;
         int y = getY() + (getHeight() - iw) / 2;
         Theme.blit(g, icon, x, y, iw, iw);
-        if (label) {
-            g.drawString(mc.font, getMessage(), x + iw + 3, getY() + (getHeight() - 8) / 2, color);
+        if (both) {
+            g.drawString(mc.font, message, x + iw + 3, getY() + (getHeight() - 8) / 2, color);
         }
     }
 

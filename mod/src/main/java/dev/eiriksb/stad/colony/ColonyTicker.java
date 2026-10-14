@@ -67,6 +67,12 @@ public final class ColonyTicker {
         for (Colony colony : ColonyManager.get(server).all()) {
             ServerLevel level = server.getLevel(colony.dimension);
             if (level != null) {
+                List<String> lost = colony.dropLost();
+                if (!lost.isEmpty()) {
+                    Announce.leaders(server, colony, net.minecraft.network.chat.Component.literal("The plans for the " + String.join(", the ", lost)
+                            + " are gone (from a pack that isn't there any more), so " + (lost.size() == 1 ? "it's" : "they're")
+                            + " off the town's list.").withStyle(net.minecraft.ChatFormatting.YELLOW));
+                }
                 Homes.update(level, colony);
                 Growth.update(level, colony, ColonyManager.get(server).all());
                 Workplaces.assign(colony);

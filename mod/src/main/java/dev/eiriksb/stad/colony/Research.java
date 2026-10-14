@@ -160,12 +160,15 @@ public final class Research {
         if (t.upgrade()) {
             return capital(t.effect());
         }
-        List<String> out = new ArrayList<>();
+        // the buildings for one job together: "the barn and the pen (shepherd)", not "(shepherd)" after each
+        Map<String, List<String>> byJob = new java.util.LinkedHashMap<>();
         for (ResourceLocation type : t.unlocks()) {
             String job = Workplaces.jobFor(type).orElse(dev.eiriksb.stad.architect.Yard.is(type) ? dev.eiriksb.stad.architect.Yard.job(type) : null);
-            out.add("the " + dev.eiriksb.stad.building.Requirements.word(type) + (job == null ? "" : " (" + job + ")"));
+            byJob.computeIfAbsent(job == null ? "" : job, k -> new ArrayList<>()).add("the " + dev.eiriksb.stad.building.Requirements.word(type));
         }
-        return "Unlocks " + dev.eiriksb.stad.planner.Design.join(out);
+        List<String> out = new ArrayList<>();
+        byJob.forEach((job, names) -> out.add(dev.eiriksb.stad.planner.Design.join(names) + (job.isEmpty() ? "" : " (" + job + ")")));
+        return "Unlocks " + String.join("; ", out);
     }
 
     private static String capital(String s) {

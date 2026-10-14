@@ -180,6 +180,8 @@ public final class YardGameTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(Pens.inside(pen, a.blockPosition()) && Pens.inside(pen, b.blockPosition()), "not in the pen yet; the shepherd says: "
                     + shepherd.status().text());
+            BlockPos gate = Pens.gate(helper.getLevel(), pen).orElseThrow().pos();
+            helper.assertFalse(helper.getLevel().getBlockState(gate).getValue(FenceGateBlock.OPEN), "the gate's shut behind them");
             cleanUp(helper, colony, owner);
         });
     }

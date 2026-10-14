@@ -160,6 +160,13 @@
   any closer for ten seconds (with a puff of cloud), not eight seconds after setting off.
 - Builders leave the ground as it is: where a building or a path wants dirt or grass and there's grass (or dirt,
   podzol...) already, it stays; only holes are filled.
+- The shepherd opens the pen's gate and lets the animal walk in, then shuts it, instead of it popping inside.
+- An unfinished building whose pack is gone comes off the town's list (with a word to its leaders) instead of
+  keeping the builder from everything planned after it.
+- What the town thinks of you tells each reason once ("+6 the town is happy", not "+3 ..., +3 ...").
+- Tabs keep their names when there's no room for the icon too, and a greyed-out button looks greyed out (Plan it was
+  still green when the building wasn't researched yet).
+- Research says "the barn and the pen (shepherd)" instead of naming the job after each building.
 
 **Placing buildings by hand**
 - **Preview** in the building plans now shows the whole building, see-through, where it would go, instead of an

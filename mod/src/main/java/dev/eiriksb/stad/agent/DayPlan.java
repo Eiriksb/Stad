@@ -28,7 +28,7 @@ public record DayPlan(List<String> intentions, String visit, boolean rest, Strin
         }
         String job = r.job == null ? "" : r.job;
         intentions.add(switch (job) {
-            case dev.eiriksb.stad.colony.Jobs.BUILDER -> colony.buildings().stream().filter(b -> !b.done()).findFirst()
+            case dev.eiriksb.stad.colony.Jobs.BUILDER -> colony.buildings().stream().filter(dev.eiriksb.stad.colony.Building::needsBuilding).findFirst()
                     .map(b -> "Get on with the " + b.name.toLowerCase(java.util.Locale.ROOT)).orElse("Help out around town");
             case dev.eiriksb.stad.colony.Jobs.FARMER -> "Tend the fields";
             case dev.eiriksb.stad.colony.Jobs.LUMBERJACK -> "Fell trees and plant new ones";

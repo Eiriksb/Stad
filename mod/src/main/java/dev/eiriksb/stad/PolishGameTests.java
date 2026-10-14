@@ -75,6 +75,39 @@ public final class PolishGameTests {
         helper.succeed();
     }
 
+    /** An unfinished building whose pack is gone comes off the list (it'd hold up the builder); one standing stays. */
+    @GameTest(template = "lot", batch = "polish_lost")
+    public static void lostPlansComeOffTheList(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.setBlock(HALL, StadRegistries.TOWN_HALL.get());
+        Colony colony = ColonyManager.get(helper.getLevel().getServer()).found(helper.getLevel(), helper.absolutePos(HALL), owner.getUUID(),
+                owner.getGameProfile().getName(), 16).colony();
+        ResourceLocation gone = ResourceLocation.parse("stad:fjord/stue");
+        var planned = colony.addBuilding(gone, "Stue", helper.absolutePos(new BlockPos(3, G, 3)), net.minecraft.world.level.block.Rotation.NONE, 0);
+        var standing = colony.addBuilding(gone, "Naust", helper.absolutePos(new BlockPos(9, G, 3)), net.minecraft.world.level.block.Rotation.NONE, 0);
+        standing.status = dev.eiriksb.stad.colony.Building.Status.DONE;
+        CitizenEntity builder = helper.spawn(StadRegistries.CITIZEN.get(), 4, G, 4);
+        helper.assertTrue(colony.workFor(builder.getUUID()).isEmpty(), "nothing a builder can build");
+        helper.assertTrue(colony.dropLost().equals(java.util.List.of("Stue")), "the stue comes off");
+        helper.assertTrue(colony.building(planned.id).isEmpty() && colony.building(standing.id).isPresent(), "the standing one stays");
+        builder.discard();
+        ColonyManager.get(helper.getLevel().getServer()).dissolve(helper.getLevel().getServer(), colony);
+        helper.getLevel().getServer().getPlayerList().remove(owner);
+        helper.succeed();
+    }
+
+    /** What the town thinks of you tells each cause once, with what it came to. */
+    @GameTest(template = "lot", batch = "polish_standing")
+    public static void standingTellsEachCauseOnce(GameTestHelper helper) {
+        dev.eiriksb.stad.colony.Standing s = new dev.eiriksb.stad.colony.Standing();
+        s.change(3, "the town is happy", 1);
+        s.change(3, "the town is happy", 2);
+        s.change(-3, "Oda went hungry", 3);
+        helper.assertTrue(s.best(5).size() == 1 && s.best(5).getFirst().delta() == 6, "once, +6: " + s.best(5));
+        helper.assertTrue(s.worst(5).size() == 1, "the hungry one: " + s.worst(5));
+        helper.succeed();
+    }
+
     /** The town earns its achievements, and its members get them. */
     @GameTest(template = "lot", batch = "polish_feats")
     public static void townsEarnAchievements(GameTestHelper helper) {

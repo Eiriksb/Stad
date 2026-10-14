@@ -270,6 +270,9 @@ public class ShepherdGoal extends WorkGoal {
     @Override
     public void stop() {
         super.stop();
+        if (citizen.level() instanceof ServerLevel level) {
+            gate(level, false); // never left open
+        }
         if (target instanceof Animal a && a.getLeashHolder() == citizen) {
             a.dropLeash(true, false); // off for the night: let it go where it is
         }
@@ -345,9 +348,30 @@ public class ShepherdGoal extends WorkGoal {
         approach.reset();
     }
 
-    /** Walks out to the animal, puts it on a lead, and walks it home. */
+    /** ticks an animal gets to walk in through the open gate */
+    static final int LET_IN = 120;
+    /** the pen's gate while it's open for an animal to walk in */
+    private BlockPos openGate;
+    private int lettingIn;
+
+    /** Opens or shuts the gate an animal's being let in at. */
+    private void gate(ServerLevel level, boolean open) {
+        if (openGate == null) {
+            return;
+        }
+        BlockState g = level.getBlockState(openGate);
+        if (g.getBlock() instanceof FenceGateBlock && g.getValue(FenceGateBlock.OPEN) != open) {
+            level.setBlock(openGate, g.setValue(FenceGateBlock.OPEN, open), 3);
+            level.playSound(null, openGate, open ? SoundEvents.FENCE_GATE_OPEN : SoundEvents.FENCE_GATE_CLOSE, SoundSource.BLOCKS, 1f, 1f);
+        }
+        if (!open) {
+            openGate = null;
+        }
+    }
+
+    /** Walks out to the animal, puts it on a lead, walks it home, and lets it in through the pen's gate. */
     private void lead(ServerLevel level, Colony colony, Animal animal) {
-        if (animal.getLeashHolder() != citizen) {
+        if (openGate == null && animal.getLeashHolder() != citizen) {
             if (!approach.tick(citizen, animal.blockPosition(), 2.2, 0.6)) {
                 return;
             }
@@ -358,29 +382,42 @@ public class ShepherdGoal extends WorkGoal {
         }
         Pens.Gate gate = penFor != null && colony.building(penFor.id).orElse(null) == penFor ? Pens.gate(level, penFor).orElse(null) : null;
         BlockPos home = gate != null ? gate.outside() : penFor != null ? Pens.middle(penFor) : home(colony);
-        if (citizen.distanceToSqr(animal) > 36) {
+        if (openGate == null && citizen.distanceToSqr(animal) > 36) {
             citizen.getNavigation().stop(); // let it catch up
             animal.getNavigation().moveTo(citizen, 1.1);
             return;
         }
-        if (!approach.tick(citizen, home, gate != null ? 2.0 : 3.0, 0.5)) {
+        if (openGate == null && !approach.tick(citizen, home, gate != null ? 2.0 : 3.0, 0.5)) {
             return;
         }
-        animal.dropLeash(true, false);
-        if (gate != null) {
-            // through the gate: open it, let the animal in, shut it behind
-            BlockState g = level.getBlockState(gate.pos());
-            if (g.getBlock() instanceof FenceGateBlock) {
-                level.playSound(null, gate.pos(), SoundEvents.FENCE_GATE_OPEN, SoundSource.BLOCKS, 1f, 1f);
-                BlockPos in = gate.inside();
-                animal.teleportTo(in.getX() + 0.5, in.getY(), in.getZ() + 0.5);
-                animal.getNavigation().moveTo(Pens.middle(penFor).getX() + 0.5, Pens.middle(penFor).getY(), Pens.middle(penFor).getZ() + 0.5, 1.0);
-                level.setBlock(gate.pos(), g.setValue(FenceGateBlock.OPEN, false), 3);
-                level.playSound(null, gate.pos(), SoundEvents.FENCE_GATE_CLOSE, SoundSource.BLOCKS, 1f, 1f);
+        if (gate != null && level.getBlockState(gate.pos()).getBlock() instanceof FenceGateBlock) {
+            // through the gate: open it, let the animal walk in, and shut it behind
+            if (openGate == null) {
+                animal.dropLeash(true, false);
+                openGate = gate.pos();
+                lettingIn = 0;
+                gate(level, true);
             }
-        } else if (penFor != null) {
             BlockPos m = Pens.middle(penFor);
-            animal.teleportTo(m.getX() + 0.5, m.getY(), m.getZ() + 0.5);
+            citizen.getLookControl().setLookAt(animal, 30, 30);
+            if (!Pens.inside(penFor, animal.blockPosition())) {
+                if (++lettingIn < LET_IN) {
+                    if (lettingIn % 20 == 1) {
+                        animal.getNavigation().moveTo(m.getX() + 0.5, m.getY(), m.getZ() + 0.5, 1.0);
+                    }
+                    return;
+                }
+                BlockPos in = gate.inside(); // it won't go: a nudge through
+                animal.teleportTo(in.getX() + 0.5, in.getY(), in.getZ() + 0.5);
+            }
+            animal.getNavigation().moveTo(m.getX() + 0.5, m.getY(), m.getZ() + 0.5, 1.0);
+            gate(level, false);
+        } else {
+            animal.dropLeash(true, false);
+            if (penFor != null) {
+                BlockPos m = Pens.middle(penFor);
+                animal.teleportTo(m.getX() + 0.5, m.getY(), m.getZ() + 0.5);
+            }
         }
         penFor = null;
         citizen.didWork(1);

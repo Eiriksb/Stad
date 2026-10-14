@@ -28,7 +28,7 @@ public final class Standing {
         return List.copyOf(events);
     }
 
-    void change(int delta, String cause, long time) {
+    public void change(int delta, String cause, long time) {
         score = Math.max(-100, Math.min(100, score + delta));
         events.addFirst(new Event(time, delta, cause));
         while (events.size() > EVENTS) {
@@ -52,11 +52,22 @@ public final class Standing {
 
     /** The biggest recent reasons, worst first: "Astrid went hungry", ... */
     public List<Event> worst(int n) {
-        return events.stream().filter(e -> e.delta() < 0).sorted((a, b) -> Integer.compare(a.delta(), b.delta())).limit(n).toList();
+        return merged(e -> e.delta() < 0).stream().sorted((a, b) -> Integer.compare(a.delta(), b.delta())).limit(n).toList();
     }
 
     public List<Event> best(int n) {
-        return events.stream().filter(e -> e.delta() > 0).sorted((a, b) -> Integer.compare(b.delta(), a.delta())).limit(n).toList();
+        return merged(e -> e.delta() > 0).stream().sorted((a, b) -> Integer.compare(b.delta(), a.delta())).limit(n).toList();
+    }
+
+    /** The events, the same cause told once with what it came to in all ("+6 the town is happy", not "+3 ..., +3 ..."). */
+    private List<Event> merged(java.util.function.Predicate<Event> which) {
+        java.util.Map<String, Event> byCause = new java.util.LinkedHashMap<>();
+        for (Event e : events) {
+            if (which.test(e)) {
+                byCause.merge(e.cause(), e, (a, b) -> new Event(Math.max(a.time(), b.time()), a.delta() + b.delta(), a.cause()));
+            }
+        }
+        return List.copyOf(byCause.values());
     }
 
     CompoundTag save() {
