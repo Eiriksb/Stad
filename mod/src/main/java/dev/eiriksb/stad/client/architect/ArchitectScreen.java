@@ -71,7 +71,8 @@ public class ArchitectScreen extends Screen {
     /** the top bar's height, and the drawer's width */
     private static final int TOP = 22, DRAWER = 150;
     private static final int SLOT = 18;
-    private static final List<String> MARKERS = List.of("stad:work", "stad:sit", "stad:bed", "stad:storage", "stad:door", "stad:shaft");
+    private static final List<String> MARKERS = List.of("stad:work", "stad:sit", "stad:bed", "stad:storage", "stad:door", "stad:shaft", "stad:post",
+            "stad:fish");
     private static final Direction[] DOORS = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
 
     enum Tool {
@@ -127,9 +128,13 @@ public class ArchitectScreen extends Screen {
     private int typeIndex, style, floors = 1, roof, door, beds = 2;
     private final Set<String> features = new LinkedHashSet<>();
     /** a field's, pen's or grove's settings ({@link Yard}) */
-    private int crop, water, fence, animal, tree, spacing = Yard.DEFAULT.spacing();
+    private int crop, water, fence, animal, tree, spacing = Yard.DEFAULT.spacing(), depth = Yard.DEFAULT.depth(), wall,
+            wallHeight = Yard.DEFAULT.height();
     private boolean path = Yard.DEFAULT.path(), extra = Yard.DEFAULT.extra();
-    private final List<Button> yardButtons = new ArrayList<>();
+    /** the drawer's land settings buttons, and which setting each is */
+    private final Map<Button, String> yardButtons = new LinkedHashMap<>();
+    /** whether the list of kinds is open */
+    private boolean choosingType;
 
     private String status = "";
     private boolean statusError;
@@ -229,11 +234,14 @@ public class ArchitectScreen extends Screen {
         spacing = y.spacing();
         path = y.path();
         extra = y.extra();
+        depth = y.depth();
+        wall = Math.max(0, Yard.WALLS.indexOf(y.wall()));
+        wallHeight = y.height();
     }
 
     private Yard yard() {
         return new Yard(Yard.CROPS.get(crop), Yard.WATERS.get(water), Yard.FENCES.get(fence), path, Yard.ANIMALS.get(animal), Yard.TREES.get(tree),
-                spacing, extra);
+                spacing, extra, depth, Yard.WALLS.get(wall), wallHeight);
     }
 
     private String typeId() {
@@ -256,6 +264,14 @@ public class ArchitectScreen extends Screen {
                     Blocks.SPRUCE_SLAB, Blocks.LANTERN, Blocks.DIRT_PATH, Blocks.WATER};
             case "stad:grove" -> new Block[]{Blocks.OAK_SAPLING, Blocks.BIRCH_SAPLING, Blocks.SPRUCE_SAPLING, Blocks.CHERRY_SAPLING,
                     Blocks.ACACIA_SAPLING, Blocks.DIRT, Blocks.GRASS_BLOCK, Blocks.DIRT_PATH, Blocks.LANTERN};
+            case "stad:quarry" -> new Block[]{fenceBlock(), Blocks.OAK_FENCE_GATE, Blocks.LANTERN, Blocks.TORCH, Blocks.COBBLESTONE, Blocks.LADDER,
+                    Blocks.STONE_BRICKS, Blocks.CHEST, Blocks.DIRT};
+            case "stad:dock" -> new Block[]{Blocks.SPRUCE_PLANKS, Blocks.SPRUCE_LOG, Blocks.SPRUCE_FENCE, Blocks.LANTERN, Blocks.SPRUCE_SLAB,
+                    Blocks.BARREL, Blocks.LADDER, Blocks.SPRUCE_TRAPDOOR, Blocks.WATER};
+            case "stad:post" -> new Block[]{Blocks.SPRUCE_LOG, Blocks.SPRUCE_PLANKS, Blocks.SPRUCE_FENCE, Blocks.LADDER, Blocks.LANTERN,
+                    Blocks.SPRUCE_SLAB, Blocks.SPRUCE_STAIRS, Blocks.BELL, Blocks.TORCH};
+            case "stad:wall" -> new Block[]{Blocks.SPRUCE_LOG, Blocks.STONE_BRICKS, Blocks.COBBLESTONE, Blocks.COBBLESTONE_WALL, Blocks.SPRUCE_DOOR,
+                    Blocks.SPRUCE_FENCE_GATE, Blocks.LANTERN, Blocks.STONE_BRICK_STAIRS, Blocks.STONE_BRICK_SLAB};
             default -> null;
         };
         if (land != null) {
@@ -354,20 +370,10 @@ public class ArchitectScreen extends Screen {
         nameBox.setTooltip(Tooltip.create(Component.literal("The building's name")));
         addRenderableWidget(nameBox);
         typeButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
-            boolean wasYard = yardType();
-            typeIndex = (typeIndex + (hasShiftDown() ? open.types().size() - 1 : 1)) % open.types().size();
-            send(TablePayloads.Action.Kind.TYPE, open.types().get(typeIndex));
-            if (model != null) {
-                model.type = open.types().get(typeIndex);
-            }
-            dirtyCheck = true;
-            if (wasYard != yardType() || yardType()) {
-                defaultHotbar();
-                rebuildWidgets();
-            }
-            refreshLabels();
-        }).bounds(88, 3, 80, 16).tooltip(Tooltip.create(Component.literal("What it is: a house or workplace, or land (a field, a pen for animals,"
-                + " a grove of trees). Click for the next kind, shift-click for the one before."))).build());
+            choosingType = !choosingType;
+            rebuildWidgets();
+        }).bounds(88, 3, 96, 16).icon(typeIcon(typeId())).tooltip(Tooltip.create(Component.literal("What it is: a home, a workplace for a job,"
+                + " or land for one (a field, a pen, a grove, a quarry, a dock, a guard post, a wall). Click to choose."))).build());
         int rx = width - 4;
         rx = topButton(rx, "Build in it", "Build it yourself, in creative, in the drafting world: a copy of the site with nothing else round it. "
                 + "What you build becomes the design. The real site isn't touched, and nothing comes back with you.", b -> {
@@ -435,40 +441,169 @@ public class ArchitectScreen extends Screen {
         typeButton.active = open.canEdit();
         nameBox.setEditable(open.canEdit());
         refreshLabels();
+        if (choosingType) {
+            initTypePicker();
+        }
+    }
+
+    private static final List<String> TOWN_KINDS = List.of("stad:home", "stad:warehouse", "stad:barracks", "stad:watchtower", "stad:market",
+            "stad:school", "stad:infirmary", "stad:building");
+
+    /** The job a kind is for ("farmer"), or null. */
+    private static String jobOf(String type) {
+        ResourceLocation id = ResourceLocation.tryParse(type);
+        if (id == null) {
+            return null;
+        }
+        if (Yard.is(id)) {
+            return Yard.job(id);
+        }
+        return dev.eiriksb.stad.colony.Workplaces.jobFor(id).orElse(null);
+    }
+
+    /** A kind's icon: its job's, or a house, a bell... */
+    static ResourceLocation typeIcon(String type) {
+        return switch (type) {
+            case "stad:home" -> Theme.icon("house");
+            case "stad:building" -> Theme.icon("bell");
+            case "stad:field" -> Theme.icon("field");
+            case "stad:pen" -> Theme.icon("fence");
+            case "stad:grove" -> Theme.icon("sapling");
+            case "stad:wall" -> Theme.icon("wall");
+            default -> {
+                String job = jobOf(type);
+                yield job != null ? Theme.job(job) : Theme.icon("bell");
+            }
+        };
+    }
+
+    private int pickerColumn() {
+        return Math.min(132, (width - 32) / 3);
+    }
+
+    /** Where the list of kinds starts: centred. */
+    private int pickerX() {
+        return (width - 3 * pickerColumn() - 8) / 2;
+    }
+
+    /** The list of kinds over the view, in three columns: homes and the town's buildings, workplaces, and land. */
+    private void initTypePicker() {
+        for (net.minecraft.client.gui.components.events.GuiEventListener l : children()) {
+            if (l instanceof net.minecraft.client.gui.components.AbstractWidget w && w != typeButton) {
+                w.visible = false;
+            }
+        }
+        int cw = pickerColumn(), x0 = pickerX(), y0 = TOP + 16;
+        int[] rows = new int[3];
+        for (int i = 0; i < open.types().size(); i++) {
+            String t = open.types().get(i);
+            int col = Yard.is(t) ? 2 : TOWN_KINDS.contains(t) ? 0 : 1;
+            int index = i;
+            String job = jobOf(t);
+            List<String> needs = new ArrayList<>();
+            ResourceLocation id = ResourceLocation.tryParse(t);
+            if (id != null) {
+                Requirements.needs(id).stream().filter(Requirements.Need::required).forEach(n -> needs.add(n.what()));
+            }
+            String tip = (job != null ? "For the " + job + ". " : "") + (needs.isEmpty() ? "" : "Needs " + dev.eiriksb.stad.planner.Design.join(needs) + ".");
+            StadButton b = StadButton.of(Component.literal(font.plainSubstrByWidth(capital(word(t)), cw - 26)), btn -> {
+                boolean wasYard = yardType();
+                typeIndex = index;
+                send(TablePayloads.Action.Kind.TYPE, open.types().get(typeIndex));
+                if (model != null) {
+                    model.type = open.types().get(typeIndex);
+                }
+                dirtyCheck = true;
+                choosingType = false;
+                if (wasYard != yardType() || yardType()) {
+                    defaultHotbar();
+                }
+                rebuildWidgets();
+            }).bounds(x0 + col * (cw + 4), y0 + rows[col] * 20, cw, 18).icon(typeIcon(t)).tooltip(Tooltip.create(Component.literal(tip))).build();
+            addRenderableWidget(b.chosen(index == typeIndex));
+            rows[col]++;
+        }
+        pickerRows = Math.max(rows[0], Math.max(rows[1], rows[2]));
+    }
+
+    private int pickerRows;
+
+    private void drawTypePicker(GuiGraphics g) {
+        int cw = pickerColumn(), x0 = pickerX(), y0 = TOP + 16;
+        Theme.panel(g, x0 - 8, TOP - 2, 3 * cw + 8 + 16, pickerRows * 20 + 26);
+        String[] heads = {"Homes and the town", "Workplaces", "Land for a job"};
+        for (int c = 0; c < 3; c++) {
+            g.drawString(font, heads[c], x0 + c * (cw + 4), TOP + 4, Theme.GOLD);
+        }
     }
 
     /** The drawer for a field, pen or grove: its settings, and laying it out. */
     private int initYardDrawer(int px, int pw, int y) {
         int half = (pw - 2) / 2;
         String t = typeId();
-        List<Object[]> rows = new ArrayList<>(); // label key, tooltip, action, full width
-        if (t.equals("stad:field")) {
-            rows.add(new Object[]{"crop", "What the farmers sow. Mixed sows a different crop in each strip; you can also put crops on by hand.",
-                    (Runnable) () -> crop = (crop + 1) % Yard.CROPS.size(), true});
-            rows.add(new Object[]{"water", "Rows: channels nine blocks apart, along the field. Holes: one in the middle of each 9 by 9. Every plot has"
-                    + " to be within four blocks of water.", (Runnable) () -> water = (water + 1) % Yard.WATERS.size(), false});
-            rows.add(new Object[]{"fence", "A fence round it keeps animals off the crops.", (Runnable) () -> {
-                fence = (fence + 1) % Yard.FENCES.size();
-                defaultHotbar();
-            }, false});
-            rows.add(new Object[]{"path", "A path round the inside of the fence, to walk on.", (Runnable) () -> path = !path, false});
-            rows.add(new Object[]{"lamps", "Lanterns on the corner posts.", (Runnable) () -> extra = !extra, false});
-        } else if (t.equals("stad:pen")) {
-            rows.add(new Object[]{"animal", "Which animals the shepherd brings into this pen.", (Runnable) () -> animal = (animal + 1) % Yard.ANIMALS.size(), true});
-            rows.add(new Object[]{"fence", "What the pen is fenced with.", (Runnable) () -> {
-                fence = (fence + 1) % (Yard.FENCES.size() - 1); // a pen has to have a fence
-                defaultHotbar();
-            }, false});
-            rows.add(new Object[]{"extra", "A roofed shelter with a hay bale, and a cauldron of water (for a pen 8 by 8 or bigger).",
-                    (Runnable) () -> extra = !extra, false});
-        } else {
-            rows.add(new Object[]{"tree", "Which saplings the lumberjack plants. Put saplings in the town hall for them.",
-                    (Runnable) () -> tree = (tree + 1) % Yard.TREES.size(), true});
-            rows.add(new Object[]{"spacing", "Blocks from one sapling to the next: further apart, the trees grow bigger.",
-                    (Runnable) () -> spacing = spacing >= Yard.MAX_SPACING ? Yard.MIN_SPACING : spacing + 1, false});
-            rows.add(new Object[]{"path", "A path through the middle.", (Runnable) () -> path = !path, false});
+        List<Object[]> rows = new ArrayList<>(); // setting, tooltip, action, full width
+        Runnable wood = () -> {
+            fence = (fence + 1) % 4; // the woods
+            defaultHotbar();
+        };
+        switch (t) {
+            case "stad:field" -> {
+                rows.add(new Object[]{"crop", "What the farmers sow. Mixed sows a different crop in each strip; you can also put crops on by hand.",
+                        (Runnable) () -> crop = (crop + 1) % Yard.CROPS.size(), true});
+                rows.add(new Object[]{"water", "Rows: channels along the field. Holes: one in the middle of each 9 by 9. Every plot has to be within"
+                        + " four blocks of water.", (Runnable) () -> water = (water + 1) % Yard.WATERS.size(), false});
+                rows.add(new Object[]{"fence", "A fence round it keeps animals off the crops.", (Runnable) () -> {
+                    fence = (fence + 1) % Yard.FENCES.size();
+                    defaultHotbar();
+                }, false});
+                rows.add(new Object[]{"path", "A path round the inside of the fence, to walk on.", (Runnable) () -> path = !path, false});
+                rows.add(new Object[]{"extra", "Lanterns on the corner posts.", (Runnable) () -> extra = !extra, false});
+            }
+            case "stad:pen" -> {
+                rows.add(new Object[]{"animal", "Which animals the shepherd brings into this pen.", (Runnable) () -> animal = (animal + 1) % Yard.ANIMALS.size(),
+                        true});
+                rows.add(new Object[]{"fence", "What the pen is fenced with.", (Runnable) () -> {
+                    fence = (fence + 1) % (Yard.FENCES.size() - 1); // a pen has to have a fence
+                    defaultHotbar();
+                }, false});
+                rows.add(new Object[]{"extra", "A roofed shelter with a hay bale, and a cauldron of water (for a pen 8 by 8 or bigger).",
+                        (Runnable) () -> extra = !extra, false});
+            }
+            case "stad:grove" -> {
+                rows.add(new Object[]{"tree", "Which saplings the lumberjack plants. Put saplings in the town hall for them.",
+                        (Runnable) () -> tree = (tree + 1) % Yard.TREES.size(), true});
+                rows.add(new Object[]{"spacing", "Blocks from one sapling to the next: further apart, the trees grow bigger.",
+                        (Runnable) () -> spacing = spacing >= Yard.MAX_SPACING ? Yard.MIN_SPACING : spacing + 1, false});
+                rows.add(new Object[]{"path", "A path through the middle.", (Runnable) () -> path = !path, false});
+            }
+            case "stad:quarry" -> {
+                rows.add(new Object[]{"depth", "How deep the miner digs it, a layer at a time, leaving steps round the edge to walk down.",
+                        (Runnable) () -> depth = Yard.DEPTHS.get((Yard.DEPTHS.indexOf(depth) + 1) % Yard.DEPTHS.size()), true});
+                rows.add(new Object[]{"fence", "A fence round the pit, so nobody walks in.", (Runnable) () -> {
+                    fence = (fence + 1) % Yard.FENCES.size();
+                    defaultHotbar();
+                }, false});
+                rows.add(new Object[]{"extra", "Lanterns on the corners.", (Runnable) () -> extra = !extra, false});
+            }
+            case "stad:dock" -> {
+                rows.add(new Object[]{"fence", "What the pier is built of.", wood, false});
+                rows.add(new Object[]{"extra", "Lanterns at the end of the pier.", (Runnable) () -> extra = !extra, false});
+            }
+            case "stad:post" -> rows.add(new Object[]{"fence", "What the post is built of.", wood, false});
+            default -> {
+                rows.add(new Object[]{"wall", "Logs make a palisade; stone bricks and cobblestone a stone wall.",
+                        (Runnable) () -> wall = (wall + 1) % Yard.WALLS.size(), true});
+                rows.add(new Object[]{"height", "How high the wall is.",
+                        (Runnable) () -> wallHeight = wallHeight >= Yard.MAX_HEIGHT ? Yard.MIN_HEIGHT : wallHeight + 1, false});
+                rows.add(new Object[]{"extra", "Watch spots on top of the corners, for the guards to patrol to.", (Runnable) () -> extra = !extra, false});
+            }
         }
-        rows.add(new Object[]{"door", "Which side the gate (or the way in) is on.", (Runnable) () -> door = (door + 1) % 4, false});
+        rows.add(new Object[]{"door", switch (t) {
+            case "stad:dock" -> "Which side the shore is on: the pier starts there and runs out over the water.";
+            case "stad:post" -> "Which side the ladder is on.";
+            case "stad:wall" -> "Which side the door in the wall is on.";
+            default -> "Which side the gate (or the way in) is on.";
+        }, (Runnable) () -> door = (door + 1) % 4, false});
         int col = 0;
         for (Object[] r : rows) {
             boolean full = (Boolean) r[3];
@@ -481,8 +616,7 @@ public class ArchitectScreen extends Screen {
                 action.run();
                 refreshLabels();
             }).bounds(full ? px : px + col * (half + 2), y, full ? pw : half, 18).tooltip(Tooltip.create(Component.literal((String) r[1]))).build());
-            b.setMessage(Component.literal((String) r[0])); // the key, until refreshLabels names it
-            yardButtons.add(b);
+            yardButtons.put(b, (String) r[0]);
             if (full || col == 1) {
                 y += 20;
                 col = 0;
@@ -496,7 +630,11 @@ public class ArchitectScreen extends Screen {
         String help = switch (t) {
             case "stad:field" -> "Farmland and water are for the farmers to make; the builders level the ground and put up the fence and path.";
             case "stad:pen" -> "The builders put up the fence. The shepherd leads animals in through the gate and looks after them there.";
-            default -> "The lumberjack plants a sapling on each spot, and fells the trees once they've grown.";
+            case "stad:grove" -> "The lumberjack plants a sapling on each spot, and fells the trees once they've grown.";
+            case "stad:quarry" -> "The miner digs the pit down a layer at a time, with steps round its edge, for stone, coal and ore.";
+            case "stad:dock" -> "The builders build the pier; the fishers fish from the marked spots on it.";
+            case "stad:post" -> "The builders build it; the guards patrol to it and keep watch from the top.";
+            default -> "The builders build it round whatever is inside. With watch spots, the guards patrol along it.";
         };
         editOnly.add(addRenderableWidget(StadButton.of(Component.literal("Lay it out"), b -> generate())
                 .tooltip(Tooltip.create(Component.literal("Fill the site with a " + word(t) + " from these settings. Your own changes stay on top. "
@@ -532,7 +670,7 @@ public class ArchitectScreen extends Screen {
                     .tooltip(Tooltip.create(Component.literal("Clear the whole design: the site goes back to how it stands."))).bounds(px + half + 2, by, half, 18).build());
             editOnly.add(startOverButton);
             boolean gen = open.canEdit() && model != null;
-            yardButtons.forEach(b -> b.active = gen);
+            yardButtons.keySet().forEach(b -> b.active = gen);
             return;
         }
         styleButton = addRenderableWidget(StadButton.of(Component.empty(), b -> {
@@ -645,21 +783,31 @@ public class ArchitectScreen extends Screen {
         }
         if (typeButton != null) {
             String type = typeId();
-            typeButton.setMessage(Component.literal(capital(word(type))).withStyle(Yard.is(type) ? ChatFormatting.GREEN : ChatFormatting.WHITE));
+            typeButton.setMessage(Component.literal(font.plainSubstrByWidth(capital(word(type)), 70)).withStyle(Yard.is(type) ? ChatFormatting.GREEN
+                    : ChatFormatting.WHITE));
         }
-        for (Button b : yardButtons) {
-            String key = b.getMessage().getString().split(":")[0].toLowerCase(Locale.ROOT).strip();
-            b.setMessage(Component.literal(switch (key) {
+        String t = typeId();
+        for (Map.Entry<Button, String> e : yardButtons.entrySet()) {
+            boolean woodOnly = t.equals("stad:dock") || t.equals("stad:post");
+            e.getKey().setMessage(Component.literal(switch (e.getValue()) {
                 case "crop" -> "Crop: " + capital(Yard.CROPS.get(crop));
                 case "water" -> "Water: " + Yard.WATERS.get(water);
-                case "fence" -> "Fence: " + Yard.FENCES.get(fence).replace('_', ' ');
+                case "fence" -> (woodOnly ? "Wood: " : "Fence: ") + Yard.FENCES.get(fence).replace('_', ' ');
                 case "path" -> "Path: " + (path ? "yes" : "no");
-                case "extra", "lamps", "shelter" -> (typeId().equals("stad:pen") ? "Shelter: " : "Lamps: ") + (extra ? "yes" : "no");
-                case "animal", "animals" -> "Animals: " + Yard.ANIMALS.get(animal);
-                case "tree", "trees" -> "Trees: " + Yard.TREES.get(tree).replace('_', ' ');
+                case "extra" -> (t.equals("stad:pen") ? "Shelter: " : t.equals("stad:wall") ? "Posts: " : "Lamps: ") + (extra ? "yes" : "no");
+                case "animal" -> "Animals: " + Yard.ANIMALS.get(animal);
+                case "tree" -> "Trees: " + Yard.TREES.get(tree).replace('_', ' ');
                 case "spacing" -> "Spacing: " + spacing;
-                case "door", "gate", "way in" -> (typeId().equals("stad:grove") ? "Way in: " : "Gate: ") + DOORS[door].getSerializedName();
-                default -> b.getMessage().getString();
+                case "depth" -> "Depth: " + depth + " layers";
+                case "wall" -> "Wall: " + Yard.WALLS.get(wall).replace('_', ' ');
+                case "height" -> "Height: " + wallHeight;
+                default -> (switch (t) {
+                    case "stad:grove" -> "Way in: ";
+                    case "stad:dock" -> "Shore: ";
+                    case "stad:post" -> "Ladder: ";
+                    case "stad:wall" -> "Door: ";
+                    default -> "Gate: ";
+                }) + DOORS[door].getSerializedName();
             }));
         }
         if (styleButton == null) {
@@ -772,6 +920,7 @@ public class ArchitectScreen extends Screen {
         if (u.design() != null && model != null) {
             model.load(u.design());
             readSpec(model.spec);
+            readYard(model.yard);
             if (!nameBox.isFocused()) {
                 name = model.name;
                 nameBox.setValue(model.name);
@@ -969,8 +1118,13 @@ public class ArchitectScreen extends Screen {
         if (drawer) {
             Theme.panel(g, viewRight(), TOP - 1, vw - viewRight() + 6, vh - TOP + 2);
         }
-        if (siteOpen) {
+        if (siteOpen && !choosingType) {
             drawSitePanel(g);
+        }
+        if (choosingType) {
+            drawTypePicker(g);
+            super.render(g, mouseX, mouseY, partialTick);
+            return;
         }
         super.render(g, mouseX, mouseY, partialTick);
         if (drawer) {
@@ -1035,6 +1189,22 @@ public class ArchitectScreen extends Screen {
             LevelRenderer.renderLineBox(pose, lines, m - 0.02, cut + 0.98, m - 0.02, m + model.sx + 0.02, cut + 1.02, m + model.sz + 0.02,
                     0.3f, 0.9f, 1f, 1f);
         }
+        // a quarry: the pit the miner will dig, going down (as far as the view shows)
+        List<BlockPos> pit = model.markers.entrySet().stream().filter(e -> e.getValue().startsWith("stad:quarry"))
+                .map(e -> DesignModel.grid(e.getKey())).toList();
+        if (!pit.isEmpty()) {
+            String name = model.markers.values().stream().filter(v -> v.startsWith("stad:quarry")).findFirst().orElse("stad:quarry_16");
+            int depth = 16;
+            try {
+                depth = Integer.parseInt(name.substring("stad:quarry_".length()));
+            } catch (RuntimeException ignored) {
+            }
+            int x0 = pit.stream().mapToInt(BlockPos::getX).min().orElse(0), x1 = pit.stream().mapToInt(BlockPos::getX).max().orElse(0);
+            int z0 = pit.stream().mapToInt(BlockPos::getZ).min().orElse(0), z1 = pit.stream().mapToInt(BlockPos::getZ).max().orElse(0);
+            int top = pit.getFirst().getY();
+            LevelRenderer.renderLineBox(pose, lines, x0 + 0.02, Math.max(0, top - depth + 1), z0 + 0.02, x1 + 0.98, top + 1.02, z1 + 0.98,
+                    0.75f, 0.75f, 0.8f, 1f);
+        }
         for (Map.Entry<Integer, String> e : model.markers.entrySet()) {
             BlockPos p = DesignModel.grid(e.getKey());
             if (p.getY() > cut) {
@@ -1079,7 +1249,9 @@ public class ArchitectScreen extends Screen {
             case "stad:bed" -> 0xFF60C0;
             case "stad:storage" -> 0xFFC040;
             case "stad:door" -> 0xFFFFFF;
-            default -> 0xFF4040;
+            case "stad:post" -> 0x4080FF;
+            case "stad:fish" -> 0x40E0E0;
+            default -> marker.startsWith("stad:quarry") ? 0xC0C0C0 : 0xFF4040;
         };
     }
 
@@ -1338,6 +1510,13 @@ public class ArchitectScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (choosingType) {
+            if (!super.mouseClicked(mx, my, button)) {
+                choosingType = false; // a click outside the list closes it
+                rebuildWidgets();
+            }
+            return true;
+        }
         if (picking && inView(mx, my)) {
             if (searchBox.mouseClicked(mx, my, button)) {
                 setFocused(searchBox);
@@ -1437,6 +1616,11 @@ public class ArchitectScreen extends Screen {
     public boolean keyPressed(int key, int scan, int mods) {
         if (picking && key == GLFW.GLFW_KEY_ESCAPE) {
             setPicking(false);
+            return true;
+        }
+        if (choosingType && key == GLFW.GLFW_KEY_ESCAPE) {
+            choosingType = false;
+            rebuildWidgets();
             return true;
         }
         if (getFocused() instanceof EditBox box && box.isFocused()) {

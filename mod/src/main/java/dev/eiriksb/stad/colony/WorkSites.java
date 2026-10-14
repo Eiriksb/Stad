@@ -146,7 +146,7 @@ public final class WorkSites {
 
     private static boolean insideBuilding(Colony colony, BlockPos pos) {
         for (Building b : colony.buildings()) {
-            if (!dev.eiriksb.stad.building.Groves.is(b) && b.placement().map(pl -> pl.bounds().isInside(pos)).orElse(false)) {
+            if (!dev.eiriksb.stad.building.Groves.is(b) && !b.ring() && b.placement().map(pl -> pl.bounds().isInside(pos)).orElse(false)) {
                 return true; // a grove's trees are there to be felled
             }
         }

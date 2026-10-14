@@ -98,7 +98,7 @@ public final class YardGameTests {
         Colony colony = found(helper, owner);
         Project p = site(helper, 4, 5, 17, 17); // 14 by 13: inside the fence and path, 10 by 9 of farmland round a channel
         p.type = BuildingDef.FIELD;
-        Yard carrots = new Yard("carrots", "rows", "oak", true, "sheep", "oak", 4, true);
+        Yard carrots = new Yard("carrots", "rows", "oak", true, "sheep", "oak", 4, true, 16, "logs", 3);
         helper.assertTrue(Tables.generate(helper.getLevel(), p, carrots, Direction.NORTH) == null, "laid out");
         var check = Tables.check(helper.getLevel(), p);
         helper.assertTrue(check.ready(), "a field: missing " + check.missing());
@@ -190,7 +190,7 @@ public final class YardGameTests {
         Colony colony = found(helper, owner);
         Project p = site(helper, 7, 7, 15, 15);
         p.type = BuildingDef.GROVE;
-        Yard birch = new Yard("wheat", "rows", "none", false, "sheep", "birch", 3, false);
+        Yard birch = new Yard("wheat", "rows", "none", false, "sheep", "birch", 3, false, 16, "logs", 3);
         helper.assertTrue(Tables.generate(helper.getLevel(), p, birch, Direction.NORTH) == null, "laid out");
         long saplings = p.design().values().stream().filter(s -> s.is(Blocks.BIRCH_SAPLING)).count();
         helper.assertTrue(saplings == 9, "a 3 by 3 of birch: " + saplings);
@@ -211,5 +211,127 @@ public final class YardGameTests {
             helper.assertTrue(birches >= 7, "birch where it asks for birch: " + birches);
             cleanUp(helper, colony, owner);
         });
+    }
+
+    @GameTest(template = "lot", batch = "yard_quarry", timeoutTicks = 3000)
+    public static void tableMarksOutAQuarryTheMinerDigs(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        for (int x = 7; x <= 13; x++) { // stone under the grass, to dig
+            for (int z = 7; z <= 13; z++) {
+                for (int y = G - 3; y < G - 1; y++) {
+                    helper.setBlock(new BlockPos(x, y, z), Blocks.STONE);
+                }
+            }
+        }
+        Project p = site(helper, 7, 7, 13, 13);
+        p.type = BuildingDef.QUARRY;
+        Yard q = new Yard("wheat", "rows", "oak", false, "sheep", "oak", 4, false, 8, "logs", 3);
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, q, Direction.NORTH) == null, "laid out");
+        helper.assertTrue(Tables.check(helper.getLevel(), p).ready(), "a quarry: " + Tables.check(helper.getLevel(), p).missing());
+        Tables.Said said = Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE));
+        helper.assertTrue(!said.error() && said.message().contains("miner"), "planned: " + said.message());
+        Building quarry = colony.buildings().stream().filter(b -> b.is(BuildingDef.QUARRY)).findFirst().orElseThrow();
+        build(helper, quarry);
+        var pits = dev.eiriksb.stad.building.Mine.pits(colony);
+        helper.assertTrue(pits.size() == 1 && pits.getFirst().x1() - pits.getFirst().x0() == 4 && pits.getFirst().depth() == 8,
+                "a 5 by 5 pit inside the fence, 8 deep: " + pits);
+        CitizenEntity miner = worker(helper, colony, Jobs.MINER, 5, 4);
+        helper.succeedWhen(() -> {
+            int dug = dev.eiriksb.stad.building.Mine.depth(helper.getLevel(), pits.getFirst());
+            helper.assertTrue(dug >= 2, "dug " + dug + " layers; the miner says: " + miner.status().text());
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "yard_dock", timeoutTicks = 2400)
+    public static void tableLaysOutADockTheFisherFishesFrom(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        for (int x = 4; x <= 17; x++) { // a pond south of z = 9
+            for (int z = 9; z <= 17; z++) {
+                helper.setBlock(new BlockPos(x, G - 2, z), Blocks.WATER);
+                helper.setBlock(new BlockPos(x, G - 1, z), Blocks.WATER);
+            }
+        }
+        Project p = site(helper, 8, 6, 14, 16);
+        p.type = BuildingDef.DOCK;
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, Yard.DEFAULT, Direction.NORTH) == null, "laid out");
+        var check = Tables.check(helper.getLevel(), p);
+        helper.assertTrue(check.ready(), "a dock: " + check.missing());
+        helper.assertTrue(p.markers.containsValue("stad:fish"), "spots to fish from");
+        Tables.Said said = Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE));
+        helper.assertTrue(!said.error(), "planned: " + said.message());
+        Building dock = colony.buildings().stream().filter(b -> b.is(BuildingDef.DOCK)).findFirst().orElseThrow();
+        build(helper, dock);
+        java.util.List<BlockPos> spots = dock.placement().orElseThrow().markers("stad:fish");
+        CitizenEntity fisher = worker(helper, colony, Jobs.FISHER, 6, 4);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(spots.stream().anyMatch(sp -> fisher.blockPosition().closerThan(sp.above(), 2.5)),
+                    "not on the dock; the fisher is at " + fisher.blockPosition() + " and says: " + fisher.status().text());
+            helper.assertTrue(fisher.status().text().contains("Fishing"), "the fisher says: " + fisher.status().text());
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "yard_post", timeoutTicks = 4000)
+    public static void tableDrawsAPostTheGuardsKeepWatchFrom(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        Project p = site(helper, 10, 10, 14, 14);
+        p.type = BuildingDef.POST;
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, Yard.DEFAULT, Direction.NORTH) == null, "laid out");
+        var check = Tables.check(helper.getLevel(), p);
+        helper.assertTrue(check.ready(), "a post: " + check.missing());
+        helper.assertTrue(Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE)).message().contains("guard"), "for the guards");
+        Building post = colony.buildings().stream().filter(b -> b.is(BuildingDef.POST)).findFirst().orElseThrow();
+        build(helper, post);
+        BlockPos spot = post.placement().orElseThrow().markers("stad:post").getFirst();
+        CitizenEntity guard = worker(helper, colony, Jobs.GUARD, 6, 4);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(guard.blockPosition().closerThan(spot.above(), 2.0), "not up on the post; the guard is at " + guard.blockPosition()
+                    + " (post " + spot + ") and says: " + guard.status().text());
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "yard_wall", timeoutTicks = 100)
+    public static void tableDrawsAWallRoundWhatsThere(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = found(helper, owner);
+        // a field first, then a wall round it
+        Project p = site(helper, 8, 8, 12, 12);
+        p.type = BuildingDef.FIELD;
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, Yard.DEFAULT.withFenceForTest("none"), Direction.NORTH) == null, "field laid out");
+        helper.assertTrue(!Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE)).error(), "field planned");
+        colony.buildings().forEach(b -> b.status = Building.Status.DONE);
+        // something else in the finished field's place is refused (a redesign has to be a field too)
+        p.type = BuildingDef.QUARRY;
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, Yard.DEFAULT, Direction.NORTH) == null, "quarry laid out");
+        Tables.Said over = Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE));
+        helper.assertTrue(over.error() && over.message().contains("can't go in its place"), "not over the field: " + over.message());
+        p = site(helper, 6, 6, 14, 14);
+        p.type = BuildingDef.WALL;
+        Yard stone = new Yard("wheat", "rows", "oak", false, "sheep", "oak", 4, true, 16, "stone_bricks", 3);
+        helper.assertTrue(Tables.generate(helper.getLevel(), p, stone, Direction.NORTH) == null, "wall laid out");
+        var check = Tables.check(helper.getLevel(), p);
+        helper.assertTrue(check.ready() && check.rows().stream().allMatch(r -> r.met()), "a wall with a door and posts: " + check.rows());
+        Project wall = p;
+        Integer gap = p.design().entrySet().stream().filter(e -> e.getValue().is(Blocks.STONE_BRICKS) && Project.kx(e.getKey()) == 0
+                && Project.kz(e.getKey()) == 3).map(Map.Entry::getKey).toList().stream().findFirst().orElseThrow();
+        int gx = Project.kx(gap), gz = Project.kz(gap);
+        p.design().keySet().stream().filter(k -> Project.kx(k) == gx && Project.kz(k) == gz).forEach(k -> wall.edits.put(k, Blocks.AIR.defaultBlockState()));
+        helper.assertTrue(!Tables.check(helper.getLevel(), p).ready(), "a gap in the wall");
+        p.edits.clear();
+        Tables.Said said = Tables.planNow(owner, helper.getLevel(), helper.absolutePos(TABLE));
+        helper.assertTrue(!said.error(), "the wall goes round the field: " + said.message());
+        helper.assertTrue(colony.buildings().stream().anyMatch(b -> b.is(BuildingDef.FIELD)) && colony.buildings().size() == 2, "the field stays");
+        Building w = colony.buildings().stream().filter(b -> b.is(BuildingDef.WALL)).findFirst().orElseThrow();
+        helper.assertTrue(w.placement().orElseThrow().markers("stad:post").size() == 4, "a watch spot on each corner");
+        cleanUp(helper, colony, owner);
+        helper.succeed();
     }
 }

@@ -205,7 +205,7 @@ public class LumberjackGoal extends WorkGoal {
 
     private static boolean insideAnything(Colony colony, BlockPos p) {
         for (dev.eiriksb.stad.colony.Building b : colony.buildings()) {
-            if (b.placement().map(pl -> pl.bounds().inflatedBy(2).isInside(p)).orElse(false)) {
+            if (!b.ring() && b.placement().map(pl -> pl.bounds().inflatedBy(2).isInside(p)).orElse(false)) {
                 return true;
             }
         }

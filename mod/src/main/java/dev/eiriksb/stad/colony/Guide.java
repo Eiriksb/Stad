@@ -91,7 +91,7 @@ public final class Guide {
             case Jobs.FISHER -> WorkSites.shore(level, colony).isEmpty() ? "No pond or river" : null;
             case Jobs.SHEPHERD -> level.getEntitiesOfClass(Animal.class, new AABB(colony.center).inflate(colony.radius + 48, 16, colony.radius + 48),
                     dev.eiriksb.stad.citizen.goal.ShepherdGoal::herd).isEmpty() ? "No farm animals in or near town" : null;
-            case Jobs.MINER -> Mine.shafts(colony).isEmpty() ? "No mine" : null;
+            case Jobs.MINER -> Mine.pits(colony).isEmpty() ? "No mine or quarry" : null;
             case Jobs.SMITH -> built(colony, BuildingDef.SMITHY) ? null : "No smithy";
             case Jobs.TEACHER -> !built(colony, BuildingDef.SCHOOL) ? "No school"
                     : colony.citizens().stream().noneMatch(r -> level.getEntity(r.uuid) instanceof dev.eiriksb.stad.citizen.CitizenEntity e && e.isBaby())

@@ -96,6 +96,22 @@ public final class Building {
         return key.getPath().startsWith("repair/");
     }
 
+    /** A wall round part of the town: what's inside it isn't the wall's, only its own blocks are. */
+    public boolean ring() {
+        return is(dev.eiriksb.stad.building.BuildingDef.WALL);
+    }
+
+    /** Whether it takes up {@code pos} (a wall only where its blocks are). */
+    public boolean occupies(net.minecraft.core.BlockPos pos) {
+        return placement().map(p -> ring() ? p.steps().stream().anyMatch(s -> s.pos().equals(pos)) : p.bounds().isInside(pos)).orElse(false);
+    }
+
+    /** Whether it takes up any of {@code box} (a wall only where its blocks are). */
+    public boolean overlaps(net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+        return placement().map(p -> p.bounds().intersects(box) && (!ring() || p.steps().stream().anyMatch(s -> box.isInside(s.pos()))))
+                .orElse(false);
+    }
+
     /** Whether there's something for the builders here (it isn't finished, and isn't only land for the farmers). */
     public boolean needsBuilding() {
         return !done() && placement().map(p -> !p.steps().isEmpty()).orElse(false);

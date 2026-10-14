@@ -165,7 +165,11 @@ porch and make the roof hip"). The drawer also has **Change site** and **Reset**
 finished building on the site is redesigned in place). Officers edit; other members can watch. Broken, the table keeps
 its project.
 
-**Fields, pens and groves.** The table designs land too: pick **Field**, **Pen** or **Grove** as the kind and open
+**Land for every job that works the land.** Besides homes and a workplace for every job, the kind list has land:
+a **quarry** for the miner (an open pit dug 8 to 48 layers down with steps round its edge), a **dock** for the fisher
+(a pier with spots to fish from), a **guard post** (a platform the guards climb and keep watch from) and a **wall**
+(logs, stone bricks or cobblestone round the site, with a door and watch spots for the guards; it may go round what's
+already there), as well as fields, pens and groves. Pick **Field**, **Pen** or **Grove** as the kind and open
 **Lay out ▾**. A field is farmland round water channels or holes (every plot within four blocks of water), sown with a
 crop or mixed strips, with a fence, a path round the inside and lamps if you like. A pen is a fenced yard with a gate,
 for sheep, cows, pigs or chickens, with a shelter, a hay bale and a cauldron of water. A grove is saplings of one kind

@@ -100,7 +100,7 @@ public final class DesignCheck {
             } else if (s.is(net.minecraft.tags.BlockTags.SAPLINGS) && touched[i] && crowded(cells, x, y, z, sx, sy, sz)) {
                 c.crowded++;
             }
-            fences |= touched[i] && fence(s);
+            fences |= touched[i] && (fence(s) || !passable(s) && y > 0);
         }
         c.penned = fences && penned(cells, touched, sx, sy, sz);
     }
@@ -175,7 +175,7 @@ public final class DesignCheck {
                         int nx = x + d[0], nz = z + d[1];
                         if (nx >= 0 && nz >= 0 && nx < sx && nz < sz) {
                             int n = (y * sz + nz) * sx + nx;
-                            byFence |= touched[n] && fence(cells[n]);
+                            byFence |= touched[n] && !passable(cells[n]); // a fence, a wall, a palisade the design put up
                         }
                     }
                 }

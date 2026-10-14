@@ -47,6 +47,7 @@ public final class Fit {
             case "home" -> "House";
             case "builder_hut" -> "Builder's Hut";
             case "building" -> "Building";
+            case "post" -> "Guard post";
             default -> Character.toUpperCase(type.getPath().charAt(0)) + type.getPath().substring(1).replace('_', ' ');
         };
     }
@@ -206,7 +207,7 @@ public final class Fit {
 
     /** Where the land is open (air, plants, water): a foundation goes down through it. */
     static boolean open(BlockState s) {
-        return s.isAir() || s.canBeReplaced() || !s.getFluidState().isEmpty();
+        return s.isAir() || s.canBeReplaced() || !s.getFluidState().isEmpty() || s.getBlock() instanceof net.minecraft.world.level.block.BushBlock;
     }
 
     /** The site's ground under a footprint: the most common height of the top of the land (logs and leaves aren't land). */

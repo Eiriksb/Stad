@@ -53,4 +53,12 @@ public record BuildingDef(ResourceLocation key, String pack, ResourceLocation ty
     public static final ResourceLocation PEN = ResourceLocation.fromNamespaceAndPath("stad", "pen");
     /** a grove the lumberjack plants and fells ({@link Yards}) */
     public static final ResourceLocation GROVE = ResourceLocation.fromNamespaceAndPath("stad", "grove");
+    /** an open pit the miner digs down ({@link Yards}) */
+    public static final ResourceLocation QUARRY = ResourceLocation.fromNamespaceAndPath("stad", "quarry");
+    /** a pier the fisher fishes from */
+    public static final ResourceLocation DOCK = ResourceLocation.fromNamespaceAndPath("stad", "dock");
+    /** a watch post the guards patrol to */
+    public static final ResourceLocation POST = ResourceLocation.fromNamespaceAndPath("stad", "post");
+    /** a wall round part of the town, with a door */
+    public static final ResourceLocation WALL = ResourceLocation.fromNamespaceAndPath("stad", "wall");
 }

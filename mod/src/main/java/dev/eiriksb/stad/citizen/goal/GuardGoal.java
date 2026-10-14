@@ -26,6 +26,8 @@ public class GuardGoal extends Goal {
     private int look;
     private int swing;
     private BlockPos patrol;
+    /** the watch spots among the patrol's points (they climb up to those) */
+    private final java.util.Set<BlockPos> posts = new java.util.HashSet<>();
     private int patrolTicks;
     private final Movement.Approach approach = new Movement.Approach();
 
@@ -140,11 +142,19 @@ public class GuardGoal extends Goal {
 
     private void patrol(Colony colony) {
         if (patrol == null || --patrolTicks <= 0) {
+            posts.clear();
             List<BlockPos> points = new ArrayList<>();
             points.add(colony.center);
             for (Building b : colony.buildings()) {
                 if (b.done() && b.type() != null && (b.type().getPath().equals("watchtower") || b.type().getPath().equals("barracks"))) {
                     b.placement().ifPresent(p -> points.add(p.bounds().getCenter().atY(p.bounds().minY() + 1)));
+                }
+                if (b.done()) { // watch posts, and the watch spots on walls (from the architect's table)
+                    b.placement().ifPresent(p -> p.markers("stad:post").forEach(m -> {
+                        points.add(m);
+                        points.add(m); // they'd rather keep watch than walk to the hall
+                        posts.add(m);
+                    }));
                 }
             }
             if (points.size() == 1) { // no towers: walk round the town's edge
@@ -157,7 +167,11 @@ public class GuardGoal extends Goal {
             patrolTicks = 400 + citizen.getRandom().nextInt(400);
             approach.reset();
         }
-        if (approach.tick(citizen, patrol, 3, 0.55)) {
+        boolean post = posts.contains(patrol);
+        if (approach.tick(citizen, patrol, post ? 1.6 : 3, 0.55)) {
+            if (post) {
+                citizen.doing("Keeping watch from the post");
+            }
             citizen.getLookControl().setLookAt(patrol.getX() + citizen.getRandom().nextInt(17) - 8, patrol.getY() + 1,
                     patrol.getZ() + citizen.getRandom().nextInt(17) - 8);
         }

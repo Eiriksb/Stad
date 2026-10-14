@@ -116,9 +116,24 @@ the block list). To start from a generated building, open **Generate ▾**, pick
 creative; a grid marks where you can build. Press **B** when you're done and **Keep it**: what you built becomes the design, and you're back at the table
 with your own things (nothing there is real, and nothing comes back with you). The builders then build it for real.
 
-**Farms, pens and groves** are designed at the table too: click the kind (top left) until it says **Field**, **Pen**
-or **Grove**, and open **Lay out ▾**. For a field choose the crop (or mixed), water in rows or holes, a fence, a path and
-lamps; for a pen the animals and a shelter; for a grove the trees and how far apart. **Lay it out** fills the site,
+**What you design** is chosen from the list behind the kind button (top left): homes and the town's buildings, a
+workplace for every job, and **land for a job**:
+
+| Land | For | What it is |
+|---|---|---|
+| Field | farmer | farmland round water, sown with the crop you choose |
+| Pen | shepherd | a fenced yard with a gate, shelter, hay and water |
+| Grove | lumberjack | saplings in rows, planted and felled as they grow |
+| Quarry | miner | an open pit dug down layer by layer, with steps round the edge |
+| Dock | fisher | a pier over the water with spots to fish from (point the door at the shore) |
+| Guard post | guard | a platform the guards climb and keep watch from |
+| Wall | guard | a palisade or stone wall round the site, with a door and watch spots on the corners |
+
+![The list of kinds, and a quarry being dug next to a field](land.png)
+
+For a **field, pen or grove**, open **Lay out ▾**. For a field choose the crop (or mixed), water in rows or holes, a fence, a path and
+lamps; for a pen the animals and a shelter; for a grove the trees and how far apart; for a quarry how deep; for a
+wall what it's made of and how high. **Lay it out** fills the site,
 and you can change it by hand like a building (the hotbar has farmland, water, crops, fences and saplings). Plan it:
 the builders level it and put up the fence, and then the farmer tills and sows it, the shepherd leads the animals in
 through the gate, or the lumberjack plants the saplings (put seeds, carrots, potatoes or saplings in the town hall).

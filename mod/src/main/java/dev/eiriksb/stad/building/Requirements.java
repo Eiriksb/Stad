@@ -123,6 +123,23 @@ public final class Requirements {
                 new Need("saplings where the trees go (at least four)", c -> c.count(s -> s.is(net.minecraft.tags.BlockTags.SAPLINGS)) >= 4
                         || c.markerLike("stad:sapling"), true),
                 new Need("room between the saplings (two blocks)", c -> c.crowded == 0, false)));
+        TYPES.put(BuildingDef.QUARRY, List.of(
+                new Need("the pit marked out (Lay it out)", c -> c.markerLike("stad:quarry"), true),
+                new Need("a fence round it, so nobody falls in", c -> c.count(s -> s.getBlock() instanceof net.minecraft.world.level.block.FenceBlock) >= 8,
+                        false)));
+        TYPES.put(BuildingDef.DOCK, List.of(
+                new Need("water (eight blocks or more)", c -> c.count(net.minecraft.world.level.block.Blocks.WATER) >= 8, true),
+                new Need("spots to fish from (Lay it out)", c -> c.marker("stad:fish"), true),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false)));
+        TYPES.put(BuildingDef.POST, List.of(
+                new Need("a watch spot (Lay it out, or mark one)", c -> c.marker("stad:post"), true),
+                new Need("some height (four blocks or more)", c -> c.height >= 4, false),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false)));
+        TYPES.put(BuildingDef.WALL, List.of(
+                new Need("a wall all round", c -> c.penned, true),
+                new Need("a way in (a door or a gate)", c -> c.has(Contents.Thing.DOOR)
+                        || c.count(s -> s.getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock) > 0, true),
+                new Need("watch spots for the guards", c -> c.marker("stad:post"), false)));
         type(WORKSHOP,
                 new Need("a crafting table", c -> c.has(Contents.Thing.CRAFTING_TABLE), true),
                 new Need("a workstation (a smithing table, stonecutter, loom, anvil...)", c -> c.has(Contents.Thing.WORKSTATION), true),
@@ -226,6 +243,7 @@ public final class Requirements {
     public static String word(ResourceLocation type) {
         return switch (type.getPath()) {
             case "builder_hut" -> "builder's hut";
+            case "post" -> "guard post";
             default -> type.getPath().replace('_', ' ');
         };
     }

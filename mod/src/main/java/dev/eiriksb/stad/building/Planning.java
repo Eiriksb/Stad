@@ -37,7 +37,7 @@ public final class Planning {
             return "That would build over the town hall.";
         }
         for (Building other : colony.buildings()) {
-            if (other.placement().map(o -> o.bounds().intersects(box)).orElse(false)) {
+            if (other.overlaps(box)) {
                 return "That overlaps the " + other.name + ".";
             }
         }

@@ -72,7 +72,7 @@ public final class Homes {
 
     /** Whether a bed is in a building. */
     public static boolean inside(BlockPos bed, Building building) {
-        return bed != null && building.placement().map(p -> p.bounds().isInside(bed)).orElse(false);
+        return bed != null && !building.ring() && building.placement().map(p -> p.bounds().isInside(bed)).orElse(false);
     }
 
     /** The town's house a citizen's bed is in, if any. */

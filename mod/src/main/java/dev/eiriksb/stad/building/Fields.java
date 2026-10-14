@@ -136,7 +136,7 @@ public final class Fields {
         }
         BoundingBox room = box.inflatedBy(2);
         for (Building b : colony.buildings()) {
-            if (b.placement().map(p -> p.bounds().intersects(room)).orElse(false)) {
+            if (b.overlaps(room)) {
                 return false;
             }
         }

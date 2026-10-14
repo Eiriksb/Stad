@@ -49,7 +49,7 @@ public final class Adoption {
             return new Check(null, wanted, List.of(), List.of(), null, "That isn't on " + colony.name() + "'s land.");
         }
         for (Building b : colony.buildings()) {
-            if (b.placement().map(p -> p.bounds().isInside(at)).orElse(false)) {
+            if (b.occupies(at)) {
                 if (!b.done()) {
                     return new Check(null, b.type(), List.of(), List.of(), b, "That's the " + b.name + ", which isn't finished yet.");
                 }
@@ -72,7 +72,7 @@ public final class Adoption {
             }
         }
         for (Building b : colony.buildings()) {
-            if (b.placement().map(p -> p.bounds().intersects(box)).orElse(false)) {
+            if (b.overlaps(box)) {
                 return new Check(s, wanted, List.of(), List.of(), null, "It runs into the " + b.name + ".");
             }
         }

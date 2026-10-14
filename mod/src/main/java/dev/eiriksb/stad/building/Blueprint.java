@@ -45,12 +45,13 @@ public record Blueprint(Vec3i size, List<Entry> entries, List<Marker> markers) {
      * The workers make these, not the builders, so they don't clear the spot either.
      */
     public static boolean land(String name) {
-        return name.startsWith("stad:plot") || name.equals("stad:water") || name.startsWith("stad:sapling") || name.startsWith("stad:pen");
+        return name.startsWith("stad:plot") || name.equals("stad:water") || name.startsWith("stad:sapling") || name.startsWith("stad:pen")
+                || name.startsWith("stad:quarry") || name.equals("stad:fish") || name.equals("stad:post");
     }
 
     /** Whether {@code name} is one of our markers. */
     public static boolean isMarker(String name) {
-        return MARKERS.contains(name) || land(name) && name.matches("stad:[a-z_]+");
+        return MARKERS.contains(name) || land(name) && name.matches("stad:[a-z_0-9]+");
     }
 
     public Blueprint {

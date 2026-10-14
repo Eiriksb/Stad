@@ -46,7 +46,18 @@
   (fetching it from the town hall first); the lumberjack plants each spot with the sapling it asks for and fells the
   trees as they grow; the shepherd leads the pen's animals in through its gate (loose ones in town first, then a pair
   from outside). The builders level the ground and put up the fence, path and the rest.
-- Fields, pens and groves are in a **Farms** tab of the Building Plans when saved into My pack.
+- Land for the other jobs too: a **quarry** (an open pit of any size the miner digs down, 8 to 48 layers, with steps
+  round its edge and a fence round it), a **dock** (a pier out over the water, with spots the fishers fish from), a
+  **guard post** (a platform with a ladder, railing and lamp; guards patrol to it and keep watch from the top) and a
+  **wall** (logs, stone bricks or cobblestone round the site, with a door and watch spots on the corners; it goes round
+  whatever is already inside).
+- **Choosing what to design** is a list now instead of a button you click through: homes and the town's buildings,
+  workplaces (one for every job: builder's hut, kitchen, mine, farmhouse, lumber camp, fishery, barn, smithy...) and
+  land, each with its job's icon and, on hover, who it's for and what it needs. Changing to a kind of land lays it out
+  at once.
+- The table won't put a different kind of land in a finished building's place (a quarry over a field); redesigning a
+  field as a field still works.
+- Fields, pens, groves and the rest are in a **Farms** tab of the Building Plans when saved into My pack.
 - **A new look**: the town hall, the citizen's card, the Building Plans, the architect's table and the pack editor are
   dark walnut panels with brass trim, with icons for every job, wood buttons, tabs and scroll bars.
 - **New models**: the architect's table is a drafting table with a blueprint, a roll of plans and an ink pot; the town

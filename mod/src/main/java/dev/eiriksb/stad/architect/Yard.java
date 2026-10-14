@@ -32,21 +32,55 @@ import java.util.Locale;
  * @param animal  pen: sheep, cows, pigs or chickens (who the shepherd brings in)
  * @param tree    grove: oak, birch, spruce, acacia, cherry, jungle or mixed
  * @param spacing grove: blocks from one sapling to the next
- * @param extra   field: lanterns on the corner posts; pen: a shelter with hay and water
+ * @param extra   field: lanterns on the corner posts; pen: a shelter with hay and water; wall: watch posts on its corners;
+ *                quarry and dock: lamps
+ * @param depth   quarry: how deep the miner digs it
+ * @param wall    wall: logs, stone_bricks or cobblestone
+ * @param height  wall: how high
  */
-public record Yard(String crop, String water, String fence, boolean path, String animal, String tree, int spacing, boolean extra) {
+public record Yard(String crop, String water, String fence, boolean path, String animal, String tree, int spacing, boolean extra,
+                   int depth, String wall, int height) {
     public static final List<String> CROPS = List.of("wheat", "carrots", "potatoes", "beetroots", "mixed");
     public static final List<String> WATERS = List.of("rows", "holes");
     public static final List<String> FENCES = List.of("oak", "spruce", "birch", "dark_oak", "cobblestone", "none");
     public static final List<String> ANIMALS = List.of("sheep", "cows", "pigs", "chickens");
     public static final List<String> TREES = List.of("oak", "birch", "spruce", "acacia", "cherry", "jungle", "mixed");
     public static final int MIN_SPACING = 3, MAX_SPACING = 6;
+    public static final List<Integer> DEPTHS = List.of(8, 16, 24, 32, 48);
+    public static final List<String> WALLS = List.of("logs", "stone_bricks", "cobblestone");
+    public static final int MIN_HEIGHT = 2, MAX_HEIGHT = 5;
 
-    public static final Yard DEFAULT = new Yard("wheat", "rows", "oak", true, "sheep", "oak", 4, true);
+    public static final Yard DEFAULT = new Yard("wheat", "rows", "oak", true, "sheep", "oak", 4, true, 16, "logs", 3);
+
+    /** The land kinds, and the job each is for. */
+    public static final List<ResourceLocation> KINDS = List.of(BuildingDef.FIELD, BuildingDef.PEN, BuildingDef.GROVE, BuildingDef.QUARRY,
+            BuildingDef.DOCK, BuildingDef.POST, BuildingDef.WALL);
 
     /** Whether a kind of building is land the table generates with a {@link Yard} rather than a {@link dev.eiriksb.stad.planner.BuildSpec}. */
     public static boolean is(ResourceLocation type) {
-        return type.equals(BuildingDef.FIELD) || type.equals(BuildingDef.PEN) || type.equals(BuildingDef.GROVE);
+        return KINDS.contains(type);
+    }
+
+    /** Who works it: "farmer" for a field... */
+    public static String job(ResourceLocation type) {
+        return switch (type.getPath()) {
+            case "field" -> "farmer";
+            case "pen" -> "shepherd";
+            case "grove" -> "lumberjack";
+            case "quarry" -> "miner";
+            case "dock" -> "fisher";
+            default -> "guard";
+        };
+    }
+
+    /** For tests: the same with another fence. */
+    public Yard withFenceForTest(String f) {
+        return withFence(f);
+    }
+
+    /** The same, with another fence (a pen has to have one). */
+    Yard withFence(String f) {
+        return new Yard(crop, water, f, path, animal, tree, spacing, extra, depth, wall, height);
     }
 
     public static boolean is(String type) {
@@ -64,6 +98,9 @@ public record Yard(String crop, String water, String fence, boolean path, String
         o.addProperty("tree", tree);
         o.addProperty("spacing", spacing);
         o.addProperty("extra", extra);
+        o.addProperty("depth", depth);
+        o.addProperty("wall", wall);
+        o.addProperty("height", height);
         return o.toString();
     }
 
@@ -77,7 +114,10 @@ public record Yard(String crop, String water, String fence, boolean path, String
             return new Yard(pick(o, "crop", CROPS, DEFAULT.crop), pick(o, "water", WATERS, DEFAULT.water), pick(o, "fence", FENCES, DEFAULT.fence),
                     o.has("path") ? o.get("path").getAsBoolean() : DEFAULT.path, pick(o, "animal", ANIMALS, DEFAULT.animal),
                     pick(o, "tree", TREES, DEFAULT.tree), o.has("spacing") ? Math.max(MIN_SPACING, Math.min(MAX_SPACING, o.get("spacing").getAsInt()))
-                    : DEFAULT.spacing, o.has("extra") ? o.get("extra").getAsBoolean() : DEFAULT.extra);
+                    : DEFAULT.spacing, o.has("extra") ? o.get("extra").getAsBoolean() : DEFAULT.extra,
+                    o.has("depth") && DEPTHS.contains(o.get("depth").getAsInt()) ? o.get("depth").getAsInt() : DEFAULT.depth,
+                    pick(o, "wall", WALLS, DEFAULT.wall),
+                    o.has("height") ? Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, o.get("height").getAsInt())) : DEFAULT.height);
         } catch (RuntimeException e) {
             return DEFAULT;
         }
@@ -151,11 +191,24 @@ public record Yard(String crop, String water, String fence, boolean path, String
         if (!p.hasSite()) {
             return "There's nothing to generate.";
         }
-        int min = p.type.equals(BuildingDef.FIELD) ? 3 : p.type.equals(BuildingDef.PEN) ? 4 : 3;
+        int min = p.type.equals(BuildingDef.PEN) || p.type.equals(BuildingDef.QUARRY) || p.type.equals(BuildingDef.WALL) ? 5 : 3;
         if (p.sx < min || p.sz < min) {
             return "The site is too small: make it at least " + min + " by " + min + " blocks.";
         }
         p.generated.clear();
+        p.markers.values().removeIf(m -> m.startsWith("stad:quarry") || m.equals("stad:fish") || m.equals("stad:post"));
+        if (p.type.equals(BuildingDef.QUARRY)) {
+            return quarry(p, terrain);
+        }
+        if (p.type.equals(BuildingDef.DOCK)) {
+            return dock(p, terrain);
+        }
+        if (p.type.equals(BuildingDef.POST)) {
+            return post(p, terrain);
+        }
+        if (p.type.equals(BuildingDef.WALL)) {
+            return wall(p, terrain);
+        }
         if (p.type.equals(BuildingDef.GROVE)) {
             grove(p, terrain);
             p.floorY = Fit.ground(terrain, p, 0, 0, p.sx, p.sz);
@@ -313,7 +366,7 @@ public record Yard(String crop, String water, String fence, boolean path, String
      */
     private void pen(Project p) {
         int f = p.floorY;
-        Yard y = fence.equals("none") ? new Yard(crop, water, "oak", path, animal, tree, spacing, extra) : this; // a pen has to have a fence
+        Yard y = fence.equals("none") ? withFence("oak") : this; // a pen has to have a fence
         y.ring(p, f + 1);
         if (!extra || p.sx < 8 || p.sz < 8) {
             return;
@@ -379,6 +432,226 @@ public record Yard(String crop, String water, String fence, boolean path, String
                 }
             }
         }
+    }
+
+    // ---- the miner's, the fisher's and the guards' ------------------------------------------------------------
+
+    /**
+     * An open pit for the miner: its corners marked ({@code stad:quarry_<depth>}) on the land as it is, a fence round it
+     * so nobody walks in, lamps on the corners, and anything growing over the pit cleared. The miner digs it down a layer
+     * at a time, leaving steps that spiral down its edge.
+     */
+    private String quarry(Project p, Grid terrain) {
+        p.floorY = Fit.ground(terrain, p, 0, 0, p.sx, p.sz);
+        int f = p.floorY;
+        boolean fenced = !fence.equals("none");
+        int e = fenced ? 1 : 0;
+        if (p.sx - 2 * e < 3 || p.sz - 2 * e < 3) {
+            return "The site is too small for a quarry: make it at least " + (3 + 2 * e) + " by " + (3 + 2 * e) + " blocks.";
+        }
+        for (int x = 0; x < p.sx; x++) {
+            for (int z = 0; z < p.sz; z++) {
+                boolean edge = x < e || z < e || x >= p.sx - e || z >= p.sz - e;
+                int g = top(terrain, p, x, z);
+                if (edge) {
+                    if (g >= 0 && g + 1 < p.sy) {
+                        p.generated.put(Project.key(x, g + 1, z), fenceState());
+                    }
+                    continue;
+                }
+                for (int y = f + 1; y < p.sy; y++) {
+                    if (!land(terrain, x, y, z).isAir()) {
+                        p.generated.put(Project.key(x, y, z), Blocks.AIR.defaultBlockState());
+                    }
+                }
+            }
+        }
+        if (fenced) {
+            int[] g = gate(p);
+            int gy = top(terrain, p, g[0], g[1]);
+            if (gy >= 0 && gy + 1 < p.sy) {
+                p.generated.put(Project.key(g[0], gy + 1, g[1]), gateState(p.door));
+            }
+            if (extra) {
+                for (int[] c : new int[][]{{0, 0}, {p.sx - 1, 0}, {0, p.sz - 1}, {p.sx - 1, p.sz - 1}}) {
+                    int cy = top(terrain, p, c[0], c[1]);
+                    if (cy >= 0 && cy + 2 < p.sy) {
+                        p.generated.put(Project.key(c[0], cy + 2, c[1]), Blocks.LANTERN.defaultBlockState());
+                    }
+                }
+            }
+        }
+        p.markers.put(Project.key(e, f, e), "stad:quarry_" + depth);
+        p.markers.put(Project.key(p.sx - 1 - e, f, p.sz - 1 - e), "stad:quarry_" + depth);
+        return null;
+    }
+
+    /**
+     * A pier for the fisher: three planks wide at the water's level, from the side the door faces (the shore) out across
+     * the site, on log posts down to the bottom; spots to fish from ({@code stad:fish}) along its sides and end, and
+     * lamps at the end.
+     */
+    private String dock(Project p, Grid terrain) {
+        java.util.Map<Integer, Integer> levels = new java.util.HashMap<>();
+        for (int x = 0; x < p.sx; x++) {
+            for (int z = 0; z < p.sz; z++) {
+                int g = top(terrain, p, x, z);
+                if (g >= 0 && land(terrain, x, g, z).getFluidState().is(net.minecraft.tags.FluidTags.WATER)) {
+                    levels.merge(g, 1, Integer::sum);
+                }
+            }
+        }
+        int wy = levels.entrySet().stream().max(java.util.Map.Entry.comparingByValue()).map(java.util.Map.Entry::getKey).orElse(-1);
+        if (wy < 0 || levels.get(wy) < 8) {
+            return "A dock needs water: put the site over the edge of a pond, a lake or a river, with the door on the shore's side.";
+        }
+        p.floorY = wy;
+        boolean alongZ = p.door.getAxis() == net.minecraft.core.Direction.Axis.Z;
+        int len = alongZ ? p.sz : p.sx, mid = (alongZ ? p.sx : p.sz) / 2;
+        // the door faces the shore: the pier starts there and runs out
+        boolean fromStart = p.door == net.minecraft.core.Direction.NORTH || p.door == net.minecraft.core.Direction.WEST;
+        BlockState plank = woodState("planks"), post = woodState("log");
+        int last = -1;
+        for (int i = 0; i < len; i++) {
+            int a = fromStart ? i : len - 1 - i;
+            boolean wet = false;
+            for (int w = -1; w <= 1; w++) {
+                int x = alongZ ? mid + w : a, z = alongZ ? a : mid + w;
+                if (x < 0 || z < 0 || x >= p.sx || z >= p.sz) {
+                    continue;
+                }
+                BlockState here = land(terrain, x, wy, z);
+                if (!here.getFluidState().isEmpty() || Fit.open(here)) {
+                    p.generated.put(Project.key(x, wy, z), plank);
+                    wet |= !here.getFluidState().isEmpty();
+                    if (w != 0 && i % 4 == 2) {
+                        for (int y = wy - 1; y >= 0 && !land(terrain, x, y, z).getFluidState().isEmpty(); y--) {
+                            p.generated.put(Project.key(x, y, z), post);
+                        }
+                    }
+                }
+                for (int y = wy + 1; y < p.sy; y++) {
+                    if (!land(terrain, x, y, z).isAir()) {
+                        p.generated.put(Project.key(x, y, z), Blocks.AIR.defaultBlockState());
+                    }
+                }
+            }
+            if (wet) {
+                last = a;
+                if (i % 2 == 1) { // spots along the sides, where there's water beside
+                    for (int w : new int[]{-1, 1}) {
+                        int x = alongZ ? mid + w : a, z = alongZ ? a : mid + w;
+                        int ox = alongZ ? x + w : x, oz = alongZ ? z : z + w;
+                        if (ox >= 0 && oz >= 0 && ox < p.sx && oz < p.sz && !land(terrain, ox, wy, oz).getFluidState().isEmpty()) {
+                            p.markers.put(Project.key(x, wy, z), "stad:fish");
+                        }
+                    }
+                }
+            }
+        }
+        if (last < 0) {
+            return "The pier doesn't reach the water: turn the door to face the shore.";
+        }
+        for (int w = -1; w <= 1; w++) { // the end of the pier
+            int x = alongZ ? mid + w : last, z = alongZ ? last : mid + w;
+            if (x >= 0 && z >= 0 && x < p.sx && z < p.sz) {
+                p.markers.put(Project.key(x, wy, z), "stad:fish");
+                if (extra && w != 0 && wy + 2 < p.sy) {
+                    p.generated.put(Project.key(x, wy + 1, z), fenceState());
+                    p.generated.put(Project.key(x, wy + 2, z), Blocks.LANTERN.defaultBlockState());
+                    p.markers.remove(Project.key(x, wy, z));
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A watch post for the guards: a platform four blocks up on log posts, a ladder up the side the door faces, a
+     * railing and a lamp, and a watch spot on top ({@code stad:post}) that the guards patrol to and keep watch from.
+     */
+    private String post(Project p, Grid terrain) {
+        p.floorY = Fit.ground(terrain, p, 0, 0, p.sx, p.sz);
+        int f = p.floorY, cx = p.sx / 2, cz = p.sz / 2;
+        if (f + 7 > p.sy) {
+            return "There isn't room above the ground for the post: lower the site's bottom corner.";
+        }
+        BlockState log = woodState("log"), plank = woodState("planks"), rail = fenceState();
+        int dx = p.door.getStepX(), dz = p.door.getStepZ();
+        for (int x = cx - 1; x <= cx + 1; x++) {
+            for (int z = cz - 1; z <= cz + 1; z++) {
+                for (int y = f; y >= 0 && Fit.open(land(terrain, x, y, z)); y--) {
+                    p.generated.put(Project.key(x, y, z), Blocks.COBBLESTONE.defaultBlockState());
+                }
+                for (int y = f + 1; y <= f + 3; y++) {
+                    boolean pillar = Math.abs(x - cx) == 1 && Math.abs(z - cz) == 1 || x == cx && z == cz;
+                    p.generated.put(Project.key(x, y, z), pillar ? log : Blocks.AIR.defaultBlockState());
+                }
+                p.generated.put(Project.key(x, f + 4, z), plank);
+                boolean edge = x != cx || z != cz;
+                p.generated.put(Project.key(x, f + 5, z), edge ? rail : Blocks.AIR.defaultBlockState());
+                p.generated.put(Project.key(x, f + 6, z), Blocks.AIR.defaultBlockState());
+            }
+        }
+        BlockState ladder = Blocks.LADDER.defaultBlockState().setValue(net.minecraft.world.level.block.LadderBlock.FACING, p.door);
+        for (int y = f + 1; y <= f + 4; y++) {
+            p.generated.put(Project.key(cx + dx, y, cz + dz), ladder);
+        }
+        p.generated.put(Project.key(cx + dx, f + 5, cz + dz), Blocks.AIR.defaultBlockState());
+        p.generated.put(Project.key(cx - dx + dz, f + 6, cz - dz + dx), Blocks.LANTERN.defaultBlockState());
+        p.markers.put(Project.key(cx, f + 4, cz), "stad:post");
+        return null;
+    }
+
+    /**
+     * A wall round the site, on the land as it is: logs (a palisade), stone bricks or cobblestone, {@code height} high,
+     * with a door in the middle of the side the door faces; with {@code extra}, a watch spot ({@code stad:post}) on top
+     * of each corner for the guards.
+     */
+    private String wall(Project p, Grid terrain) {
+        p.floorY = Fit.ground(terrain, p, 0, 0, p.sx, p.sz);
+        BlockState stone = switch (wall) {
+            case "stone_bricks" -> Blocks.STONE_BRICKS.defaultBlockState();
+            case "cobblestone" -> Blocks.COBBLESTONE.defaultBlockState();
+            default -> Blocks.SPRUCE_LOG.defaultBlockState();
+        };
+        int[] door = gate(p);
+        for (int x = 0; x < p.sx; x++) {
+            for (int z = 0; z < p.sz; z++) {
+                if (x != 0 && z != 0 && x != p.sx - 1 && z != p.sz - 1) {
+                    continue;
+                }
+                int g = top(terrain, p, x, z);
+                if (g < 0) {
+                    continue;
+                }
+                for (int y = g + 1; y <= g + height && y < p.sy; y++) {
+                    p.generated.put(Project.key(x, y, z), stone);
+                }
+                if (x == door[0] && z == door[1] && g + 2 < p.sy) {
+                    BlockState d = Blocks.SPRUCE_DOOR.defaultBlockState().setValue(net.minecraft.world.level.block.DoorBlock.FACING, p.door.getOpposite());
+                    p.generated.put(Project.key(x, g + 1, z), d);
+                    p.generated.put(Project.key(x, g + 2, z), d.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
+                            net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER));
+                }
+            }
+        }
+        if (extra) {
+            for (int[] c : new int[][]{{0, 0}, {p.sx - 1, 0}, {0, p.sz - 1}, {p.sx - 1, p.sz - 1}}) {
+                int g = top(terrain, p, c[0], c[1]);
+                if (g >= 0 && g + height < p.sy) {
+                    p.markers.put(Project.key(c[0], g + height, c[1]), "stad:post");
+                }
+            }
+        }
+        return null;
+    }
+
+    /** A wooden block of the fence's wood ("planks", "log"); spruce for a stone fence or none. */
+    private BlockState woodState(String what) {
+        String wood = fence.equals("cobblestone") || fence.equals("none") ? "spruce" : fence;
+        Block b = BuiltInRegistries.BLOCK.get(ResourceLocation.withDefaultNamespace(wood + "_" + what));
+        return (b == Blocks.AIR ? (what.equals("log") ? Blocks.SPRUCE_LOG : Blocks.SPRUCE_PLANKS) : b).defaultBlockState();
     }
 
     /** The top of the land in a column of the site (not logs or leaves), or -1. */

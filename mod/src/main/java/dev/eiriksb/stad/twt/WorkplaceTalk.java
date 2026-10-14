@@ -83,7 +83,7 @@ public final class WorkplaceTalk {
         String w = where.toLowerCase(Locale.ROOT);
         if (w.equals("here") || w.equals("this one")) {
             return colony.buildings().stream().filter(Workplaces::isWorkplace)
-                    .filter(b -> b.placement().map(p -> p.bounds().isInside(player.blockPosition())).orElse(false)).findFirst();
+                    .filter(b -> !b.ring() && b.placement().map(p -> p.bounds().isInside(player.blockPosition())).orElse(false)).findFirst();
         }
         return colony.buildings().stream().filter(Workplaces::isWorkplace)
                 .filter(b -> b.name.toLowerCase(Locale.ROOT).contains(w) || w.contains(b.name.toLowerCase(Locale.ROOT))).findFirst();

@@ -107,7 +107,7 @@ public final class Tables {
     public static List<ResourceLocation> types() {
         List<ResourceLocation> t = new ArrayList<>(Requirements.types().stream().filter(r -> !Yard.is(r)).toList());
         t.add(ResourceLocation.fromNamespaceAndPath("stad", "building"));
-        t.addAll(List.of(BuildingDef.FIELD, BuildingDef.PEN, BuildingDef.GROVE));
+        t.addAll(Yard.KINDS);
         return t;
     }
 
@@ -394,8 +394,21 @@ public final class Tables {
                 }
                 case TYPE -> {
                     ResourceLocation t = ResourceLocation.tryParse(a.text());
-                    if (t != null && types().contains(t)) {
+                    if (t != null && types().contains(t) && !t.equals(p.type)) {
+                        ResourceLocation was = p.type;
                         p.type = t;
+                        if (p.hasSite() && Yard.is(t)) {
+                            p.floorY = -1; // each kind finds its own ground (a quarry's isn't a dock's)
+                            yard(player, s, p, p.yard != null ? p.yard : Yard.DEFAULT, p.door); // land: laid out for the new kind at once
+                        } else if (p.hasSite() && Yard.is(was) && p.yard != null) {
+                            p.yard = null;
+                            p.generated.clear();
+                            p.markers.values().removeIf(m -> m.startsWith("stad:quarry") || m.equals("stad:fish") || m.equals("stad:post"));
+                            if (p.name.equals(Fit.defaultName(was))) {
+                                p.name = Fit.defaultName(t);
+                            }
+                            update(player, s, p, "The " + Requirements.word(was) + " is cleared: generate a building, or build one by hand.", false);
+                        }
                     }
                 }
                 case SAVE -> {
@@ -473,7 +486,7 @@ public final class Tables {
         p.yard = yard;
         p.door = door;
         p.spec = null;
-        if (p.name.equals(new Project().name) || p.name.equals("Building") || List.of("Field", "Pen", "Grove").contains(p.name)) {
+        if (p.name.equals(new Project().name) || p.name.equals("Building") || Yard.KINDS.stream().anyMatch(k -> Fit.defaultName(k).equals(p.name))) {
             p.name = Fit.defaultName(p.type);
         }
         String problem = yard.generate(p, s.terrain);
@@ -672,15 +685,27 @@ public final class Tables {
                 p.min.getZ() + p.sz - 1);
         String problem = null;
         List<Building> replaced = new ArrayList<>();
-        if (box.isInside(colony.center)) {
+        // a wall goes round what's there: only its own blocks have to keep clear
+        boolean ring = p.type.equals(BuildingDef.WALL);
+        List<BlockPos> own = ring ? placement.steps().stream().map(Placement.Step::pos).toList() : List.of();
+        if (ring ? own.contains(colony.center) : box.isInside(colony.center)) {
             problem = "That would build over the town hall.";
         }
         for (Building b : colony.buildings()) {
             BoundingBox other = b.placement().map(Placement::bounds).orElse(null);
-            if (problem != null || other == null || !other.intersects(box)) {
+            if (problem != null || other == null || !other.intersects(box) || b.ring() && !b.overlaps(box)) {
+                continue; // inside a wall is fine
+            }
+            if (ring) {
+                if (own.stream().anyMatch(other::isInside)) {
+                    problem = "The wall runs through the " + b.name + ": make the site bigger, or move it.";
+                }
                 continue;
             }
-            if (b.done() && site.isInside(other.minX(), other.minY(), other.minZ()) && site.isInside(other.maxX(), other.maxY(), other.maxZ())) {
+            boolean sameUse = !(Yard.is(p.type) || b.type() != null && Yard.is(b.type())) || p.type.equals(b.type());
+            if (b.done() && !sameUse) {
+                problem = "The " + b.name + " is there: a " + Requirements.word(p.type) + " can't go in its place. Choose another site.";
+            } else if (b.done() && site.isInside(other.minX(), other.minY(), other.minZ()) && site.isInside(other.maxX(), other.maxY(), other.maxZ())) {
                 replaced.add(b); // redesigning a building that stands on the site
             } else {
                 problem = "That overlaps the " + b.name + (b.done() ? "." : ", which isn't finished yet.");

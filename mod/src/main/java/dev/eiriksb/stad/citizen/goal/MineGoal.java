@@ -36,7 +36,7 @@ public class MineGoal extends WorkGoal {
             return true;
         }
         BlockPos from = from(colony);
-        Mine.Task task = Mine.shafts(colony).stream().sorted(Comparator.comparingDouble(s -> s.distSqr(from)))
+        Mine.Task task = Mine.pits(colony).stream().sorted(Comparator.comparingDouble(s -> s.middle().distSqr(from)))
                 .map(s -> Mine.task(level, s, citizen.blockPosition())).flatMap(Optional::stream).findFirst().orElse(null);
         block = task == null ? null : task.pos();
         step = task != null && task.step();
@@ -45,8 +45,8 @@ public class MineGoal extends WorkGoal {
 
     @Override
     protected String blocked(ServerLevel level, Colony colony) {
-        return dev.eiriksb.stad.building.Mine.shafts(colony).isEmpty() ? "No mine to dig: build a Mine (from the building plans)"
-                : "The mine is as deep as it goes";
+        return dev.eiriksb.stad.building.Mine.pits(colony).isEmpty() ? "No mine to dig: build a Mine (from the building plans), or lay out a"
+                + " Quarry at the architect's table" : "The mine is as deep as it goes";
     }
 
     @Override

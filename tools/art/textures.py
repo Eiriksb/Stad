@@ -479,11 +479,28 @@ def _sapling(l):
     l.rect(4, 14, 12, 15, rgb("#6b4428"))
 
 
+def _wall(l):
+    stone, dark, door = rgb("#9a958e"), rgb("#6e6a64"), rgb("#6b4428")
+    l.rect(1, 5, 15, 15, stone)
+    for x in (1, 5, 9, 13):  # battlements
+        l.rect(x, 2, x + 2, 5, stone)
+    for y in (8, 11):
+        for x in range(1, 15):
+            l.set(x, y, dark)
+    for x in (4, 8, 12):
+        l.set(x, 6, dark)
+        l.set(x, 7, dark)
+    l.rect(6, 10, 10, 15, door)
+    l.rect(6, 9, 10, 10, door)
+    l.set(6, 9, stone)
+    l.set(9, 9, stone)
+
+
 ICONS = {
     "job/builder": _hammer, "job/farmer": _wheat, "job/lumberjack": _axe, "job/courier": _crate, "job/guard": _shield,
     "job/cook": _pot, "job/fisher": _fish, "job/shepherd": _sheep, "job/miner": _pickaxe, "job/smith": _anvil,
     "job/healer": _potion, "job/merchant": _emerald, "job/teacher": _book, "job/none": _question,
-    "person": _person, "people": _people, "house": _house, "bell": _bell, "field": _hoe_field, "fence": _fence, "sapling": _sapling,
+    "person": _person, "people": _people, "house": _house, "bell": _bell, "field": _hoe_field, "fence": _fence, "sapling": _sapling, "wall": _wall,
 }
 
 

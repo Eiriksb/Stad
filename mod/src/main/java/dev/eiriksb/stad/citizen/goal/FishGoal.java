@@ -44,13 +44,26 @@ public class FishGoal extends WorkGoal {
         return 12;
     }
 
+    /** The spots to fish from on the town's finished docks. */
+    static List<BlockPos> dockSpots(Colony colony) {
+        List<BlockPos> out = new java.util.ArrayList<>();
+        for (dev.eiriksb.stad.colony.Building b : colony.buildings()) {
+            if (b.done() && b.is(dev.eiriksb.stad.building.BuildingDef.DOCK)) {
+                b.placement().ifPresent(p -> out.addAll(p.markers("stad:fish")));
+            }
+        }
+        return out;
+    }
+
     @Override
     protected boolean hasWork(ServerLevel level, Colony colony) {
         if (spot != null && WorkSites.waterBeside(level, spot).isPresent()) {
             return true;
         }
         BlockPos from = from(colony);
-        List<BlockPos> shore = WorkSites.shore(level, colony).stream()
+        // the town's docks first (designed at the architect's table), then the shore
+        List<BlockPos> docks = dockSpots(colony).stream().filter(p -> level.isLoaded(p) && WorkSites.waterBeside(level, p).isPresent()).toList();
+        List<BlockPos> shore = (docks.isEmpty() ? WorkSites.shore(level, colony) : docks).stream()
                 .sorted(Comparator.comparingDouble(p -> p.distSqr(from))).limit(4).toList();
         // one of the nearest few, so fishers don't all crowd the same spot
         spot = shore.isEmpty() ? null : shore.get(citizen.getRandom().nextInt(shore.size()));

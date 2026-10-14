@@ -583,6 +583,17 @@ from outside when the pen has fewer than two. The 9 by 9 field of §6.10 is the 
 allowed in designs now (it has no item). Ground blocks a survival player can't pick up (grass, path, farmland) cost
 dirt.
 
+**Land for the other jobs.** The same `Yard` also draws a **quarry** (its pit's corners marked
+`stad:quarry_<depth>`, a fence and lamps round it; `Mine` digs any rectangular `Pit` the way it digs a mine's 5x5 shaft,
+steps spiralling down its rim), a **dock** (a 3-wide pier at the water's level from the door's side, on log posts,
+`stad:fish` spots along it; fishers use a finished dock's spots before the shore), a **guard post** (a platform four up
+on logs, a ladder, a railing, a `stad:post` watch spot) and a **wall** (on the land as it is, with a door; `stad:post`
+on the corners). Guards patrol to watch spots (twice as likely as the hall) and climb up to them. A wall only takes up
+its own blocks: buildings inside it, beds, trees and plans are unaffected (`Building.ring/occupies/overlaps`). The
+table's kind button opens a list in three columns (homes and the town, workplaces, land) with the job each is for;
+changing to a kind of land lays it out at once (working out its ground afresh), and a design of another kind of land
+won't replace a finished building in its site.
+
 **Stad's own look.** Screens share a theme (`client/ui/Theme`, `StadButton`): walnut panels with brass trim round dark
 felt, brass title plates, wells for lists, wood buttons and tabs, brass scroll bars, and 16 by 16 icons for every job
 and the town hall's tabs, 9 by 9 ones for inline states. They're GUI sprites (nine-sliced where they stretch). The art is
