@@ -216,6 +216,9 @@ public final class StadAdapter implements VillagerAdapter {
             }
             case Jobs.CARPENTER, Jobs.MASON, Jobs.WEAVER -> f.context.add(done == 0 ? "You haven't made anything yet today."
                     : "Today you've made " + done + " things for the town.");
+            case Jobs.RESEARCHER -> f.context.add(t.research.current == null ? "Nobody has chosen what you should research next."
+                    : "You're researching " + dev.eiriksb.stad.colony.Research.topic(t.research.current).map(dev.eiriksb.stad.colony.Research.Topic::name)
+                    .orElse("something") + ".");
             case Jobs.GATHERER -> f.context.add(done == 0 ? "You haven't gathered anything yet today." : "Today you've gathered " + done
                     + " loads from the land round the town.");
             case Jobs.BEEKEEPER -> f.context.add(done == 0 ? "You haven't taken any honey yet today." : "Today you've done " + done

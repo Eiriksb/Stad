@@ -73,4 +73,6 @@ public record BuildingDef(ResourceLocation key, String pack, ResourceLocation ty
     public static final ResourceLocation APIARY = ResourceLocation.fromNamespaceAndPath("stad", "apiary");
     /** a road: paving the citizens walk faster on */
     public static final ResourceLocation ROAD = ResourceLocation.fromNamespaceAndPath("stad", "road");
+    /** the researcher's university: bookshelves and lecterns */
+    public static final ResourceLocation UNIVERSITY = ResourceLocation.fromNamespaceAndPath("stad", "university");
 }

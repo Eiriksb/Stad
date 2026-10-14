@@ -49,6 +49,7 @@ public final class ArchitectGameTests {
                 owner.getGameProfile().getName(), 16);
         helper.assertTrue(f.colony() != null, "no town: " + f.problem());
         helper.setBlock(TABLE, StadRegistries.ARCHITECT_TABLE.get());
+        f.colony().research.all(); // these tests plan every kind of building
         return f.colony();
     }
 

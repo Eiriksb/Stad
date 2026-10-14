@@ -220,6 +220,54 @@ public final class ResourcesGameTests {
         helper.succeed();
     }
 
+    // ---- research ---------------------------------------------------------------------------------------------------
+
+    /** A new town researches most buildings first: chosen at the town hall, studied at the university. */
+    @GameTest(template = "lot", batch = "res_research", timeoutTicks = 3000)
+    public static void researchUnlocksBuildings(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        ServerLevel level = helper.getLevel();
+        level.setDayTime(1000);
+        Colony colony = found(helper, owner);
+        helper.assertTrue(dev.eiriksb.stad.colony.Research.locked(colony, BuildingDef.HOME) == null
+                && dev.eiriksb.stad.colony.Research.locked(colony, BuildingDef.UNIVERSITY) == null, "homes and the university from the start");
+        helper.assertTrue(dev.eiriksb.stad.colony.Research.locked(colony, BuildingDef.MINE) != null, "a mine needs research");
+        var mine = BuildingPacks.get(net.minecraft.resources.ResourceLocation.parse("stad:medieval/mine")).orElseThrow();
+        var refused = dev.eiriksb.stad.building.Planning.plan(owner, level, colony, mine, helper.absolutePos(new BlockPos(3, G, 10)), Rotation.NONE);
+        helper.assertTrue(refused.building() == null && refused.problem().contains("Mining"), "planning a mine is refused: " + refused.problem());
+        String said = dev.eiriksb.stad.colony.Research.choose(colony, owner, "masonry");
+        helper.assertTrue(colony.research.current == null, "masonry needs mining first: " + said);
+        said = dev.eiriksb.stad.colony.Research.choose(colony, owner, "mining");
+        helper.assertTrue("mining".equals(colony.research.current), "mining chosen: " + said);
+        dev.eiriksb.stad.colony.Research.Topic mining = dev.eiriksb.stad.colony.Research.topic("mining").orElseThrow();
+        colony.research.progress = mining.work() - 1; // the last piece of study left
+        built(helper, colony, "stad:medieval/university", new BlockPos(1, G - 1, 1));
+        hall(helper).storage().addItem(new ItemStack(Items.BOOK, 2));
+        hall(helper).storage().addItem(new ItemStack(Items.OAK_PLANKS, 20));
+        CitizenEntity researcher = worker(helper, colony, Jobs.RESEARCHER, 13, 13);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(colony.research.done.contains("mining"), "mining learned: " + researcher.status().text() + " ("
+                    + colony.research.progress + "/" + mining.work() + ", paid " + colony.research.paid + ")");
+            helper.assertTrue(hall(helper).storage().countItem(Items.BOOK) == 0 && hall(helper).storage().countItem(Items.OAK_PLANKS) == 4,
+                    "the books and planks were used");
+            helper.assertTrue(dev.eiriksb.stad.colony.Research.locked(colony, BuildingDef.MINE) == null
+                    && dev.eiriksb.stad.colony.Research.locked(colony, BuildingDef.STONEWORKS) != null, "mines now, not stoneworks yet");
+            // a town from before research keeps what it's built
+            Building gone = colony.addBuilding(net.minecraft.resources.ResourceLocation.parse("stad:fjord/stue"), "Stue",
+                    helper.absolutePos(new BlockPos(12, G - 1, 8)), Rotation.NONE, 0); // its pack is gone: no type
+            Building mill = colony.addBuilding(BuildingPacks.get(net.minecraft.resources.ResourceLocation.parse("stad:medieval/sawmill")).orElseThrow().key(),
+                    "Sawmill", helper.absolutePos(new BlockPos(12, G - 1, 2)), Rotation.NONE, 0);
+            CompoundTag saved = colony.save();
+            saved.remove("Research");
+            Colony old = Colony.load(saved);
+            helper.assertTrue(old.research.done.contains("carpentry") && !old.research.done.contains("fishing"), "an old town knows what it built: "
+                    + old.research.done);
+            colony.removeBuilding(mill.id);
+            colony.removeBuilding(gone.id);
+            cleanUp(helper, colony, owner);
+        });
+    }
+
     // ---- the gatherer ---------------------------------------------------------------------------------------------
 
     @GameTest(template = "lot", batch = "res_gather", timeoutTicks = 4000)

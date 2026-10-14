@@ -23,7 +23,8 @@ import java.util.List;
  * (or what's stopping them), every job with what it needs and whether the town has it, and its buildings.
  */
 public class TownHallScreen extends Screen {
-    private enum Tab { TOWN("Town", "bell"), CITIZENS("Citizens", "people"), JOBS("Jobs", null), BUILDINGS("Buildings", "house");
+    private enum Tab { TOWN("Town", "bell"), CITIZENS("Citizens", "people"), JOBS("Jobs", null), BUILDINGS("Buildings", "house"),
+        RESEARCH("Research", "job:researcher");
         final String label, icon;
 
         Tab(String label, String icon) {
@@ -32,7 +33,7 @@ public class TownHallScreen extends Screen {
         }
 
         ResourceLocation sprite() {
-            return icon == null ? Theme.job("builder") : Theme.icon(icon);
+            return icon == null ? Theme.job("builder") : icon.startsWith("job:") ? Theme.job(icon.substring(4)) : Theme.icon(icon);
         }
     }
 
@@ -86,8 +87,20 @@ public class TownHallScreen extends Screen {
 
     /** Where the list starts: under the roads bar on the Buildings tab. */
     private int listTop() {
-        return top() + (roadsBar() ? 24 : 0);
+        return top() + (roadsBar() || researchBar() ? 24 : 0);
     }
+
+    /** the Research tab's bar, for officers: a topic to choose, and the button to choose it */
+    private boolean researchBar() {
+        return tab == Tab.RESEARCH && view.viewerRank().atLeast(Rank.OFFICER) && !choosable().isEmpty();
+    }
+
+    private List<ColonyView.Topic> choosable() {
+        return view.research().stream().filter(t -> t.state() == ColonyView.State.AVAILABLE).toList();
+    }
+
+    /** which of the topics that can be chosen the bar shows */
+    private static int pick;
 
     private boolean roadsBar() {
         return tab == Tab.BUILDINGS && view.viewerRank().atLeast(Rank.OFFICER);
@@ -118,10 +131,10 @@ public class TownHallScreen extends Screen {
                 rebuildWidgets();
             }).bounds(x + w - 52, 8, 52, 16).tooltip(Tooltip.create(Component.literal("Give the town a new name."))).build());
         }
-        int tw = (w - 3 * 3) / 4;
+        int tabs = Tab.values().length, tw = (w - 3 * (tabs - 1)) / tabs;
         for (Tab t : Tab.values()) {
             boolean trouble = t == Tab.CITIZENS && view.citizens().stream().anyMatch(ColonyView.Citizen::problem);
-            StadButton b = StadButton.of(Component.literal(t.label + (trouble ? " (!)" : "")), btn -> {
+            StadButton b = StadButton.of(Component.literal(t.label + (trouble ? "!" : "")), btn -> {
                 tab = t;
                 lastTab = t;
                 scroll = 0;
@@ -139,6 +152,27 @@ public class TownHallScreen extends Screen {
                     .bounds(x + w - 100, top(), 100, 20).icon(Theme.icon("road")).tooltip(Tooltip.create(Component.literal("Join every door in town, and"
                             + " the town hall, with roads for the builders to lay: three wide, with lamp posts, round buildings and hills. Citizens walk"
                             + " faster on them. Press it again after building more: it adds what's missing."))).build());
+        }
+        if (researchBar()) {
+            List<ColonyView.Topic> can = choosable();
+            pick = Math.floorMod(pick, can.size());
+            ColonyView.Topic t = can.get(pick);
+            addRenderableWidget(StadButton.of(Component.literal("<"), b -> {
+                pick--;
+                rebuildWidgets();
+            }).bounds(x, top(), 20, 20).build());
+            addRenderableWidget(StadButton.of(Component.literal(font.plainSubstrByWidth(t.name(), 150)), b -> {
+                pick++;
+                rebuildWidgets();
+            }).bounds(x + 22, top(), 160, 20).tooltip(Tooltip.create(Component.literal(t.gives() + ". Takes " + t.cost() + "."))).build());
+            addRenderableWidget(StadButton.of(Component.literal(">"), b -> {
+                pick++;
+                rebuildWidgets();
+            }).bounds(x + 184, top(), 20, 20).build());
+            addRenderableWidget(StadButton.of(Component.literal("Research this").withStyle(ChatFormatting.GREEN), b -> PacketDistributor.sendToServer(
+                            new ColonyActionPayload(view.id(), ColonyActionPayload.Action.RESEARCH, t.id())))
+                    .bounds(x + w - 110, top(), 110, 20).icon(Theme.job("researcher")).tooltip(Tooltip.create(Component.literal(
+                            "Have the university work on this next."))).build());
         }
         int bw = (w - 3 * 4) / 4, by = height - 28;
         StadButton storage = StadButton.of(Component.literal("Storage"), b -> PacketDistributor.sendToServer(
@@ -206,6 +240,35 @@ public class TownHallScreen extends Screen {
             case CITIZENS -> citizens();
             case JOBS -> jobs();
             case BUILDINGS -> buildings();
+            case RESEARCH -> research();
+        }
+    }
+
+    private void research() {
+        text("The university's researchers work out how to build the town's other buildings, and better ways of working, a topic at a"
+                + " time, with books and materials from the stores." + (view.viewerRank().atLeast(Rank.OFFICER) ? " Choose what's next above."
+                : " The town's officers choose what's next."), Theme.FAINT);
+        for (ColonyView.State state : ColonyView.State.values()) {
+            List<ColonyView.Topic> topics = view.research().stream().filter(t -> t.state() == state).toList();
+            if (topics.isEmpty()) {
+                continue;
+            }
+            heading(switch (state) {
+                case CURRENT -> "Being researched";
+                case AVAILABLE -> "Can be researched";
+                case LOCKED -> "Needs other research first";
+                case DONE -> "Learned";
+            });
+            for (ColonyView.Topic t : topics) {
+                gap();
+                iconRow(Theme.job("researcher"), Component.literal(t.name()).withColor(state == ColonyView.State.DONE ? Theme.GOOD
+                        : state == ColonyView.State.LOCKED ? Theme.MUTED : Theme.GOLD).append(Component.literal(state == ColonyView.State.CURRENT
+                        ? "   " + t.percent() + "% done" : "").withColor(Theme.TEXT)));
+                text(t.gives() + ".", Theme.TEXT, 20, null);
+                if (state != ColonyView.State.DONE) {
+                    text("Takes " + t.cost() + (t.needs().isEmpty() ? "" : ". Needs " + t.needs() + " first") + ".", Theme.MUTED, 20, null);
+                }
+            }
         }
     }
 
@@ -215,7 +278,7 @@ public class TownHallScreen extends Screen {
                 .append(Component.literal("  ·  " + view.beds() + " beds, " + Math.max(0, view.beds() - homed) + " free  ·  land " + view.radius()
                         + " blocks round the hall").withColor(Theme.MUTED)));
         if (!view.growth().isEmpty()) {
-            text("The town's land: " + view.growth(), Theme.MUTED);
+            text(view.growth(), Theme.MUTED);
         }
         text("Founded by " + view.owner() + " · you're " + (view.viewerRank() == Rank.OWNER ? "its owner" : "a " + view.viewerRank().id()),
                 Theme.MUTED);
@@ -324,6 +387,9 @@ public class TownHallScreen extends Screen {
         Theme.inset(g, x - 4, listTop() - 2, w() + 8, bottom() - listTop() + 6);
         if (roadsBar()) {
             g.drawString(font, "Roads for the whole town", x, top() + 6, Theme.GOLD);
+        }
+        if (researchBar()) {
+            g.drawString(font, (pick % Math.max(1, choosable().size()) + 1) + " of " + choosable().size(), x + 212, top() + 6, Theme.MUTED);
         }
         if (!renaming) {
             Theme.header(g, font, title, width / 2, 8);

@@ -469,6 +469,21 @@ def _gather(l):
         l.ellipse(x, y, 1.2, 1.2, berry)
 
 
+def _scroll(l):
+    """The researcher's open book and quill."""
+    page, edge, ink, cover, feather = rgb("#efe4c4"), rgb("#b8a77c"), rgb("#5a4a3a"), rgb("#6a3a2a"), rgb("#e8e8e8")
+    l.poly([(1, 7), (8, 9), (8, 15), (1, 13)], cover)
+    l.poly([(15, 7), (8, 9), (8, 15), (15, 13)], cover)
+    l.poly([(2, 6.5), (8, 8.5), (8, 14), (2, 12)], page)
+    l.poly([(14, 6.5), (8, 8.5), (8, 14), (14, 12)], page)
+    l.line(8, 8.5, 8, 14, 1, edge)
+    for y in (9, 10.5):
+        l.line(3, y, 6.5, y + 0.8, 0.7, ink)
+        l.line(9.5, y + 0.8, 13, y, 0.7, ink)
+    l.line(10, 7, 14.5, 1, 1.2, feather)
+    l.line(10, 7, 9.2, 8.2, 0.8, ink)
+
+
 def _person(l):
     skin, shirt = rgb("#d9a77e"), rgb("#5f7f4a")
     l.ellipse(8, 4.5, 3, 3, skin)
@@ -607,7 +622,7 @@ ICONS = {
     "job/builder": _hammer, "job/farmer": _wheat, "job/lumberjack": _axe, "job/courier": _crate, "job/guard": _shield,
     "job/cook": _pot, "job/fisher": _fish, "job/shepherd": _sheep, "job/miner": _pickaxe, "job/smith": _anvil,
     "job/healer": _potion, "job/merchant": _emerald, "job/teacher": _book, "job/none": _question,
-    "job/carpenter": _saw, "job/mason": _trowel, "job/weaver": _yarn, "job/beekeeper": _bee, "job/gatherer": _gather,
+    "job/carpenter": _saw, "job/mason": _trowel, "job/weaver": _yarn, "job/beekeeper": _bee, "job/gatherer": _gather, "job/researcher": _scroll,
     "person": _person, "people": _people, "house": _house, "bell": _bell, "field": _hoe_field, "fence": _fence, "sapling": _sapling, "wall": _wall,
     "stall": _stall, "road": _road,
 }

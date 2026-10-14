@@ -17,7 +17,7 @@ import java.util.List;
 /** What the town hall screen shows, as sent to one player. */
 public record ColonyView(int id, String name, String owner, BlockPos center, int radius, String growth, int beds, Rank viewerRank, String standing,
                          List<Member> members, List<Citizen> citizens, List<String> buildings, List<String> needs, List<String> recentOrders,
-                         boolean open, boolean poaching, String war, List<Step> steps, List<Job> jobs) {
+                         boolean open, boolean poaching, String war, List<Step> steps, List<Job> jobs, List<Topic> research) {
     public record Member(String name, Rank rank) {}
 
     /** a citizen, and what they're doing (or what's stopping them: {@code problem}) */
@@ -27,6 +27,11 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
 
     /** a job: what it does and needs, what's missing for it here ("" for nothing), and who has it */
     public record Job(String job, String does, String needs, String problem, List<String> workers) {}
+
+    /** A research topic: what it gives and takes, what it needs first ("" for nothing), how far along, and its state. */
+    public record Topic(String id, String name, String gives, String cost, String needs, int percent, State state) {}
+
+    public enum State { CURRENT, AVAILABLE, LOCKED, DONE }
 
     public static ColonyView of(Colony c, ServerLevel level, ServerPlayer viewer) {
         List<Member> members = new ArrayList<>();
@@ -73,14 +78,29 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         List<Step> steps = dev.eiriksb.stad.colony.Guide.steps(level, c).stream().map(x -> new Step(x.text(), x.done())).toList();
         List<Job> jobs = dev.eiriksb.stad.colony.Guide.jobs(level, c).stream()
                 .map(j -> new Job(j.job(), j.does(), j.needs(), j.problem() == null ? "" : j.problem(), j.workers())).toList();
-        int wanted = dev.eiriksb.stad.colony.Growth.wanted(c), per = dev.eiriksb.stad.StadConfig.LAND_PER_HOME.get();
-        String growth = per == 0 ? "" : c.radius >= dev.eiriksb.stad.StadConfig.MAX_RADIUS.get() ? "It's grown as far as it can."
+        int wanted = dev.eiriksb.stad.colony.Growth.wanted(c), per = dev.eiriksb.stad.colony.Growth.perHome(c);
+        String growth = per == 0 ? "" : c.radius >= dev.eiriksb.stad.colony.Growth.max(c) ? "The land has grown as far as it can."
                 : wanted > c.radius && dev.eiriksb.stad.colony.Growth.room(c, dev.eiriksb.stad.colony.ColonyManager.get(level.getServer()).all()) <= c.radius
-                ? "It can't grow any further: another town's land is in the way."
-                : "It grows " + per + " blocks with each new home (up to " + dev.eiriksb.stad.StadConfig.MAX_RADIUS.get() + ").";
+                ? "The land can't grow any further: another town's land is in the way."
+                : "The land grows " + per + " blocks with each new home (up to " + dev.eiriksb.stad.colony.Growth.max(c) + ").";
         return new ColonyView(c.id, c.name(), c.ownerName(), c.center, c.radius, growth, Homes.beds(level, c).size(), c.rank(viewer.getUUID()),
                 standing.toString(), members, citizens, buildings, needs, orders, c.politics.open(), c.politics.poaching, String.join("; ", wars),
-                steps, jobs);
+                steps, jobs, research(c));
+    }
+
+    private static List<Topic> research(Colony c) {
+        List<Topic> out = new java.util.ArrayList<>();
+        for (dev.eiriksb.stad.colony.Research.Topic t : dev.eiriksb.stad.colony.Research.TOPICS) {
+            boolean done = dev.eiriksb.stad.colony.Research.has(c, t.id());
+            State state = done ? State.DONE : t.id().equals(c.research.current) ? State.CURRENT
+                    : dev.eiriksb.stad.colony.Research.available(c, t) ? State.AVAILABLE : State.LOCKED;
+            String needs = String.join(" and ", t.requires().stream().filter(r -> !c.research.done.contains(r))
+                    .map(r -> dev.eiriksb.stad.colony.Research.topic(r).map(dev.eiriksb.stad.colony.Research.Topic::name).orElse(r)).toList());
+            int percent = state == State.CURRENT ? 100 * c.research.progress / Math.max(1, t.work()) : 0;
+            out.add(new Topic(t.id(), t.name(), dev.eiriksb.stad.colony.Research.gives(t), dev.eiriksb.stad.colony.Research.describe(t.cost())
+                    + (state == State.CURRENT && c.research.paid ? " (paid)" : ""), needs, percent, state));
+        }
+        return out;
     }
 
     public static void send(ServerPlayer player, Colony colony, ServerLevel level) {
@@ -132,6 +152,15 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
             b.writeUtf(j.problem());
             b.writeCollection(j.workers(), FriendlyByteBuf::writeUtf);
         });
+        buf.writeCollection(research, (b, t) -> {
+            b.writeUtf(t.id());
+            b.writeUtf(t.name());
+            b.writeUtf(t.gives());
+            b.writeUtf(t.cost());
+            b.writeUtf(t.needs());
+            b.writeVarInt(t.percent());
+            b.writeEnum(t.state());
+        });
     }
 
     static ColonyView read(FriendlyByteBuf buf) {
@@ -146,6 +175,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
                 buf.readList(FriendlyByteBuf::readUtf),
                 buf.readBoolean(), buf.readBoolean(), buf.readUtf(),
                 buf.readList(b -> new Step(b.readUtf(), b.readBoolean())),
-                buf.readList(b -> new Job(b.readUtf(), b.readUtf(), b.readUtf(), b.readUtf(), b.readList(FriendlyByteBuf::readUtf))));
+                buf.readList(b -> new Job(b.readUtf(), b.readUtf(), b.readUtf(), b.readUtf(), b.readList(FriendlyByteBuf::readUtf))),
+                buf.readList(b -> new Topic(b.readUtf(), b.readUtf(), b.readUtf(), b.readUtf(), b.readUtf(), b.readVarInt(), b.readEnum(State.class))));
     }
 }

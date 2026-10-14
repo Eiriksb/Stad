@@ -106,6 +106,11 @@ public final class Requirements {
         type(BuildingDef.SCHOOL,
                 block("a lectern", net.minecraft.world.level.block.Blocks.LECTERN),
                 new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
+        type(BuildingDef.UNIVERSITY,
+                block("a lectern", net.minecraft.world.level.block.Blocks.LECTERN),
+                new Need("bookshelves (four or more)", c -> c.count(net.minecraft.world.level.block.Blocks.BOOKSHELF) >= 4, true,
+                        net.minecraft.world.level.block.Blocks.BOOKSHELF),
+                new Need("a light", c -> c.has(Contents.Thing.LIGHT), false));
         TYPES.put(BuildingDef.FIELD, List.of( // fields, pens and groves are land, not buildings: no walls or roof
                 new Need("farmland (at least four blocks)", c -> c.count(net.minecraft.world.level.block.Blocks.FARMLAND) >= 4
                         || c.markerLike("stad:plot"), true),
@@ -272,6 +277,9 @@ public final class Requirements {
         }
         if (w.contains("market") || w.contains("shop") || w.contains("stall") || w.contains("trading")) {
             return BuildingDef.MARKET;
+        }
+        if (w.contains("university") || w.contains("research") || w.contains("academy") || w.contains("library")) {
+            return BuildingDef.UNIVERSITY;
         }
         if (w.contains("school") || w.contains("classroom")) {
             return BuildingDef.SCHOOL;

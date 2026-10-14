@@ -62,6 +62,7 @@ too.
 | Weaver | makes wool into beds for new homes, and carpets | a **loom house** (a loom), wool and planks, and shears |
 | Beekeeper | brings bees to the hives, sows flowers for them, takes the honey and honeycomb | an **apiary** (beehives among flowers: lay one out at the architect's table), shears, and glass bottles for the honey |
 | Gatherer | digs dirt, sand, gravel and clay from the land round the town, forages berries, sugar cane, seeds and flowers, and picks up what's left lying about | nothing; a shovel makes it quicker |
+| Researcher | studies how to build the town's other buildings, and better ways of working | a **university** (a lectern and bookshelves), books and materials, and a topic chosen in the town hall's Research tab |
 
 The carpenter, mason and weaver first make whatever the builders are waiting for (a door, stone bricks, a bed for a
 new house), then keep the town stocked with the basics: 64 planks and 32 sticks; 32 stone, 64 stone bricks and 16
@@ -76,6 +77,33 @@ start the day there, work the land round it, work faster and are happier; withou
 
 Workers bring what they gather to the **warehouse** (or the town hall when there's none). Late in the afternoon they
 bring the day's work in.
+
+**Research.** At first the town can build homes, the builder's hut, the warehouse, the farmhouse and fields, the
+lumber camp and groves, the kitchen, roads and a **university**. To build the rest, build a university (a lectern and
+bookshelves), make someone a **researcher**, and choose a topic in the town hall's **Research** tab. Each topic takes
+some books and materials from the stores and a few minutes' study, and then unlocks its buildings (Mining: the mine and
+quarry; Animal husbandry: the barn and pen; Masonry, after Mining: the stoneworks...). Some topics are upgrades instead:
+Better tools and Mastery make every worker a tenth quicker, Surveying and Cartography let the land grow further. In
+the building plans, what isn't learned yet is greyed out and says what to research.
+
+| Topic | Needs first | Unlocks |
+|---|---|---|
+| Animal husbandry | | barn, pen |
+| Fishing | | fishery, dock |
+| Mining | | mine, quarry |
+| Carpentry | | sawmill |
+| Trade | | market, market square |
+| Medicine | | infirmary |
+| Schooling | | school |
+| Surveying | | the land grows 2 more per home, and 32 further |
+| Masonry | Mining | stoneworks |
+| Smithing | Mining | smithy |
+| Weaving | Animal husbandry | loom house |
+| Beekeeping | Animal husbandry | apiary |
+| Defence | Smithing | barracks, watchtower, guard post, wall |
+| Better tools | Carpentry | workers a tenth quicker |
+| Mastery | Better tools, Smithing | workers another tenth quicker |
+| Cartography | Surveying | the land grows another 32 further |
 
 **The warehouse's shelves.** Each chest (or double chest, or rack of them) in a warehouse is for one kind of goods:
 building blocks, wood, ores and metals, food, farming, wool and cloth, tools and arms, or everything else. It says so
@@ -226,6 +254,7 @@ change:
 | `colonies.claimRadius` | 32 | how far a new town's land reaches |
 | `colonies.landPerHome` | 4 | how many blocks the land grows with each home finished on it |
 | `colonies.maxRadius` | 96 | how far a town's land can grow to |
+| `colonies.research` | true | whether new towns research most buildings first |
 | `colonies.arrivalMinutes` | 5 | minutes between newcomers |
 | `colonies.leadership` | NORMAL | LOYAL (they always obey), NORMAL, HARSH |
 | `jobs.herdSize` | 6 | animals of each kind the shepherd keeps |

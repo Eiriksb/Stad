@@ -1,0 +1,9 @@
+{
+  "type": "stad:university",
+  "name": "University",
+  "description": "Shelves of books and two lecterns, where the town's researchers study.",
+  "structure": "stad:medieval/university",
+  "tags": [
+    "workplace"
+  ]
+}

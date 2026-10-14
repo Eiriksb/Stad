@@ -807,6 +807,9 @@ public final class Tables {
                 problem = "That overlaps the " + b.name + (b.done() ? "." : ", which isn't finished yet.");
             }
         }
+        if (problem == null) {
+            problem = dev.eiriksb.stad.colony.Research.locked(colony, p.type);
+        }
         if (!Planning.canPlan(colony, player)) {
             problem = "Only officers of " + colony.name() + " can plan buildings.";
         }

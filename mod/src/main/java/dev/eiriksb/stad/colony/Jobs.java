@@ -23,8 +23,9 @@ public final class Jobs {
     public static final String WEAVER = "weaver";
     public static final String BEEKEEPER = "beekeeper";
     public static final String GATHERER = "gatherer";
+    public static final String RESEARCHER = "researcher";
     private static final List<String> ALL = List.of(BUILDER, FARMER, LUMBERJACK, COURIER, GUARD, COOK, FISHER, SHEPHERD, MINER, SMITH,
-            HEALER, MERCHANT, TEACHER, CARPENTER, MASON, WEAVER, BEEKEEPER, GATHERER);
+            HEALER, MERCHANT, TEACHER, CARPENTER, MASON, WEAVER, BEEKEEPER, GATHERER, RESEARCHER);
     private static final Map<String, String> WHAT = Map.ofEntries(Map.entry(
 BUILDER, "you build what the town's leaders plan, with materials from the town hall"),
             Map.entry(FARMER, "you make the town's fields (till the ground round a water hole), sow them, and harvest and replant the crops"),
@@ -44,7 +45,9 @@ BUILDER, "you build what the town's leaders plan, with materials from the town h
             Map.entry(WEAVER, "you work at the loom house: you make the shepherd's wool into beds for new homes, and carpets"),
             Map.entry(BEEKEEPER, "you keep the town's bees at the apiary: you bring bees to the hives, plant flowers for them, and take the honey and honeycomb"),
             Map.entry(GATHERER, "you gather the basics from the land round the town: you dig dirt, sand, gravel and clay, forage berries, sugar cane,"
-                    + " seeds and flowers, and pick up what's been left lying about"));
+                    + " seeds and flowers, and pick up what's been left lying about"),
+            Map.entry(RESEARCHER, "you work at the university, studying how to build what the town can't yet, and better ways of working, with"
+                    + " books and materials from the stores"));
 
     private Jobs() {}
 

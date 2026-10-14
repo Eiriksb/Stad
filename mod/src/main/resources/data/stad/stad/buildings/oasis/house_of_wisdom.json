@@ -1,0 +1,9 @@
+{
+  "type": "stad:university",
+  "name": "House of Wisdom",
+  "description": "Cool reading rooms lined with books, where the researchers study.",
+  "structure": "stad:oasis/house_of_wisdom",
+  "tags": [
+    "workplace"
+  ]
+}

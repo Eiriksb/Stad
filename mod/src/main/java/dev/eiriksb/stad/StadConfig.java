@@ -26,6 +26,10 @@ public final class StadConfig {
             .comment("How far (in blocks) a town's land can grow to at most.")
             .defineInRange("maxRadius", 96, 16, 512);
 
+    public static final ModConfigSpec.BooleanValue RESEARCH = B
+            .comment("Whether new towns research most of their buildings at a university first (false: everything is there from the start).")
+            .define("research", true);
+
     public static final ModConfigSpec.IntValue MAX_COLONIES_PER_PLAYER = B
             .comment("How many towns one player may found (0: no limit).")
             .defineInRange("maxColoniesPerPlayer", 1, 0, 100);

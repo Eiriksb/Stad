@@ -194,6 +194,10 @@ public final class StadNetwork {
                 player.sendSystemMessage(Component.literal(r.message()).withStyle(r.error() ? ChatFormatting.RED : ChatFormatting.GREEN));
                 ColonyView.send(player, colony, level, r.message(), r.error());
             }
+            case RESEARCH -> {
+                String said = dev.eiriksb.stad.colony.Research.choose(colony, player, p.text());
+                ColonyView.send(player, colony, level, said, !said.startsWith("The university will"));
+            }
             case POACHING -> {
                 if (colony.owner().equals(player.getUUID())) {
                     colony.politics.poaching = !colony.politics.poaching;

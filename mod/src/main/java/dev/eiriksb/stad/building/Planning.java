@@ -84,6 +84,9 @@ public final class Planning {
         if (!colony.rank(player.getUUID()).atLeast(OrderKind.PLAN_BUILDING.minRank)) {
             outcome = Order.Outcome.NOT_ALLOWED;
             reason = "Only officers of " + colony.name() + " can plan buildings.";
+        } else if ((reason = dev.eiriksb.stad.colony.Research.locked(colony, design != null ? design.type()
+                : BuildingPacks.get(key).map(BuildingDef::type).orElse(null))) != null) {
+            outcome = Order.Outcome.INVALID;
         } else if ((reason = problem(colony, blueprint, origin, rotation)) != null
                 || (reason = ground(level, blueprint, origin, rotation)) != null) {
             outcome = Order.Outcome.INVALID;

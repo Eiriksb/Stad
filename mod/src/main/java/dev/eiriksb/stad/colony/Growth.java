@@ -24,7 +24,18 @@ public final class Growth {
 
     /** How far the town's land would reach with its homes, before any other town is in the way. */
     public static int wanted(Colony colony) {
-        return Math.min(Math.max(colony.baseRadius, StadConfig.MAX_RADIUS.get()), colony.baseRadius + StadConfig.LAND_PER_HOME.get() * homes(colony));
+        return Math.min(max(colony), colony.baseRadius + perHome(colony) * homes(colony));
+    }
+
+    /** How far it can grow at most (further with Surveying and Cartography researched). */
+    public static int max(Colony colony) {
+        return Math.max(colony.baseRadius, StadConfig.MAX_RADIUS.get() + Research.moreLand(colony));
+    }
+
+    /** How much each home adds. */
+    public static int perHome(Colony colony) {
+        int per = StadConfig.LAND_PER_HOME.get();
+        return per == 0 ? 0 : per + Research.morePerHome(colony);
     }
 
     /** How far it can reach without running into another town's land. */

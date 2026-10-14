@@ -13,8 +13,9 @@ import java.util.List;
 /** Server to client: open the building plans for a spot (the buildings that can be planned there). */
 public record PlansPayload(int colony, BlockPos at, Rotation rotation, List<Option> options, List<String> palettes) implements CustomPacketPayload {
     /** a building: {@code group} is what kind it is ("Homes", "Workplaces"...), {@code purpose} what it's for, in a line */
+    /** A building to choose; {@code locked} is the research it needs first ("" for none). */
     public record Option(String key, String name, String description, int sizeX, int sizeY, int sizeZ, String materials, String group,
-                         String purpose) {}
+                         String purpose, String locked) {}
 
     public static final Type<PlansPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "plans"));
     public static final StreamCodec<FriendlyByteBuf, PlansPayload> CODEC = StreamCodec.of((buf, p) -> {
@@ -31,11 +32,12 @@ public record PlansPayload(int colony, BlockPos at, Rotation rotation, List<Opti
             b.writeUtf(o.materials());
             b.writeUtf(o.group());
             b.writeUtf(o.purpose());
+            b.writeUtf(o.locked());
         });
         buf.writeCollection(p.palettes, FriendlyByteBuf::writeUtf);
     }, buf -> new PlansPayload(buf.readVarInt(), buf.readBlockPos(), buf.readEnum(Rotation.class),
             buf.readList(b -> new Option(b.readUtf(), b.readUtf(), b.readUtf(), b.readVarInt(), b.readVarInt(), b.readVarInt(), b.readUtf(),
-                    b.readUtf(), b.readUtf())),
+                    b.readUtf(), b.readUtf(), b.readUtf())),
             buf.readList(FriendlyByteBuf::readUtf)));
 
     @Override

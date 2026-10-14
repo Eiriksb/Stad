@@ -60,7 +60,10 @@ public final class Guide {
             Map.entry(Jobs.BEEKEEPER, new String[]{"Brings bees to the hives, plants flowers for them and takes the honey and honeycomb.",
                     "An apiary (beehives among flowers: lay one out at the architect's table), shears, and glass bottles for the honey."}),
             Map.entry(Jobs.GATHERER, new String[]{"Digs dirt, sand, gravel and clay from the land round the town, forages berries, sugar cane, seeds"
-                    + " and flowers, and picks up what's left lying about.", "Nothing; a shovel makes it quicker."}));
+                    + " and flowers, and picks up what's left lying about.", "Nothing; a shovel makes it quicker."}),
+            Map.entry(Jobs.RESEARCHER, new String[]{"Works out how to build the town's other buildings (and so their jobs), and better ways"
+                    + " of working, a topic at a time.", "A university (a lectern and bookshelves), books and materials in the town hall, and a"
+                    + " topic chosen in the town hall's Research tab."}));
 
     public static String does(String job) {
         return JOBS.getOrDefault(job, new String[]{"", ""})[0];
@@ -107,6 +110,7 @@ public final class Guide {
             case Jobs.MASON -> built(colony, BuildingDef.STONEWORKS) ? null : "No stoneworks";
             case Jobs.WEAVER -> built(colony, BuildingDef.LOOM_HOUSE) ? null : "No loom house";
             case Jobs.BEEKEEPER -> built(colony, BuildingDef.APIARY) ? null : "No apiary";
+            case Jobs.RESEARCHER -> !built(colony, BuildingDef.UNIVERSITY) ? "No university" : colony.research.current == null ? "Nothing chosen to research" : null;
             case Jobs.TEACHER -> !built(colony, BuildingDef.SCHOOL) ? "No school"
                     : colony.citizens().stream().noneMatch(r -> level.getEntity(r.uuid) instanceof dev.eiriksb.stad.citizen.CitizenEntity e && e.isBaby())
                     ? "No children" : null;
@@ -140,12 +144,16 @@ public final class Guide {
         out.add(new Step("Feed the town: put food in the town hall, and make a farmer and a cook (with a furnace) to keep it fed.",
                 people.stream().anyMatch(r -> Jobs.FARMER.equals(r.job)) && people.stream().anyMatch(r -> Jobs.COOK.equals(r.job))));
         out.add(new Step("Give everyone a bed: plan houses as the town grows.", people.size() >= 3 && people.stream().allMatch(r -> r.home != null)));
-        out.add(new Step("Design fields, a pen for the animals and a grove at the architect's table (a cartography table with Building Plans"
-                + " on top): pick Field, Pen or Grove as its kind.", colony.buildings().stream().anyMatch(b -> !b.key.equals(Fields.KEY)
+        out.add(new Step("Design fields and a grove at the architect's table (a cartography table with Building Plans on top): pick Field or"
+                + " Grove as its kind.", colony.buildings().stream().anyMatch(b -> !b.key.equals(Fields.KEY)
                 && dev.eiriksb.stad.architect.Yard.is(b.type()))));
         out.add(new Step("Build workplaces (a farmhouse, lumber camp, kitchen...): workers there work faster and are happier.",
                 people.stream().anyMatch(r -> r.workplace != null) && people.stream().filter(r -> Workplaces.wanted(r.job) != null)
                         .allMatch(r -> Workplaces.of(colony, r).isPresent())));
+        if (dev.eiriksb.stad.StadConfig.RESEARCH.get()) {
+            out.add(new Step("Build a university, make someone a researcher and choose what to research (the Research tab): it unlocks the mine,"
+                    + " the barn, the smithy and the rest.", !colony.research.done.isEmpty()));
+        }
         out.add(new Step("Build a warehouse and make a courier: workers bring their goods there, and the courier carries what's needed.",
                 built(colony, BuildingDef.WAREHOUSE) && people.stream().anyMatch(r -> Jobs.COURIER.equals(r.job))));
         out.add(new Step("Keep the town safe: make a guard and put a sword in the town hall.", people.stream().anyMatch(r -> Jobs.GUARD.equals(r.job))));

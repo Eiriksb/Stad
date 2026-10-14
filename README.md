@@ -18,7 +18,7 @@ which Stad requires. Everything runs locally on your own GPU. No cloud, no API k
 > with the local AI), spend evenings with friends (passing news along), court, marry and have children who grow up.
 > Give them jobs from their card (right-click): **builder**, **farmer**, **lumberjack**, **courier**, **guard**, **cook**,
 > **fisher**, **shepherd**, **miner**, **smith**, **healer**, **merchant**, **teacher**, **carpenter**, **mason**,
-> **weaver**, **beekeeper** and **gatherer**.
+> **weaver**, **beekeeper**, **gatherer** and **researcher**.
 > **Plan buildings by talking to your builder**: "a small stone cottage with two bedrooms, a spruce roof and a
 > chimney". They draw it up (restyling one of the pack's buildings when it fits, or designing a new one: framing,
 > rooms, stairs, furniture, gable, hip or flat roofs, porches, chimneys), a see-through ghost of it appears on free
@@ -74,6 +74,7 @@ them.) When you talk to the builder aloud, they keep it short and leave the list
 | Weaver | makes wool into beds for new homes, and carpets | a loom house (a loom), wool and planks, shears |
 | Beekeeper | brings bees to the hives, sows flowers for them, takes honey (into glass bottles) and honeycomb | an apiary (lay one out at the architect's table), shears |
 | Gatherer | digs dirt, sand, gravel and clay off the top of the land round the town, forages berries, sugar cane, seeds and flowers, picks up what's lying about | nothing (a shovel makes it quicker) |
+| Researcher | studies a topic at a time to unlock buildings and upgrades | a university (a lectern and bookshelves), books and materials |
 
 All of it happens on the town's land. **Every citizen says what they're doing, or what's stopping them and what would
 fix it**, on their card and in the town hall's Citizens tab; the Jobs tab says what each job needs and whether the town
@@ -236,6 +237,12 @@ arrive: more for bigger, richer towns (`maxRaiders` at most). Guards fight; ever
 the far side of town when there's nowhere to hide. Afterwards the whole town remembers it ("Hild killed four
 of them"), your standing rises if you saw them through it (and drops if you weren't there), and anything broken
 becomes a repair order the builders do first. `mobRaids` in the config: off, easy, normal or hard.
+
+**Research.** A new town can build its homes, the builder's hut, the warehouse, the farmhouse and fields, the lumber
+camp and groves, the kitchen, roads and a **university** from the start. The rest a **researcher** works out at the
+university (a lectern and bookshelves), a topic at a time, with books and materials from the stores: Mining unlocks
+the mine and quarry, Animal husbandry the barn and pen, Smithing the smithy, and so on, plus upgrades for quicker work
+and more land. Officers choose what's next in the town hall's **Research** tab. Turn it off with `research = false`.
 
 **Your land grows.** A new town's land reaches 32 blocks round its town hall, and every home finished on it adds 4
 more, up to 96 (`claimRadius`, `landPerHome`, `maxRadius`). It stops where another town's land begins, and never

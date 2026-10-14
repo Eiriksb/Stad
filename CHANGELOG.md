@@ -127,6 +127,20 @@
   carry, the courier puts what's on the wrong shelf on the right one, and when the town hall is nearly full takes what
   it doesn't need (not its food, tools or what the builders are waiting for) to the warehouse.
 
+**The university and research**
+- A new town can build its homes, the builder's hut, the warehouse, the farmhouse and fields, the lumber camp and
+  groves, the kitchen, roads and a **university** from the start. The rest it learns: a **researcher** at the
+  university (a lectern and bookshelves; a University and a House of Wisdom in the packs) studies a topic at a time,
+  using books and materials from the stores, and when it's done the town can build what it unlocks.
+- Sixteen topics: Animal husbandry (barn, pen), Fishing (fishery, dock), Mining (mine, quarry), Carpentry (sawmill),
+  Trade (market, market square), Masonry, Smithing, Weaving, Beekeeping, Medicine, Schooling and Defence (barracks,
+  watchtower, guard post, wall) for buildings, some needing others first; and upgrades: Better tools and Mastery
+  (workers a tenth quicker each), Surveying and Cartography (more land).
+- The town hall's new **Research** tab shows what's learned, what's being studied and how far along, and what each
+  topic takes and gives; officers choose what's next there. Locked buildings are greyed out in the building plans,
+  with what to research, and can't be planned, adopted or designed at the table until they're learned.
+- Towns founded before this know whatever they've already built or planned. Turn research off with `research`.
+
 **Towns that grow**
 - A town's land starts smaller (32 blocks round the town hall) and grows by 4 blocks with every home finished on it,
   up to 96, stopping where another town's land begins. Members are told when it grows, citizens can roam the new

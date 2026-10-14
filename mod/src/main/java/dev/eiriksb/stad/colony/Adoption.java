@@ -108,6 +108,8 @@ public final class Adoption {
         } else if (c.problem() != null) {
             outcome = Order.Outcome.INVALID;
             reason = c.problem();
+        } else if ((reason = Research.locked(colony, c.type())) != null) {
+            outcome = Order.Outcome.INVALID;
         } else if (!c.missing().isEmpty()) {
             outcome = Order.Outcome.INVALID;
             reason = "To be a " + Requirements.word(c.type()) + " it needs " + c.missingText() + ".";

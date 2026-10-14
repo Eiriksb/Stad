@@ -47,6 +47,7 @@ public final class Workplaces {
             Map.entry(Jobs.HEALER, List.of(BuildingDef.INFIRMARY)),
             Map.entry(Jobs.MERCHANT, List.of(BuildingDef.MARKET, BuildingDef.STALLS)),
             Map.entry(Jobs.TEACHER, List.of(BuildingDef.SCHOOL)),
+            Map.entry(Jobs.RESEARCHER, List.of(BuildingDef.UNIVERSITY)),
             Map.entry(Jobs.CARPENTER, List.of(BuildingDef.SAWMILL)),
             Map.entry(Jobs.MASON, List.of(BuildingDef.STONEWORKS)),
             Map.entry(Jobs.WEAVER, List.of(BuildingDef.LOOM_HOUSE)),
@@ -94,7 +95,7 @@ public final class Workplaces {
             return s -> false; // one beekeeper looks after all the hives
         } else if (type.equals(BuildingDef.STALLS)) {
             return s -> s.is(Blocks.BARREL); // one behind each stall's counter
-        } else if (type.equals(BuildingDef.SCHOOL)) {
+        } else if (type.equals(BuildingDef.SCHOOL) || type.equals(BuildingDef.UNIVERSITY)) {
             return s -> s.is(Blocks.LECTERN);
         } else if (type.equals(BuildingDef.BARRACKS)) {
             return s -> s.getBlock() instanceof BedBlock && s.getValue(BedBlock.PART) == BedPart.HEAD;

@@ -688,6 +688,27 @@ missing from a building), else a stack on the wrong shelf whose own shelf has ro
 `furnish_great_warehouse`, 13 by 11) and the generator's warehouse racks (two high round the walls, a wall sign over
 each where there's solid wall behind) make room for it.
 
+### 6.14 Research, growing land, and placing by hand
+
+**Research.** `colony/Research`: `TOPICS` (id, name, required topics, cost from the stores, pieces of work, building
+types unlocked, or an upgrade's effect). A type no topic unlocks is there from the start. `Colony.research` (`State`:
+done, current, progress, paid) is saved with the town; a town saved before it learns the topics of every building it
+has (`fromBuildings`). `Research.locked` refuses planning (`Planning.plan`, `Tables.plan`) and adoption; the building
+plans mark locked options. `ResearchGoal` (job `researcher`, workplace `stad:university`: a lectern and four
+bookshelves): fetch the cost from the stores (once), then a piece of study (600 ticks, paced like other work) at the
+lectern until `progress` reaches the topic's work; members are told. Officers choose with `ColonyActionPayload.RESEARCH`
+(`Research.choose`: available, and not while a paid topic is under way). Upgrades: `Research.speed` in `WorkGoal.pace`;
+`moreLand`/`morePerHome` in `Growth`. Config `research` (false: building topics count as done).
+
+**Growing land.** `Colony.radius` is mutable, `baseRadius` what it was founded with. `Growth.update` (with the town's
+upkeep): base + `landPerHome` (+ research) per finished home, up to `maxRadius` (+ research), and never past
+(distance to another town) − its radius; it never shrinks. Members are told and citizens' roaming widened.
+
+**Placing by hand.** The plans' Preview asks the server for the blueprint (`PlacePreviewPayload`, styled); the client
+(`BuildingPlacer`) draws it see-through via `GhostPreview.draw` with a box, follows the crosshair (48 blocks) or stays put,
+and moves with its own key mappings. Each move asks the server whether it fits (`PlanActionPayload` with `check`),
+debounced; Enter sends the plan with where it is now.
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).

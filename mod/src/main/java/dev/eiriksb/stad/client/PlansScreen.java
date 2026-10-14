@@ -78,7 +78,9 @@ public class PlansScreen extends Screen {
         int y = 51;
         for (int k = scroll; k < Math.min(list.size(), scroll + rows); k++) {
             int index = list.get(k);
-            addRenderableWidget(StadButton.of(Component.literal(font.plainSubstrByWidth(plans.options().get(index).name(), 104)), btn -> {
+            PlansPayload.Option o = plans.options().get(index);
+            addRenderableWidget(StadButton.of(Component.literal(font.plainSubstrByWidth(o.name(), 104)).withStyle(o.locked().isEmpty()
+                    ? ChatFormatting.RESET : ChatFormatting.DARK_GRAY), btn -> {
                 selected = index;
                 rebuildWidgets();
             }).bounds(x + 3, y, 110, 20).build().chosen(index == selected));
@@ -95,13 +97,14 @@ public class PlansScreen extends Screen {
                 b.setMessage(styleLabel());
             }).bounds(x, by - 24, 110, 20).build());
         }
+        boolean locked = !plans.options().isEmpty() && !plans.options().get(selected).locked().isEmpty();
         addRenderableWidget(StadButton.of(Component.literal("Preview"), b -> send(true)).bounds(x + 106, by, 70, 20)
                 .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("See the whole building where it would go, and move it"
                         + " about before planning it"))).build());
         addRenderableWidget(StadButton.of(Component.literal("Plan it").withStyle(ChatFormatting.GREEN), b -> {
             send(false);
             onClose();
-        }).bounds(x + 182, by, 70, 20).build());
+        }).bounds(x + 182, by, 70, 20).build()).active = !locked;
         addRenderableWidget(StadButton.of(Component.literal("Cancel"), b -> onClose()).bounds(x + 258, by, 82, 20).build());
     }
 
@@ -163,6 +166,13 @@ public class PlansScreen extends Screen {
         int y = 52;
         g.drawString(font, Component.literal(o.name()).withStyle(ChatFormatting.BOLD), x, y, Theme.GOLD);
         y += 13;
+        if (!o.locked().isEmpty()) {
+            for (var line : font.split(Component.literal("Not yet: research " + o.locked() + " at a university first (the town hall's Research tab)."), tw)) {
+                g.drawString(font, line, x, y, Theme.BAD);
+                y += 10;
+            }
+            y += 2;
+        }
         for (var line : font.split(Component.literal(o.purpose()), tw)) {
             g.drawString(font, line, x, y, 0xFFFFE08A);
             y += 10;
@@ -178,7 +188,9 @@ public class PlansScreen extends Screen {
         Theme.heading(g, font, "Materials", x, y, tw);
         y += 13;
         for (var line : font.split(Component.literal(o.materials()), tw)) {
-            g.drawString(font, line, x, y, Theme.TEXT);
+            if (y < listBottom() - 4) {
+                g.drawString(font, line, x, y, Theme.TEXT);
+            }
             y += 10;
         }
         y += 6;

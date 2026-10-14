@@ -67,7 +67,7 @@ public final class Fit {
             } else if (type.equals(BuildingDef.FARMHOUSE) || type.equals(BuildingDef.FISHERY) || type.equals(BuildingDef.BARN)
                     || type.equals(BuildingDef.MARKET)) {
                 rooms = List.of("storage");
-            } else if (type.equals(BuildingDef.SCHOOL)) {
+            } else if (type.equals(BuildingDef.SCHOOL) || type.equals(BuildingDef.UNIVERSITY)) {
                 rooms = List.of("library");
             } else if (type.equals(BuildingDef.INFIRMARY)) {
                 rooms = List.of("bedroom", "storage");

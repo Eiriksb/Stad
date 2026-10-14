@@ -46,6 +46,7 @@ public class BuildingPlansItem extends Item {
             return "Homes";
         }
         if (t.equals(BuildingDef.WAREHOUSE) || t.equals(BuildingDef.MARKET) || t.equals(BuildingDef.SCHOOL) || t.equals(BuildingDef.INFIRMARY)
+                || t.equals(BuildingDef.UNIVERSITY)
                 || t.equals(BuildingDef.BARRACKS) || t.equals(BuildingDef.WATCHTOWER)) {
             return "Town";
         }
@@ -82,6 +83,9 @@ public class BuildingPlansItem extends Item {
         if (t.equals(BuildingDef.WAREHOUSE)) {
             return "Where workers bring what they make, and couriers work from." + sleeps;
         }
+        if (t.equals(BuildingDef.UNIVERSITY)) {
+            return "Where the researchers work out how to build the rest of the town's buildings, and better ways of working.";
+        }
         Optional<String> job = dev.eiriksb.stad.colony.Workplaces.jobFor(t);
         return job.map(j -> "Where the " + j + (j.equals("guard") ? "s live and" : "") + " work" + (j.equals("guard") ? "" : "s")
                 + ": they work faster and are happier there.").orElse("A " + dev.eiriksb.stad.building.Requirements.word(t) + ".") + sleeps
@@ -111,7 +115,7 @@ public class BuildingPlansItem extends Item {
                     : Construction.describe(Placement.of(d.blueprint(), ctx.getClickedPos(), net.minecraft.world.level.block.Rotation.NONE)
                     .materials(), 6);
             options.add(new PlansPayload.Option(d.key().toString(), d.name(), d.description(), size.getX(), size.getY(), size.getZ(), materials,
-                    group(d), purpose(d)));
+                    group(d), purpose(d), dev.eiriksb.stad.colony.Research.needed(colony.get(), d.type()).map(t -> t.name()).orElse("")));
         });
         PacketDistributor.sendToPlayer(player, new PlansPayload(colony.get().id, ctx.getClickedPos(),
                 Placement.facingViewer(player.getDirection()), options,

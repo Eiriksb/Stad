@@ -374,6 +374,22 @@ def school_with(seat):
     return lambda b, w, d: furnish_school(b, w, d, seat)
 
 
+def furnish_university(b, w, d):
+    """Bookshelves two high along the back wall and down the sides, two lecterns (a researcher at each), a chest, lamps."""
+    for x in range(1, w - 1):
+        for y in (1, 2):
+            b[(x, y, d - 2)] = ("minecraft:bookshelf", {})
+    for z in range(3, d - 2):
+        for y in (1, 2):
+            b[(1, y, z)] = ("minecraft:bookshelf", {})
+            b[(w - 2, y, z)] = ("minecraft:bookshelf", {})
+    for x in (3, w - 4):
+        b[(x, 1, d // 2)] = ("minecraft:lectern", {"facing": "north", "has_book": "false", "powered": "false"})
+    b[(w // 2, 1, d // 2)] = ("minecraft:chest", {"facing": "north", "type": "single"})
+    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+    b[(w - 2, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
+
+
 # ---- the trades' workplaces ---------------------------------------------------------------------------------------
 
 def furnish_sawmill(b, w, d):
@@ -483,6 +499,8 @@ PACKS = {
                    workplace(medieval_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
         "school": ("stad:school", "Schoolhouse", "Benches facing the teacher's lectern, between the bookshelves.",
                    workplace(medieval_shell, school_with("minecraft:spruce_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "university": ("stad:university", "University", "Shelves of books and two lecterns, where the town's researchers study.",
+                       workplace(medieval_shell, furnish_university, 11, 9, SIDE_WINDOWS(11, 9)), ["workplace"]),
         "sawmill": ("stad:sawmill", "Sawmill", "A crafting table and a log pile, where the carpenter saws planks and makes doors and fences.",
                     workplace(medieval_shell, furnish_sawmill, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
         "stoneworks": ("stad:stoneworks", "Stoneworks", "A stonecutter and a furnace, where the mason makes stone, bricks and glass.",
@@ -512,6 +530,8 @@ PACKS = {
                  workplace(oasis_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
         "school": ("stad:school", "Oasis School", "Sandstone benches facing the lectern.",
                    workplace(oasis_shell, school_with("minecraft:sandstone_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
+        "house_of_wisdom": ("stad:university", "House of Wisdom", "Cool reading rooms lined with books, where the researchers study.",
+                            workplace(oasis_shell, furnish_university, 11, 9, SIDE_WINDOWS(11, 9)), ["workplace"]),
         "sawpit": ("stad:sawmill", "Sawpit", "Where palm and acacia logs are sawn into planks.",
                    workplace(oasis_shell, furnish_sawmill, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
         "stonecutters": ("stad:stoneworks", "Stonecutters' Yard", "Sandstone walls round the stonecutter and the kiln.",

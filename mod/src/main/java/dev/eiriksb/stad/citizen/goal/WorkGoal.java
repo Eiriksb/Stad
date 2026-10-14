@@ -302,6 +302,7 @@ abstract class WorkGoal extends Goal {
             t *= 0.75;
         }
         t *= dev.eiriksb.stad.citizen.Skills.speed(citizen.skill());
+        t *= citizen.colony().map(dev.eiriksb.stad.colony.Research::speed).orElse(1.0); // better tools, mastery
         return Math.max(1, (int) Math.ceil(t));
     }
 
