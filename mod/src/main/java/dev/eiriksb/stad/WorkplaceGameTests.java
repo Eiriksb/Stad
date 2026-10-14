@@ -92,13 +92,13 @@ public final class WorkplaceGameTests {
         helper.assertTrue(Workplaces.move(colony, c, fishery) != null, "full: " + Workplaces.move(colony, c, fishery));
         helper.assertTrue(Workplaces.move(colony, farmer, fishery) != null, "not for a farmer");
         // a farmhouse comes: the farmer gets it; changing job lets go
-        Building farmhouse = done(helper, colony, "stad:fjord/gardshus", new BlockPos(5, G - 1, 12), false);
+        Building farmhouse = done(helper, colony, "stad:oasis/farmhouse", new BlockPos(5, G - 1, 12), false);
         Workplaces.assign(colony);
-        helper.assertTrue(Workplaces.of(colony, farmer).map(x -> x.id == farmhouse.id).orElse(false), "the farmer works from the gardshus");
+        helper.assertTrue(Workplaces.of(colony, farmer).map(x -> x.id == farmhouse.id).orElse(false), "the farmer works from the farmhouse");
         a.job = Jobs.FARMER;
         Workplaces.assign(colony);
         helper.assertTrue(Workplaces.of(colony, c).isPresent(), "Ada's place went to Cy once Ada became a farmer");
-        helper.assertTrue(Workplaces.describe(colony, farmer).equals("the Gardshus") && "a fishery".equals(Workplaces.wanted(Jobs.FISHER)),
+        helper.assertTrue(Workplaces.describe(colony, farmer).equals("the Oasis Farmhouse") && "a fishery".equals(Workplaces.wanted(Jobs.FISHER)),
                 Workplaces.describe(colony, farmer));
         cleanUp(helper, colony, owner);
         helper.succeed();

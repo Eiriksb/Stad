@@ -78,7 +78,7 @@ building blocks, wood, ores and metals, food, farming, wool and cloth, tools and
 when you open it, and on the sign over the rack. Goods go onto their own shelf. To choose a chest's shelf yourself,
 name it in an anvil before you place it ("Food", "Ores"). A courier with nothing to carry puts things on the right
 shelves, and when the town hall is nearly full moves what it doesn't need to the warehouse. The **Great Warehouse**
-(and the Storstabbur and Great Storehouse) holds about 2,000 stacks.
+(and the Oasis Great Storehouse) holds about 2,000 stacks.
 
 **The gatherer** needs nothing but the land round the town. They gather what the town has asked for, then keep a
 little dirt, sand, gravel, clay, berries, sugar cane and seeds in stock. They take the top off natural ground, never
@@ -123,11 +123,9 @@ Design bigger ones, pens and groves at the architect's table (below).
 **Or talk to your builder**: "a small stone cottage with two bedrooms and a chimney". They draw it
 up, a ghost of it appears nearby, and you change it as you talk until you say "build it".
 
-The packs: **Medieval** (timber and cobblestone under hip roofs: cottage, builder's hut, warehouse, kitchen, mine),
-**Fjord** (laid log walls on stone footings under turf roofs: stue, stabbur, builder's smie) and **Oasis** (sandstone
-with flat roofs and parapets: house, storehouse, workshop). Any building can be built in any of the seven styles.
-
-![The Fjord and Oasis packs, and the Medieval kitchen and mine](packs.png)
+The packs: **Medieval** (timber and cobblestone under hip roofs: cottage, builder's hut, warehouses, kitchen, mine and
+the workplaces) and **Oasis** (sandstone with flat roofs and parapets: house, storehouses, workshop and the
+workplaces). Any building can be built in any of the seven styles.
 
 **The architect's table** (Building Plans on top of a cartography table) lets you design for one exact spot. Mark
 two corners with the scan wand and right-click the table with it. You see the site in 3D: drag to turn it, scroll to

@@ -28,7 +28,7 @@ public enum Faction {
             List.of("Jack", "Moll", "Silas", "Rook", "Mags", "Crispin", "Tam", "Wren", "Nell", "Garrick"),
             List.of("One-Eye", "the Knife", "Blackheart", "Quickfingers", "the Fox", "Crowfoot")),
     NORSE("Norse raiders", "Norse raider",
-            List.of("Bjørn", "Ivar", "Ragnar", "Sigurd", "Halvdan", "Ragnhild", "Thorfinn", "Ulf", "Gunnhild", "Hakon"),
+            List.of("Ivar", "Ragnar", "Sigurd", "Halfdan", "Thorfinn", "Ulf", "Gunnhild", "Harald", "Eric", "Astrid"),
             List.of("the Bold", "Ironside", "Bloodaxe", "the Grim", "the Red", "Wolfcloak")),
     MARAUDERS("marauders", "marauder",
             List.of("Kesh", "Varo", "Imra", "Tazu", "Orhan", "Selka", "Doran", "Ysra"),
@@ -62,7 +62,7 @@ public enum Faction {
         return random.nextBoolean() ? BANDITS : PILLAGERS;
     }
 
-    /** A name for a raid's leader: "Bjørn Ironside". */
+    /** A name for a raid's leader: "Ivar Ironside". */
     public String leaderName(RandomSource random) {
         return names.get(random.nextInt(names.size())) + " " + epithets.get(random.nextInt(epithets.size()));
     }

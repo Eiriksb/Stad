@@ -1,9 +1,0 @@
-{
-  "type": "stad:warehouse",
-  "name": "Storstabbur",
-  "description": "The great storehouse: racks of chests round its log walls, each for its own goods.",
-  "structure": "stad:fjord/storstabbur",
-  "tags": [
-    "storage"
-  ]
-}

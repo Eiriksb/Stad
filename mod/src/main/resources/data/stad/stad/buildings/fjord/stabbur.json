@@ -1,9 +1,0 @@
-{
-  "type": "stad:warehouse",
-  "name": "Stabbur",
-  "description": "The log storehouse, chests and barrels round its walls.",
-  "structure": "stad:fjord/stabbur",
-  "tags": [
-    "storage"
-  ]
-}

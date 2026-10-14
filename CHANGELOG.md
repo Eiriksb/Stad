@@ -118,7 +118,7 @@
   shaft before going deeper: two-high tunnels 24 blocks each way, with side tunnels every three blocks off the east and
   west ones, lit with torches, floored over caves, and on the town's land only. Any ore they uncover they dig out, the
   whole vein, as far as they can reach it.
-- **Great warehouses** in every pack (Great Warehouse, Storstabbur, Great Storehouse): double chests two high round the
+- **Great warehouses** in every pack (Great Warehouse, Great Storehouse): double chests two high round the
   walls and barrels down the middle, about 2,000 slots. Warehouses generated at the table get racks two high round
   their walls too.
 - **Shelves.** A warehouse's chests are each given a kind of goods (building blocks, wood, ores and metals, food,
@@ -126,6 +126,13 @@
   rack. Goods go onto their own shelf; name a chest in an anvil ("Food") to choose its shelf yourself. With nothing to
   carry, the courier puts what's on the wrong shelf on the right one, and when the town hall is nearly full takes what
   it doesn't need (not its food, tools or what the builders are waiting for) to the warehouse.
+
+**English names, one pack fewer**
+- The Fjord pack is gone (its buildings were doubles of the Medieval and Oasis ones under Norwegian names), so the
+  building plans list each building twice instead of three times. Buildings already put up from it stay standing but
+  aren't the town's any more.
+- New citizens and towns get English names (Alice Thatcher, Ashford) instead of Nordic ones; the ones already named
+  keep theirs.
 
 **Easier to play**
 - **Every citizen says what they're doing, or what's stopping them and what would fix it** ("No seeds to sow: put wheat

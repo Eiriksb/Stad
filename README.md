@@ -210,11 +210,8 @@ brings seven; add your own as `data/<namespace>/stad/palettes/<id>.json`:
 
 ![The Medieval cottage in its own materials and in the seven styles](docs/palettes.png)
 
-**Packs.** Besides Medieval (cottage, builder's hut, warehouse, kitchen, mine) the mod brings **Fjord** (laid log walls
-on stone footings under turf roofs) and **Oasis** (sandstone with flat roofs and parapets), each with a home, a
-warehouse and a builder's hut.
-
-![The Fjord and Oasis packs, and the Medieval kitchen and mine](docs/packs.png)
+**Packs.** Besides Medieval (timber and cobblestone under hip roofs) the mod brings **Oasis** (sandstone with flat
+roofs and parapets). Both have a home, a builder's hut, warehouses and every job's workplace.
 
 **Making do.** When the builder runs out of a material and the town has enough of a similar one (another wood for
 wood, another stone for stone), they ask before swapping: "We're out of oak. Shall I use birch for the walls?" Say
@@ -233,7 +230,7 @@ sorts (boastful or dramatic citizens) pick up a weapon when their town is attack
 depends on the land round the town hall: **Norse raiders** (iron helmets and axes) in taiga and snowy lands,
 **marauders** (sand-coloured leathers, golden swords and bows) in deserts, badlands and savanna, and **bandits** (dark
 leathers, swords and bows) or the game's **pillagers** elsewhere. Every raid but the pillagers' has a named leader,
-tougher and better armoured than the rest ("Bjørn Ironside and 5 Norse raiders are attacking Lillestad from the
+tougher and better armoured than the rest ("Ivar Ironside and 5 Norse raiders are attacking Ashford from the
 north!"). A citizen spots them and shouts which way they're coming from, a horn sounds, and a minute later they
 arrive: more for bigger, richer towns (`maxRaiders` at most). Guards fight; everyone else shelters indoors, or runs to
 the far side of town when there's nowhere to hide. Afterwards the whole town remembers it ("Hild killed four

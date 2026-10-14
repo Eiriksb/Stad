@@ -1,9 +1,0 @@
-{
-  "type": "stad:barn",
-  "name": "Fjos",
-  "description": "The byre: hay and a loom inside, a pen behind.",
-  "structure": "stad:fjord/fjos",
-  "tags": [
-    "workplace"
-  ]
-}

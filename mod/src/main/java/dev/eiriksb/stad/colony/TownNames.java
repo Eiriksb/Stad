@@ -4,13 +4,13 @@ import net.minecraft.util.RandomSource;
 
 import java.util.Collection;
 
-/** Names for new towns, with a Nordic flavour. */
+/** Names for new towns, after old English places. */
 final class TownNames {
     private static final String[] FIRST = {
-            "Elve", "Furu", "Bjørke", "Stein", "Fjell", "Sol", "Ny", "Gamle", "Lille", "Store", "Nord", "Sør", "Øst", "Vest",
-            "Eike", "Rogn", "Lyng", "Myr", "Sand", "Strand", "Berg", "Ulv", "Ørne", "Revs", "Bjørne", "Hjorte", "Å", "Kilde"};
+            "Ash", "Oak", "Elm", "Mill", "Stone", "Brook", "North", "South", "East", "West", "Green", "Red", "Old", "New",
+            "Fair", "Hazel", "Wolf", "Fox", "Raven", "Thorn", "Hay", "Long", "High", "Clear", "Rock", "Willow", "Bramble", "Kings"};
     private static final String[] LAST = {
-            "bakken", "vik", "dal", "heim", "stad", "by", "lia", "nes", "haug", "vang", "mo", "ås", "rud", "set", "tun", "holm"};
+            "ford", "ton", "by", "ham", "field", "wick", "wood", "bridge", "dale", "stead", "bury", "hill", "mere", "well", "combe", "worth"};
 
     private TownNames() {}
 

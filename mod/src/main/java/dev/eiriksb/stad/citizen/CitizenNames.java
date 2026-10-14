@@ -2,20 +2,20 @@ package dev.eiriksb.stad.citizen;
 
 import net.minecraft.util.RandomSource;
 
-/** Names for new citizens, with a Nordic flavour. */
+/** Names for new citizens, old English village names. */
 public final class CitizenNames {
     private static final String[] WOMEN = {
-            "Astrid", "Ingrid", "Sigrid", "Solveig", "Ragnhild", "Liv", "Kari", "Turid", "Hedda", "Ylva", "Frida", "Gudrun",
-            "Maren", "Signe", "Tove", "Eira", "Runa", "Aud", "Brynhild", "Dagny", "Elin", "Gro", "Helga", "Inga", "Jorunn",
-            "Lene", "Marit", "Nora", "Oda", "Randi", "Siri", "Thora", "Unni", "Vilde", "Åse", "Embla", "Hild", "Rikke"};
+            "Ada", "Agnes", "Alice", "Amice", "Annis", "Beatrice", "Bess", "Cecily", "Clemence", "Dora", "Edith", "Eleanor",
+            "Elsie", "Emma", "Florence", "Grace", "Hazel", "Hilda", "Isabel", "Ivy", "Joan", "Juliana", "Lettice", "Lily",
+            "Mabel", "Margery", "Matilda", "Maud", "Molly", "Nell", "Petra", "Rose", "Ruth", "Sybil", "Tilly", "Winifred"};
     private static final String[] MEN = {
-            "Bjørn", "Leif", "Ivar", "Gunnar", "Sigurd", "Torstein", "Halvard", "Erling", "Arne", "Einar", "Finn", "Geir",
-            "Håkon", "Ingvar", "Jarle", "Knut", "Magnus", "Njål", "Odd", "Ragnar", "Sverre", "Trygve", "Ulf", "Vidar",
-            "Asbjørn", "Eirik", "Frode", "Harald", "Kjetil", "Olav", "Rune", "Steinar", "Torvald", "Audun", "Bård", "Ketil"};
+            "Alfred", "Arthur", "Baldwin", "Bernard", "Cuthbert", "Edmund", "Edward", "Edwin", "Geoffrey", "George", "Gilbert",
+            "Godfrey", "Harold", "Henry", "Hugh", "Jasper", "John", "Lambert", "Martin", "Miles", "Nicholas", "Oliver", "Osbert",
+            "Peter", "Ralph", "Robert", "Roger", "Simon", "Stephen", "Thomas", "Tobias", "Walter", "Warin", "William", "Wilfred"};
     private static final String[] PLACES = {
-            "Berg", "Dal", "Haug", "Lund", "Moen", "Nes", "Rud", "Strand", "Vik", "Aas", "Bakken", "Fjeld", "Holm", "Li",
-            "Myr", "Sand", "Stein", "Tveit", "Våge", "Øvre", "Elvestad", "Furuli", "Granheim", "Hammer", "Kvam", "Lien",
-            "Nordby", "Solberg", "Sætre", "Tangen"};
+            "Ashby", "Baker", "Brook", "Carter", "Cooper", "Dale", "Fairweather", "Field", "Fisher", "Fletcher", "Green", "Hale",
+            "Hill", "Holt", "Lane", "Marsh", "Mason", "Meadows", "Miller", "Oakley", "Shaw", "Smith", "Stone", "Thatcher",
+            "Turner", "Underwood", "Webb", "Wells", "Wood", "Wright"};
 
     private CitizenNames() {}
 

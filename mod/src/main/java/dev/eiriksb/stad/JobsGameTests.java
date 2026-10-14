@@ -282,7 +282,7 @@ public final class JobsGameTests {
         try {
             for (BuildingDef def : BuildingPacks.all()) {
                 String pack = def.key().getPath().split("/")[0];
-                if (!def.key().getNamespace().equals("stad") || !List.of("medieval", "fjord", "oasis").contains(pack) || def.type().equals(BuildingDef.MINE)) {
+                if (!def.key().getNamespace().equals("stad") || !List.of("medieval", "oasis").contains(pack) || def.type().equals(BuildingDef.MINE)) {
                     continue;
                 }
                 BlockPos origin = helper.absolutePos(new BlockPos(2, G, 2));

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generates the bundled building packs (Medieval, Fjord, Oasis): vanilla structure templates (.nbt) plus their manifests.
+"""Generates the bundled building packs (Medieval, Oasis): vanilla structure templates (.nbt) plus their manifests.
 
     packgen.py <resources dir>      # mod/src/main/resources
 
@@ -188,98 +188,6 @@ def kitchen():
     b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
     return size, b
 
-# ---- Fjord: laid log walls, stone footings and turf roofs ----------------------------------------------------------
-
-def gable(b, w, d, y0, slope, ridge, gable_wall, overhang=False):
-    """A gable roof across x (ridge along z, gable ends in the north and south walls). slope = stairs, or a full block
-    for a stepped turf roof. Returns the height above it."""
-    x0, x1, y = 0, w - 1, y0
-    stairs = slope.endswith("_stairs")
-    while x1 - x0 >= 1:
-        for z in range(d):
-            if stairs:
-                b[(x0, y, z)] = (slope, {"facing": "east", "half": "bottom", "shape": "straight"})
-                b[(x1, y, z)] = (slope, {"facing": "west", "half": "bottom", "shape": "straight"})
-            else:
-                b[(x0, y, z)] = (slope, {})
-                b[(x1, y, z)] = (slope, {})
-        for x in range(x0 + 1, x1):
-            for z in (0, d - 1):
-                b[(x, y, z)] = (gable_wall, {})
-        x0, x1, y = x0 + 1, x1 - 1, y + 1
-    if x0 == x1:
-        for z in range(d):
-            b[(x0, y, z)] = (ridge, {})
-        y += 1
-    return y
-
-def laft(w, d, wall_h, log, door_x, windows):
-    """Walls of logs laid on their side (axis along each wall), corners standing, on a stone footing."""
-    b = {}
-    for x in range(w):
-        for z in range(d):
-            b[(x, 0, z)] = ("minecraft:cobblestone" if x in (0, w - 1) or z in (0, d - 1) else "minecraft:spruce_planks", {})
-    for y in range(1, wall_h + 1):
-        for x in range(w):
-            for z in range(d):
-                corner = x in (0, w - 1) and z in (0, d - 1)
-                if corner:
-                    b[(x, y, z)] = (log, {"axis": "y"})
-                elif z in (0, d - 1):
-                    b[(x, y, z)] = (log, {"axis": "x"})
-                elif x in (0, w - 1):
-                    b[(x, y, z)] = (log, {"axis": "z"})
-    for (x, y, z) in windows:
-        along_x = z in (0, d - 1)
-        b[(x, y, z)] = ("minecraft:glass_pane", {"east": "true", "west": "true"} if along_x else {"north": "true", "south": "true"})
-    b[(door_x, 1, 0)] = ("minecraft:spruce_door", {"facing": "south", "half": "lower", "hinge": "left", "open": "false"})
-    b[(door_x, 2, 0)] = ("minecraft:spruce_door", {"facing": "south", "half": "upper", "hinge": "left", "open": "false"})
-    return b
-
-def fjord_stue():
-    w, d = 7, 9
-    b = laft(w, d, 3, "minecraft:spruce_log", 3, [(0, 2, 3), (0, 2, 6), (6, 2, 3), (6, 2, 6)])
-    # a turf roof: stepped moss over a spruce ceiling, birch bark at the gable ends
-    for x in range(1, w - 1):
-        for z in range(1, d - 1):
-            b[(x, 4, z)] = ("minecraft:spruce_planks", {})
-    top = gable(b, w, d, 4, "minecraft:moss_block", "minecraft:moss_block", "minecraft:spruce_planks")
-    bed(b, "red", (1, 1, 6), "south")
-    bed(b, "white", (5, 1, 6), "south")
-    b[(3, 1, 7)] = ("minecraft:chest", {"facing": "north", "type": "single"})
-    b[(1, 1, 1)] = ("minecraft:campfire", {"facing": "south", "lit": "false", "signal_fire": "false", "waterlogged": "false"})
-    b[(5, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
-    return (w, top, d), b
-
-def fjord_stabbur():
-    """The storehouse: a log store with a deep plank roof, its chests and barrels round the walls."""
-    w, d = 7, 7
-    b = laft(w, d, 3, "minecraft:dark_oak_log", 3, [(3, 2, 6)])
-    for x in range(1, w - 1):
-        for z in range(1, d - 1):
-            b[(x, 4, z)] = ("minecraft:dark_oak_planks", {})
-    top = gable(b, w, d, 4, "minecraft:dark_oak_stairs", "minecraft:dark_oak_slab", "minecraft:dark_oak_planks")
-    for x in (1, 2, 4, 5):
-        b[(x, 1, 5)] = ("minecraft:chest", {"facing": "north", "type": "single"})
-    b[(1, 1, 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
-    b[(5, 1, 2)] = ("minecraft:barrel", {"facing": "up", "open": "false"})
-    b[(5, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
-    return (w, top, d), b
-
-def fjord_smie():
-    """The builder's workshop and home under a turf roof."""
-    w, d = 7, 7
-    b = laft(w, d, 3, "minecraft:spruce_log", 3, [(0, 2, 3), (6, 2, 3)])
-    for x in range(1, w - 1):
-        for z in range(1, d - 1):
-            b[(x, 4, z)] = ("minecraft:spruce_planks", {})
-    top = gable(b, w, d, 4, "minecraft:moss_block", "minecraft:moss_block", "minecraft:spruce_planks")
-    b[(1, 1, 5)] = ("minecraft:crafting_table", {})
-    b[(2, 1, 5)] = ("minecraft:chest", {"facing": "north", "type": "single"})
-    b[(1, 1, 1)] = ("minecraft:lantern", {"hanging": "false"})
-    bed(b, "brown", (5, 1, 5), "north")
-    return (w, top, d), b
-
 # ---- Oasis: sandstone, flat roofs with a parapet -------------------------------------------------------------------
 
 def flat_house(w, d, wall_h, door_x, windows):
@@ -353,14 +261,6 @@ def oasis_workshop():
 def medieval_shell(w, d, windows):
     return house(w, d, 3, "minecraft:cobblestone", "minecraft:oak_planks", "minecraft:oak_log", "minecraft:spruce_stairs",
                  "minecraft:spruce_planks", "minecraft:spruce_slab", w // 2, windows)
-
-def fjord_shell(w, d, windows):
-    b = laft(w, d, 3, "minecraft:spruce_log", w // 2, windows)
-    for x in range(1, w - 1):
-        for z in range(1, d - 1):
-            b[(x, 4, z)] = ("minecraft:spruce_planks", {})
-    top = gable(b, w, d, 4, "minecraft:moss_block", "minecraft:moss_block", "minecraft:spruce_planks")
-    return (w, top, d), b
 
 def oasis_shell(w, d, windows):
     h, b = flat_house(w, d, 3, w // 2, windows)
@@ -551,15 +451,6 @@ def medieval_great_warehouse():
     furnish_great_warehouse(b, GREAT_W, GREAT_D, "spruce")
     return size, b
 
-def fjord_great_stabbur():
-    b = laft(GREAT_W, GREAT_D, GREAT_H, "minecraft:dark_oak_log", GREAT_W // 2, GREAT_WINDOWS)
-    for x in range(1, GREAT_W - 1):
-        for z in range(1, GREAT_D - 1):
-            b[(x, GREAT_H + 1, z)] = ("minecraft:dark_oak_planks", {})
-    top = gable(b, GREAT_W, GREAT_D, GREAT_H + 1, "minecraft:dark_oak_stairs", "minecraft:dark_oak_slab", "minecraft:dark_oak_planks")
-    furnish_great_warehouse(b, GREAT_W, GREAT_D, "dark_oak")
-    return (GREAT_W, top, GREAT_D), b
-
 def oasis_great_storehouse():
     h, b = flat_house(GREAT_W, GREAT_D, GREAT_H, GREAT_W // 2, GREAT_WINDOWS)
     furnish_great_warehouse(b, GREAT_W, GREAT_D, "jungle")
@@ -598,35 +489,6 @@ PACKS = {
                        workplace(medieval_shell, furnish_stoneworks, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
         "loom_house": ("stad:loom_house", "Loom House", "The weaver's loom among bales of wool, for beds and carpets.",
                        workplace(medieval_shell, furnish_loom_house, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
-    }),
-    "fjord": ({"name": "Fjord", "description": "Laid log walls on stone footings, under turf roofs.", "author": "Stad"}, {
-        "stue": ("stad:home", "Stue", "A log house with a turf roof and two beds.", fjord_stue, ["small", "home"]),
-        "stabbur": ("stad:warehouse", "Stabbur", "The log storehouse, chests and barrels round its walls.", fjord_stabbur, ["storage"]),
-        "storstabbur": ("stad:warehouse", "Storstabbur", "The great storehouse: racks of chests round its log walls, each for its own goods.",
-                        fjord_great_stabbur, ["storage"]),
-        "smie": ("stad:builder_hut", "Builder's Smie", "The builder's workshop and bed under a turf roof.", fjord_smie, ["small", "workplace"]),
-        "gardshus": ("stad:farmhouse", "Gardshus", "The farm's log house, with a composter and the harvest chest.",
-                     workplace(fjord_shell, furnish_farmhouse, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
-        "vedskjul": ("stad:lumber_camp", "Vedskjul", "The woodshed: a log pile, a crafting table and a stonecutter under turf.",
-                     workplace(fjord_shell, furnish_lumber_camp, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
-        "naust": ("stad:fishery", "Naust", "The boathouse by the water, its barrels for the catch.",
-                  workplace(fjord_shell, furnish_fishery, 7, 5, SIDE_WINDOWS(7, 5)), ["small", "workplace"]),
-        "fjos": ("stad:barn", "Fjos", "The byre: hay and a loom inside, a pen behind.",
-                 workplace(fjord_shell, furnish_barn, 9, 7, SIDE_WINDOWS(9, 7), ("minecraft:spruce_fence", "minecraft:spruce_fence_gate")), ["workplace"]),
-        "esse": ("stad:smithy", "Esse", "The forge under a turf roof: anvil, blast furnace and grindstone.",
-                 workplace(fjord_shell, furnish_smithy, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
-        "sjukestue": ("stad:infirmary", "Sjukestue", "The sick-house: beds by the wall and the healer's brewing stand.",
-                      workplace(fjord_shell, furnish_infirmary, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
-        "handelsbu": ("stad:market", "Handelsbu", "The trading booth, its bell and barrels of goods.",
-                      workplace(fjord_shell, furnish_market, 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
-        "skulestue": ("stad:school", "Skulestue", "The schoolroom in a log house: benches and a lectern.",
-                      workplace(fjord_shell, school_with("minecraft:spruce_stairs"), 9, 7, SIDE_WINDOWS(9, 7)), ["workplace"]),
-        "sagbruk": ("stad:sawmill", "Sagbruk", "The saw shed: crafting table and log pile under a turf roof.",
-                    workplace(fjord_shell, furnish_sawmill, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
-        "steinhoggeri": ("stad:stoneworks", "Steinhoggeri", "The stonecutter's hut: stonecutter, furnace and a heap of cobblestone.",
-                         workplace(fjord_shell, furnish_stoneworks, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
-        "vevstue": ("stad:loom_house", "Vevstue", "The weaving room: the loom and the wool in a warm log house.",
-                    workplace(fjord_shell, furnish_loom_house, 7, 7, SIDE_WINDOWS(7, 7)), ["small", "workplace"]),
     }),
     "oasis": ({"name": "Oasis", "description": "Sandstone houses with flat roofs and parapets, palm-wood beams.", "author": "Stad"}, {
         "house": ("stad:home", "Sandstone House", "A cool sandstone house with two beds.", oasis_house, ["small", "home"]),
