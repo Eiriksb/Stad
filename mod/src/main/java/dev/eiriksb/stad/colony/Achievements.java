@@ -51,10 +51,40 @@ public final class Achievements {
         STATE.put("jobs", c -> c.citizens().stream().map(r -> r.job).filter(java.util.Objects::nonNull).distinct().count() >= 10);
     }
 
+    /** what each town has earned since it last told its members (not saved: a restart skips telling, not earning) */
+    private static final Map<Integer, java.util.List<String>> untold = new java.util.HashMap<>();
+
     /** Something the town did (a child born, a raid beaten off): it's earned, and its members get it soon. */
     public static void feat(Colony colony, String id) {
         if (colony.feats.add(id)) {
+            untold.computeIfAbsent(colony.id, k -> new java.util.ArrayList<>()).add(id);
             colony.changed();
+        }
+    }
+
+    /**
+     * Tells the town's members what it's earned, once (the game's own announcement would be once per member, to the
+     * whole server): one line each, or one for the lot when it's a handful at once (an older town catching up).
+     */
+    private static void tell(MinecraftServer server, Colony colony) {
+        java.util.List<String> ids = untold.remove(colony.id);
+        if (ids == null) {
+            return;
+        }
+        java.util.List<net.minecraft.advancements.DisplayInfo> shown = ids.stream()
+                .map(id -> server.getAdvancements().get(ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, id)))
+                .filter(a -> a != null && a.value().parent().isPresent()).flatMap(a -> a.value().display().stream()).toList();
+        if (shown.size() > 3) {
+            Announce.members(server, colony, net.minecraft.network.chat.Component.literal(colony.name() + " has earned " + shown.size()
+                    + " achievements (the Stad tab, L).").withStyle(net.minecraft.ChatFormatting.GOLD));
+            return;
+        }
+        for (net.minecraft.advancements.DisplayInfo d : shown) {
+            Announce.members(server, colony, net.minecraft.network.chat.Component.literal(colony.name() + " has earned ")
+                    .append(d.getTitle().copy().withStyle(net.minecraft.ChatFormatting.GREEN)
+                            .withStyle(st -> st.withHoverEvent(new net.minecraft.network.chat.HoverEvent(
+                                    net.minecraft.network.chat.HoverEvent.Action.SHOW_TEXT, d.getDescription()))))
+                    .append(": " + d.getDescription().getString()).withStyle(net.minecraft.ChatFormatting.GOLD));
         }
     }
 
@@ -66,6 +96,7 @@ public final class Achievements {
             }
         });
         MinecraftServer server = level.getServer();
+        tell(server, colony);
         for (ServerPlayer p : server.getPlayerList().getPlayers()) {
             if (colony.rank(p.getUUID()).atLeast(Rank.MEMBER)) {
                 give(server, p, colony);

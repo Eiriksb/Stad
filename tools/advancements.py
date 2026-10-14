@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generates the town's achievements: the game's own advancements, in a Stad tab. Colony/Achievements.java awards them.
+They aren't announced in chat by the game (that would be once per member, to everyone): the town tells its members.
 
     advancements.py <resources dir>      # mod/src/main/resources
 """
@@ -38,7 +39,7 @@ def main(resources):
             os.remove(os.path.join(out, name))
     for id_, parent, icon, title, desc, frame in ALL:
         display = {"icon": {"id": icon}, "title": {"text": title}, "description": {"text": desc}, "frame": frame,
-                   "show_toast": True, "announce_to_chat": parent is not None, "hidden": False}
+                   "show_toast": True, "announce_to_chat": False, "hidden": False}
         a = {}
         if parent:
             a["parent"] = "stad:" + parent

@@ -156,6 +156,7 @@
   as each is done, until they all are. U hides it and shows it again (it remembers).
 
 **Smoother**
+- Needs They Will Talk 0.3.0-alpha.7, whose citizens' voices (Q8) are clearly cleaner.
 - Citizens don't jump across town any more on a long walk: they only take the shortcut when they've stopped getting
   any closer for ten seconds (with a puff of cloud), not eight seconds after setting off.
 - Builders leave the ground as it is: where a building or a path wants dirt or grass and there's grass (or dirt,
@@ -166,6 +167,11 @@
 - What the town thinks of you tells each reason once ("+6 the town is happy", not "+3 ..., +3 ...").
 - Tabs keep their names when there's no room for the icon too, and a greyed-out button looks greyed out (Plan it was
   still green when the building wasn't researched yet).
+- Citizens on a long walk (further than a path can be worked out in one go) walk it a stretch at a time instead of
+  stopping short and taking the shortcut.
+- A town's new achievements are told to its members once, in a line ("Solvik has earned A Village: Ten citizens"), or
+  one line for a handful at once, instead of the game announcing each member's to the whole server.
+- The building plans' details scroll (mouse wheel) when they don't fit.
 - Research says "the barn and the pen (shepherd)" instead of naming the job after each building.
 
 **Placing buildings by hand**
@@ -204,7 +210,7 @@
 
 ## 0.1.0 (first release)
 
-Stad needs [They Will Talk](https://github.com/Eiriksb/they-will-talk) 0.3.0-alpha.6 or newer, NeoForge 21.1 on
+Stad needs [They Will Talk](https://github.com/Eiriksb/they-will-talk) 0.3.0-alpha.7 or newer, NeoForge 21.1 on
 Minecraft 1.21.1.
 
 **Towns and citizens**

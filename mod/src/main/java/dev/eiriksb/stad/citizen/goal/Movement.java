@@ -80,6 +80,8 @@ public final class Movement {
      */
     public static final class Approach {
         static final int REPATH = 20;
+        /** how far one stretch of a long walk goes */
+        static final int LEG = 24;
         private BlockPos target;
         private int stuck;
         private int repath;
@@ -105,8 +107,11 @@ public final class Movement {
             if (--repath <= 0 && citizen.getNavigation().isDone()) {
                 repath = REPATH;
                 Path path = citizen.getNavigation().createPath(Set.of(pos), 1);
+                Path leg = path != null && path.canReach() ? null : leg(citizen, pos);
                 if (path != null && path.canReach()) {
                     citizen.getNavigation().moveTo(path, speed);
+                } else if (leg != null) {
+                    citizen.getNavigation().moveTo(leg, speed); // a long way: a stretch at a time
                 } else {
                     if (path != null) {
                         citizen.getNavigation().moveTo(path, speed); // as close as it goes
@@ -123,6 +128,28 @@ public final class Movement {
                 best = citizen.position().distanceTo(pos.getCenter());
             }
             return false;
+        }
+
+        /**
+         * On a walk too long for one path (the search gives up after so many blocks), a path to a spot {@link #LEG}
+         * blocks along the way, on the ground, if there's one; null when it's not far or there's no way there either.
+         */
+        private static Path leg(CitizenEntity citizen, BlockPos pos) {
+            net.minecraft.world.phys.Vec3 from = citizen.position(), to = pos.getCenter();
+            double far = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.z - from.z, 2));
+            if (far <= LEG + 8) {
+                return null;
+            }
+            ServerLevel level = (ServerLevel) citizen.level();
+            for (int along : new int[]{LEG, LEG * 2 / 3, LEG / 3}) {
+                int x = (int) Math.floor(from.x + (to.x - from.x) * along / far), z = (int) Math.floor(from.z + (to.z - from.z) * along / far);
+                BlockPos ground = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+                Path path = citizen.getNavigation().createPath(ground, 1);
+                if (path != null && path.canReach()) {
+                    return path;
+                }
+            }
+            return null;
         }
 
         public void reset() {

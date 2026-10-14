@@ -355,7 +355,7 @@ facing north). See `data/stad/stad/buildings/medieval/` and `tools/packgen.py`, 
 ## Development
 
 Requirements: JDK 21 (Gradle downloads it if needed), and a checkout of
-[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.6 or newer, for its public
+[They Will Talk](https://github.com/Eiriksb/they-will-talk) next to this one (0.3.0-alpha.7 or newer, for its public
 API). TWT in turn needs [Sipher](https://github.com/Eiriksb/Sipher) built next to it
 (see TWT's README).
 

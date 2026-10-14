@@ -36,6 +36,8 @@ public class PlansScreen extends Screen {
     /** the tab: which kind of building the list shows */
     private String group;
     private int scroll;
+    /** how far the details on the right are scrolled (pixels), and how tall they were last drawn */
+    private int detailScroll, detailHeight;
 
     private java.util.List<String> groups() {
         return plans.options().stream().map(PlansPayload.Option::group).distinct().toList();
@@ -69,6 +71,7 @@ public class PlansScreen extends Screen {
                 group = g;
                 scroll = 0;
                 selected = inGroup().getFirst();
+                detailScroll = 0;
                 rebuildWidgets();
             }).bounds(x + i * (tw + 4), 26, tw, 20).icon(groupIcon(g)).build().tab(g.equals(group)));
         }
@@ -82,6 +85,7 @@ public class PlansScreen extends Screen {
             addRenderableWidget(StadButton.of(Component.literal(font.plainSubstrByWidth(o.name(), 104)).withStyle(o.locked().isEmpty()
                     ? ChatFormatting.RESET : ChatFormatting.DARK_GRAY), btn -> {
                 selected = index;
+                detailScroll = 0;
                 rebuildWidgets();
             }).bounds(x + 3, y, 110, 20).build().chosen(index == selected));
             y += 22;
@@ -134,6 +138,10 @@ public class PlansScreen extends Screen {
             rebuildWidgets();
             return true;
         }
+        if (mouseX >= left() + 120 && mouseY < listBottom()) {
+            detailScroll = Math.max(0, Math.min(Math.max(0, detailHeight - (listBottom() - 52)), detailScroll - (int) Math.signum(scrollY) * 20));
+            return true;
+        }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
@@ -163,7 +171,9 @@ public class PlansScreen extends Screen {
             return;
         }
         PlansPayload.Option o = plans.options().get(selected);
-        int y = 52;
+        int top = 52, bottom = listBottom() - 3;
+        g.enableScissor(x - 2, top - 3, x + tw + 2, bottom);
+        int y = top - detailScroll;
         g.drawString(font, Component.literal(o.name()).withStyle(ChatFormatting.BOLD), x, y, Theme.GOLD);
         y += 13;
         if (!o.locked().isEmpty()) {
@@ -188,9 +198,7 @@ public class PlansScreen extends Screen {
         Theme.heading(g, font, "Materials", x, y, tw);
         y += 13;
         for (var line : font.split(Component.literal(o.materials()), tw)) {
-            if (y < listBottom() - 4) {
-                g.drawString(font, line, x, y, Theme.TEXT);
-            }
+            g.drawString(font, line, x, y, Theme.TEXT);
             y += 10;
         }
         y += 6;
@@ -199,11 +207,12 @@ public class PlansScreen extends Screen {
                 : "Centred on the block you clicked, floor level with it. Builders take the "
                 + "materials from the town hall." + (palette < 0 ? "" : " In the " + plans.palettes().get(palette)
                 + " style, walls, roof, floor and frame are built in its materials instead.")), tw)) {
-            if (y < listBottom() - 4) {
-                g.drawString(font, line, x, y, Theme.FAINT);
-            }
+            g.drawString(font, line, x, y, Theme.FAINT);
             y += 10;
         }
+        g.disableScissor();
+        detailHeight = y + detailScroll - top;
+        Theme.scrollbar(g, x + tw + 1, top - 3, bottom - top + 3, detailScroll, bottom - top, detailHeight);
         int rows = Math.max(1, (listBottom() - 50) / 22);
         Theme.scrollbar(g, left() + 116 - 7, 48, listBottom() - 48, scroll, rows, inGroup().size());
     }

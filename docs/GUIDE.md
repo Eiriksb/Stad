@@ -2,7 +2,7 @@
 
 ## Getting started
 
-1. Install NeoForge 21.1 for Minecraft 1.21.1, then **They Will Talk** (0.3.0-alpha.6 or newer) and **Stad**. On a
+1. Install NeoForge 21.1 for Minecraft 1.21.1, then **They Will Talk** (0.3.0-alpha.7 or newer) and **Stad**. On a
    server, both go on the server; players need Stad on their own computer too (for its screens and the building
    previews), and Simple Voice Chat plus Sipher if they want to talk with their voice.
 2. The citizens think with a small AI model that runs on your own GPU. Open a world (or start the server), run

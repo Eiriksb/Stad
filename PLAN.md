@@ -716,7 +716,8 @@ debounced; Enter sends the plan with where it is now.
 out with the upkeep: population 10/25/50, a job, a finished building, every citizen housed, a road, a warehouse with a
 courier, ten different jobs, all research, land at its widest) or `Achievements.feat` as things happen (a child born, a
 trade, a raid beaten off, a war won, diamonds, bedrock, a topic researched). They're kept in `Colony.feats` ("Feats")
-and awarded to every member who's on, so a member who was away gets them when they're next on.
+and awarded to every member who's on, so a member who was away gets them when they're next on. The game doesn't
+announce them (`announce_to_chat` false); `Achievements.tell` tells the members once per town, or one line for more than three.
 
 **The guide (tutorial).** `Tutorial.update` (with the upkeep) sends each member `GuidePayload` for their town (the one
 they're in, else the one they own): `Guide.steps`' first one not done, how many are done, and the one just done.
@@ -724,7 +725,8 @@ they're in, else the one they own): `Guide.steps`' first one not done, how many 
 (U) hides it, kept in `stad-client.toml` (`showGuide`).
 
 **Walking.** `Movement.Approach` takes the shortcut (teleporting) only after `PATIENCE` ticks without getting a block
-closer, sooner when there's no way there at all; a long walk that's going well isn't cut short. A puff of cloud
+closer, sooner when there's no way there at all; a long walk that's going well isn't cut short. When no path
+reaches (the search's node budget runs out past ~40 blocks), they take a leg of `LEG` (24) blocks toward it, on the ground. A puff of cloud
 where they go from and come out.
 
 **Ground.** `Construction.satisfied`: a step that wants dirt or grass is done where there's dirt, grass, coarse dirt,
