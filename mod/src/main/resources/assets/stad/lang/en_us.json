@@ -7,5 +7,14 @@
   "item.stad.building_plans": "Building Plans",
   "item.stad.scan_wand": "Scan Wand",
   "key.categories.stad": "Stad",
-  "key.stad.finish_design": "Finish designing"
+  "key.stad.finish_design": "Finish designing",
+  "key.stad.place.turn": "Placing a building: turn it",
+  "key.stad.place.plan_here": "Placing a building: plan it here",
+  "key.stad.place.put_away": "Placing a building: put it away",
+  "key.stad.place.raise": "Placing a building: up",
+  "key.stad.place.lower": "Placing a building: down",
+  "key.stad.place.move_away": "Placing a building: away from you",
+  "key.stad.place.move_back": "Placing a building: towards you",
+  "key.stad.place.move_left": "Placing a building: left",
+  "key.stad.place.move_right": "Placing a building: right"
 }

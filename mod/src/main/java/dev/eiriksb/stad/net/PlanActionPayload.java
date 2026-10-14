@@ -8,8 +8,13 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Rotation;
 
-/** Client to server: preview or plan a building from the building plans screen, in a palette's style ("" for its own). */
-public record PlanActionPayload(int colony, String key, BlockPos at, Rotation rotation, boolean preview, String palette) implements CustomPacketPayload {
+/**
+ * Client to server: preview or plan a building from the building plans screen, in a palette's style ("" for its own).
+ * A preview sends back the building to place by hand ({@link PlacePreviewPayload}); {@code check} only whether it fits
+ * where it's been moved to.
+ */
+public record PlanActionPayload(int colony, String key, BlockPos at, Rotation rotation, boolean preview, String palette, boolean check)
+        implements CustomPacketPayload {
     public static final Type<PlanActionPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "plan_action"));
     public static final StreamCodec<FriendlyByteBuf, PlanActionPayload> CODEC = StreamCodec.of((buf, p) -> {
         buf.writeVarInt(p.colony);
@@ -18,8 +23,9 @@ public record PlanActionPayload(int colony, String key, BlockPos at, Rotation ro
         buf.writeEnum(p.rotation);
         buf.writeBoolean(p.preview);
         buf.writeUtf(p.palette);
+        buf.writeBoolean(p.check);
     }, buf -> new PlanActionPayload(buf.readVarInt(), buf.readUtf(), buf.readBlockPos(), buf.readEnum(Rotation.class), buf.readBoolean(),
-            buf.readUtf()));
+            buf.readUtf(), buf.readBoolean()));
 
     @Override
     public Type<? extends CustomPacketPayload> type() {

@@ -55,6 +55,10 @@ public final class StadClientHooks {
         dev.eiriksb.stad.client.architect.DraftingHud.set(p);
     }
 
+    public static void placePreview(dev.eiriksb.stad.net.PlacePreviewPayload p) {
+        BuildingPlacer.receive(p);
+    }
+
     public static void draftPreview(dev.eiriksb.stad.net.DraftPreviewPayload preview) {
         GhostPreview.set(preview);
     }

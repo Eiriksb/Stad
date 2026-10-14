@@ -21,6 +21,7 @@ public final class StadClient {
     @SubscribeEvent
     static void guiLayers(net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) {
         event.registerAboveAll(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "draft"), GhostPreview::hud);
+        event.registerAboveAll(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "placing"), BuildingPlacer::hud);
         event.registerAboveAll(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "drafting"),
                 dev.eiriksb.stad.client.architect.DraftingHud::hud);
     }
@@ -28,5 +29,6 @@ public final class StadClient {
     @SubscribeEvent
     static void keys(net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) {
         event.register(dev.eiriksb.stad.client.architect.DraftingHud.FINISH);
+        BuildingPlacer.KEYS.forEach(event::register);
     }
 }

@@ -127,6 +127,12 @@
   carry, the courier puts what's on the wrong shelf on the right one, and when the town hall is nearly full takes what
   it doesn't need (not its food, tools or what the builders are waiting for) to the warehouse.
 
+**Placing buildings by hand**
+- **Preview** in the building plans now shows the whole building, see-through, where it would go, instead of an
+  outline, and you can move it before planning it, much like placing a Create schematic: the arrow keys move it,
+  Page Up and Down raise and lower it, R turns it, right-click picks it up to follow where you look (and puts it down
+  again), Enter plans it there and Backspace puts it away. It turns red, and says why, where it doesn't fit.
+
 **English names, one pack fewer**
 - The Fjord pack is gone (its buildings were doubles of the Medieval and Oasis ones under Norwegian names), so the
   building plans list each building twice instead of three times. Buildings already put up from it stay standing but

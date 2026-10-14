@@ -13,7 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-/** The building plans: pick a building, turn it, preview its outline, plan it. */
+/** The building plans: pick a building, turn it, preview it (and move it about: {@link BuildingPlacer}), plan it. */
 public class PlansScreen extends Screen {
     private static final int W = 340;
     private final PlansPayload plans;
@@ -95,7 +95,9 @@ public class PlansScreen extends Screen {
                 b.setMessage(styleLabel());
             }).bounds(x, by - 24, 110, 20).build());
         }
-        addRenderableWidget(StadButton.of(Component.literal("Preview"), b -> send(true)).bounds(x + 106, by, 70, 20).build());
+        addRenderableWidget(StadButton.of(Component.literal("Preview"), b -> send(true)).bounds(x + 106, by, 70, 20)
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("See the whole building where it would go, and move it"
+                        + " about before planning it"))).build());
         addRenderableWidget(StadButton.of(Component.literal("Plan it").withStyle(ChatFormatting.GREEN), b -> {
             send(false);
             onClose();
@@ -146,7 +148,7 @@ public class PlansScreen extends Screen {
             return;
         }
         PacketDistributor.sendToServer(new PlanActionPayload(plans.colony(), plans.options().get(selected).key(), plans.at(), rotation, preview,
-                palette < 0 ? "" : plans.palettes().get(palette)));
+                palette < 0 ? "" : plans.palettes().get(palette), false));
     }
 
     @Override

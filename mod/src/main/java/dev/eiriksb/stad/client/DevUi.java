@@ -122,16 +122,23 @@ public final class DevUi {
                     }
                 }
                 case "key" -> {
+                    int code = switch (a[1].toUpperCase()) {
+                        case "ESC", "ESCAPE" -> GLFW.GLFW_KEY_ESCAPE;
+                        case "ENTER" -> GLFW.GLFW_KEY_ENTER;
+                        case "PGUP" -> GLFW.GLFW_KEY_PAGE_UP;
+                        case "PGDN" -> GLFW.GLFW_KEY_PAGE_DOWN;
+                        case "BACKSPACE" -> GLFW.GLFW_KEY_BACKSPACE;
+                        case "UP" -> GLFW.GLFW_KEY_UP;
+                        case "DOWN" -> GLFW.GLFW_KEY_DOWN;
+                        case "LEFT" -> GLFW.GLFW_KEY_LEFT;
+                        case "RIGHT" -> GLFW.GLFW_KEY_RIGHT;
+                        default -> a[1].toUpperCase().charAt(0);
+                    };
                     if (screen != null) {
-                        int code = switch (a[1].toUpperCase()) {
-                            case "ESC", "ESCAPE" -> GLFW.GLFW_KEY_ESCAPE;
-                            case "ENTER" -> GLFW.GLFW_KEY_ENTER;
-                            case "PGUP" -> GLFW.GLFW_KEY_PAGE_UP;
-                            case "PGDN" -> GLFW.GLFW_KEY_PAGE_DOWN;
-                            default -> a[1].toUpperCase().charAt(0);
-                        };
                         screen.keyPressed(code, 0, 0);
                         screen.keyReleased(code, 0, 0);
+                    } else { // in the world: whatever the key's bound to
+                        net.minecraft.client.KeyMapping.click(com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(code));
                     }
                 }
                 case "type" -> {

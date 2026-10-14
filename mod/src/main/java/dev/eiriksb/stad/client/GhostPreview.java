@@ -40,7 +40,7 @@ import java.util.List;
  */
 @EventBusSubscriber(modid = Stad.MOD_ID, value = Dist.CLIENT)
 public final class GhostPreview {
-    private record Ghost(BlockPos pos, BlockState state) {}
+    record Ghost(BlockPos pos, BlockState state) {}
 
     private static final float ALPHA = 0.45f;
     private static final double RANGE = 128;
@@ -87,6 +87,14 @@ public final class GhostPreview {
     }
 
     private static void draw(Minecraft mc, RenderLevelStageEvent event) {
+        draw(mc, event, ghosts, 1f, 1f, 1f);
+    }
+
+    /**
+     * Draws blocks see-through where they'd go (not where the same block is already), tinted by {@code tr, tg, tb}.
+     * Shared with {@link BuildingPlacer}.
+     */
+    static void draw(Minecraft mc, RenderLevelStageEvent event, List<Ghost> ghosts, float tr, float tg, float tb) {
         Vec3 cam = event.getCamera().getPosition();
         PoseStack pose = event.getPoseStack() != null ? event.getPoseStack() : new PoseStack();
         MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
@@ -104,6 +112,9 @@ public final class GhostPreview {
             if (color == -1) {
                 r = gr = b = 1f;
             }
+            r *= tr;
+            gr *= tg;
+            b *= tb;
             pose.pushPose();
             pose.translate(g.pos.getX() - cam.x, g.pos.getY() - cam.y, g.pos.getZ() - cam.z);
             random.setSeed(42);

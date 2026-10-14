@@ -94,6 +94,11 @@ public final class StadNetwork {
                 dev.eiriksb.stad.client.StadClientHooks.drafting(p);
             }
         });
+        r.playToClient(PlacePreviewPayload.TYPE, PlacePreviewPayload.CODEC, (p, ctx) -> {
+            if (FMLEnvironment.dist.isClient()) {
+                dev.eiriksb.stad.client.StadClientHooks.placePreview(p);
+            }
+        });
         r.playToClient(DraftPreviewPayload.TYPE, DraftPreviewPayload.CODEC, (p, ctx) -> {
             if (FMLEnvironment.dist.isClient()) {
                 dev.eiriksb.stad.client.StadClientHooks.draftPreview(p);
@@ -129,14 +134,22 @@ public final class StadNetwork {
         var blueprint = styled != null ? styled.blueprint() : def.get().blueprint();
         String name = styled != null ? styled.name() : def.get().name();
         BlockPos origin = Placement.originFor(blueprint, p.at(), p.rotation());
-        if (p.preview()) {
-            Outlines.preview(player, Placement.of(blueprint, origin, p.rotation()).bounds(), 100);
+        if (p.preview()) { // the building itself, to move about and put down by hand (client.BuildingPlacer)
             String problem = Planning.problem(colony.get(), blueprint, origin, p.rotation());
             if (problem == null) {
                 problem = Planning.ground(player.serverLevel(), blueprint, origin, p.rotation());
             }
-            player.displayClientMessage(problem == null ? Component.literal("The outline shows where the " + name + " would go.")
-                    : Component.literal(problem).withStyle(ChatFormatting.RED), true);
+            int[] blocks = new int[0];
+            if (!p.check()) {
+                java.util.List<dev.eiriksb.stad.building.Blueprint.Entry> entries = blueprint.entries().stream().filter(e -> !e.state().isAir()).toList();
+                blocks = new int[entries.size() * 2];
+                for (int i = 0; i < entries.size(); i++) {
+                    blocks[2 * i] = PlacePreviewPayload.pack(entries.get(i).pos());
+                    blocks[2 * i + 1] = net.minecraft.world.level.block.Block.getId(entries.get(i).state());
+                }
+            }
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new PlacePreviewPayload(p.colony(), p.key(), p.palette(), name, blueprint.size().getX(),
+                    blueprint.size().getY(), blueprint.size().getZ(), blocks, p.at(), p.rotation(), problem == null ? "" : problem));
             return;
         }
         Planning.Result result = styled != null ? Planning.plan(player, player.serverLevel(), colony.get(), styled, origin, p.rotation())

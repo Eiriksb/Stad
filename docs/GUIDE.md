@@ -21,8 +21,11 @@ who can't work and why.
 2. **A builder.** Right-click a citizen and pick **Builder**. Hover over any job to see what it does and needs; jobs
    your town can't support yet are greyed out and say what's missing.
 3. **A house.** Craft **Building Plans** (two paper and a coal) and right-click the ground. Pick a building from the
-   tabs (Homes, Workplaces, Town, Fields), turn it with Door, check it with Preview, and Plan it. You're told what to put
-   in the town hall. (Or describe a house to your builder: "a small stone cottage with two bedrooms".)
+   tabs (Homes, Workplaces, Town, Fields), turn it with Door, and Plan it. You're told what to put in the town hall.
+   **Preview** shows the whole building, see-through, where it would go (red when it doesn't fit, and why). Move it
+   with the arrow keys (Page Up and Down for up and down) and turn it with R; right-click to pick it up so it follows
+   where you look, and again to put it down; Enter plans it there, Backspace puts it away. The keys can be changed in
+   the game's controls. (Or describe a house to your builder: "a small stone cottage with two bedrooms".)
 4. **Materials.** Sneak and right-click the town hall (or press Storage on its screen) and put the materials in. The
    builder makes up the ground under the house, builds what they can, and says what's still missing.
 5. **Food.** Put some food in the town hall. Make a **farmer**: they mark out a field by their farmhouse or the town
