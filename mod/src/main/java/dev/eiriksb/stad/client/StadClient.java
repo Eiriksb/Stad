@@ -19,6 +19,11 @@ public final class StadClient {
     }
 
     @SubscribeEvent
+    static void screens(net.neoforged.neoforge.client.event.RegisterMenuScreensEvent event) {
+        event.register(StadRegistries.CITIZEN_MENU.get(), CitizenGearScreen::new);
+    }
+
+    @SubscribeEvent
     static void guiLayers(net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) {
         event.registerAboveAll(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "draft"), GhostPreview::hud);
         event.registerAboveAll(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "placing"), BuildingPlacer::hud);

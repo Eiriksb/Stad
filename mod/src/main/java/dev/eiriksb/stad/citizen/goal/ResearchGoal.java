@@ -50,7 +50,7 @@ public class ResearchGoal extends WorkGoal {
 
     private ColonyStorage stores(ServerLevel level, Colony colony) {
         List<ColonyStorage.Box> all = new ArrayList<>();
-        Tools.stores(level, colony, workplace(colony)).forEach(s -> all.addAll(s.boxes()));
+        Tools.stores(level, colony, citizen, workplace(colony)).forEach(s -> all.addAll(s.boxes()));
         return ColonyStorage.of(all);
     }
 

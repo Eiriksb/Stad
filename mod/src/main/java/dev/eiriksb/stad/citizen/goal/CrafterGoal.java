@@ -67,7 +67,7 @@ public class CrafterGoal extends WorkGoal {
     }
 
     private List<ColonyStorage> stores(ServerLevel level, Colony colony) {
-        return Tools.stores(level, colony, workplace(colony));
+        return Tools.stores(level, colony, citizen, workplace(colony));
     }
 
     @Override

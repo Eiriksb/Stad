@@ -166,8 +166,8 @@ public class LumberjackGoal extends WorkGoal {
         return n;
     }
 
-    private static boolean saplingsInStores(ServerLevel level, Colony colony) {
-        return ColonyStorage.deliveries(level, colony).count(st -> st.is(ItemTags.SAPLINGS)) > 0
+    private boolean saplingsInStores(ServerLevel level, Colony colony) {
+        return ownFirst(level, colony, ColonyStorage.deliveries(level, colony)).count(st -> st.is(ItemTags.SAPLINGS)) > 0
                 || ColonyStorage.supply(level, colony).count(st -> st.is(ItemTags.SAPLINGS)) > 0;
     }
 
@@ -229,7 +229,7 @@ public class LumberjackGoal extends WorkGoal {
                 have |= kind.test(citizen.inventory().getItem(i));
             }
             if (!have) {
-                for (ItemStack st : ColonyStorage.deliveries(level, colony).takeUpTo(kind, 4)) {
+                for (ItemStack st : ownFirst(level, colony, ColonyStorage.deliveries(level, colony)).takeUpTo(kind, 4)) {
                     pocket(st);
                 }
                 for (ItemStack st : ColonyStorage.supply(level, colony).takeUpTo(kind, 4)) {
@@ -238,7 +238,7 @@ public class LumberjackGoal extends WorkGoal {
             }
         }
         if (!hasSapling()) {
-            for (ItemStack st : ColonyStorage.deliveries(level, colony).takeUpTo(x -> x.is(ItemTags.SAPLINGS), 4)) {
+            for (ItemStack st : ownFirst(level, colony, ColonyStorage.deliveries(level, colony)).takeUpTo(x -> x.is(ItemTags.SAPLINGS), 4)) {
                 pocket(st);
             }
             if (!hasSapling()) {
@@ -330,7 +330,7 @@ public class LumberjackGoal extends WorkGoal {
         }
         if (!hasSapling()) {
             // one from the town's storage, if there's any
-            for (ItemStack s : ColonyStorage.deliveries(level, colony).takeUpTo(st -> st.is(ItemTags.SAPLINGS), 1)) {
+            for (ItemStack s : ownFirst(level, colony, ColonyStorage.deliveries(level, colony)).takeUpTo(st -> st.is(ItemTags.SAPLINGS), 1)) {
                 pocket(s);
             }
         }

@@ -162,6 +162,7 @@ public final class LaterJobsGameTests {
         hall.addItem(axe);
         hall.addItem(new ItemStack(Items.IRON_INGOT, 2));
         hall.addItem(new ItemStack(Items.RAW_IRON, 3));
+        hall.addItem(new ItemStack(Items.COAL, 1)); // smelts all three in the smithy's blast furnace
         CitizenEntity smith = worker(helper, colony, Jobs.SMITH, 12, 12);
         CitizenEntity miner = worker(helper, colony, Jobs.MINER, 13, 13); // no mine, so idle: but short of a pickaxe
         helper.succeedWhen(() -> {
@@ -178,6 +179,76 @@ public final class LaterJobsGameTests {
             helper.assertTrue(town.count(Items.RAW_IRON) == 0 && town.count(Items.IRON_INGOT) >= 1, "the ore smelted: raw " + town.count(Items.RAW_IRON)
                     + ", ingots " + town.count(Items.IRON_INGOT));
             helper.assertTrue(town.count(Items.COBBLESTONE) == 0, "the cobblestone went into the pickaxe");
+            helper.assertTrue(town.count(Items.COAL) == 0, "the coal burnt");
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "gear", timeoutTicks = 1200)
+    public static void citizensUseWhatTheyreGiven(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        CitizenEntity c = worker(helper, colony, Jobs.LUMBERJACK, 12, 12); // no trees, no stores: just what they're given
+        var menu = new dev.eiriksb.stad.citizen.CitizenMenu(1, owner.getInventory(), c);
+        owner.getInventory().setItem(0, new ItemStack(Items.IRON_HELMET));
+        owner.getInventory().setItem(1, new ItemStack(Items.BREAD, 3));
+        owner.getInventory().setItem(2, new ItemStack(Items.STONE_AXE));
+        owner.getInventory().setItem(3, new ItemStack(Items.LEATHER_BOOTS));
+        int hotbar = dev.eiriksb.stad.citizen.CitizenMenu.GEAR.length + CitizenEntity.BELONGINGS + CitizenEntity.POCKETS + 27;
+        for (int i = 0; i < 3; i++) {
+            menu.quickMoveStack(owner, hotbar + i); // shift-clicked across
+        }
+        helper.assertTrue(c.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET), "the helmet went on their head");
+        helper.assertTrue(c.belongings().countItem(Items.BREAD) == 3 && c.belongings().countItem(Items.STONE_AXE) == 1,
+                "the bread and the axe are their own things");
+        c.belongings().addItem(owner.getInventory().removeItem(3, 1)); // boots given, not worn: they put them on
+        c.setHunger(4);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(c.getMainHandItem().is(Items.STONE_AXE), "their own axe in hand: " + c.getMainHandItem());
+            helper.assertTrue(c.getItemBySlot(EquipmentSlot.FEET).is(Items.LEATHER_BOOTS), "the boots on");
+            helper.assertTrue(c.hunger() > 8 && c.belongings().countItem(Items.BREAD) < 3, "ate their own bread: hunger " + c.hunger());
+            helper.assertTrue(c.belongings().countItem(Items.BREAD) > 0 || c.hunger() >= 16, "work doesn't hand in their own things");
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "gear", timeoutTicks = 400)
+    public static void aCitizensGearDropsWhenTheyDie(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        Colony colony = found(helper, owner);
+        CitizenEntity c = worker(helper, colony, Jobs.FARMER, 12, 12);
+        c.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+        c.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_HOE));
+        c.belongings().addItem(new ItemStack(Items.BREAD, 2));
+        c.hurt(helper.getLevel().damageSources().fellOutOfWorld(), 1000); // not killed by a player
+        helper.succeedWhen(() -> {
+            var items = helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, c.getBoundingBox().inflate(4));
+            java.util.function.Predicate<net.minecraft.world.item.Item> dropped = it -> items.stream().anyMatch(e -> e.getItem().is(it));
+            helper.assertTrue(dropped.test(Items.IRON_CHESTPLATE) && dropped.test(Items.IRON_HOE) && dropped.test(Items.BREAD),
+                    "armour, tool and their own things dropped: " + items.stream().map(e -> e.getItem().toString()).toList());
+            items.forEach(net.minecraft.world.entity.Entity::discard);
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "later_smith_armour", timeoutTicks = 4000)
+    public static void smithArmoursTheGuardsAndNeedsCoalToSmelt(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        built(helper, colony, "stad:medieval/smithy", new BlockPos(3, G - 1, 3));
+        var hall = hall(helper).storage();
+        hall.addItem(new ItemStack(Items.IRON_INGOT, 8)); // a chestplate's worth (no planks: no sword)
+        hall.addItem(new ItemStack(Items.RAW_COPPER, 4)); // no coal for it
+        CitizenEntity smith = worker(helper, colony, Jobs.SMITH, 12, 12);
+        CitizenEntity guard = worker(helper, colony, Jobs.GUARD, 13, 13);
+        guard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD)); // armed: just short of armour
+        helper.succeedWhen(() -> {
+            helper.assertTrue(guard.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE), "the guard wears the chestplate the smith made: "
+                    + guard.getItemBySlot(EquipmentSlot.CHEST) + "; smith " + smith.activity());
+            helper.assertTrue(ColonyStorage.deliveries(helper.getLevel(), colony).count(Items.RAW_COPPER) == 4, "no ore smelted without coal");
+            helper.assertTrue(smith.status().text().contains("nothing to burn"), "the smith says what's missing: " + smith.status().text());
             cleanUp(helper, colony, owner);
         });
     }

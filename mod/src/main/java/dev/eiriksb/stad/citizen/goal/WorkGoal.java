@@ -121,6 +121,22 @@ abstract class WorkGoal extends Goal {
         return near.isEmpty() ? sites : near;
     }
 
+    /**
+     * Where they take what they work with: their own things first (what they've been given), then their workplace's
+     * chests (the kitchen's ingredients, the barn's feed, the lumber camp's saplings), then {@code town}.
+     */
+    protected ColonyStorage ownFirst(ServerLevel level, Colony colony, ColonyStorage town) {
+        List<ColonyStorage.Box> boxes = new java.util.ArrayList<>();
+        boxes.add(citizen.ownBox());
+        workplace(colony).ifPresent(at -> boxes.addAll(Workplaces.storage(level, at).boxes()));
+        for (ColonyStorage.Box b : town.boxes()) {
+            if (boxes.stream().noneMatch(x -> x.pos().equals(b.pos()))) {
+                boxes.add(b);
+            }
+        }
+        return ColonyStorage.of(boxes);
+    }
+
     /** What they hang on to instead of delivering (seeds to sow, saplings to plant). */
     protected boolean keep(ItemStack stack) {
         return false;

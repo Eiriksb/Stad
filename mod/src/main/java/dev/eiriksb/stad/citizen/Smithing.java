@@ -167,6 +167,11 @@ public final class Smithing {
         return plain(s) && (s.is(Tags.Items.RAW_MATERIALS) || s.is(Tags.Items.ORES));
     }
 
+    /** What the smith burns: coal, charcoal and coal blocks (not the town's wood). */
+    public static boolean fuel(ItemStack s) {
+        return plain(s) && (s.is(net.minecraft.tags.ItemTags.COALS) || s.is(net.minecraft.world.item.Items.COAL_BLOCK));
+    }
+
     /** What smelting one makes, or nothing. */
     public static ItemStack smelted(ServerLevel level, ItemStack s) {
         return level.getRecipeManager().getRecipeFor(RecipeType.SMELTING, new SingleRecipeInput(s), level)

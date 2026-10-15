@@ -63,7 +63,7 @@ public class ShepherdGoal extends WorkGoal {
         return feed(stack) && stack.getCount() <= 16;
     }
 
-    private static boolean feed(ItemStack s) {
+    static boolean feed(ItemStack s) {
         return s.is(Items.WHEAT) || s.is(Items.CARROT) || s.is(Items.POTATO) || s.is(Items.BEETROOT) || s.is(Items.WHEAT_SEEDS);
     }
 
@@ -114,7 +114,7 @@ public class ShepherdGoal extends WorkGoal {
 
     @Override
     protected String idle(ServerLevel level, Colony colony) {
-        return ColonyStorage.deliveries(level, colony).count(ShepherdGoal::feed) > 0 || pocketed(ShepherdGoal::feed) ? "Keeping an eye on the animals"
+        return ownFirst(level, colony, ColonyStorage.deliveries(level, colony)).count(ShepherdGoal::feed) > 0 || pocketed(ShepherdGoal::feed) ? "Keeping an eye on the animals"
                 : "Keeping an eye on the animals (to breed them they need wheat, carrots, potatoes or seeds in the town hall)";
     }
 
@@ -220,7 +220,7 @@ public class ShepherdGoal extends WorkGoal {
                 return;
             }
         }
-        ColonyStorage feedStore = ColonyStorage.deliveries(level, colony);
+        ColonyStorage feedStore = ownFirst(level, colony, ColonyStorage.deliveries(level, colony));
         for (List<Animal> kind : kinds.values()) {
             List<Animal> ready = kind.stream().filter(a -> !a.isBaby() && a.getAge() == 0 && a.canFallInLove()).toList();
             boolean waiting = kind.stream().anyMatch(Animal::isInLove); // one's been fed: feed it a partner
@@ -428,7 +428,7 @@ public class ShepherdGoal extends WorkGoal {
 
     private void fetchFeed(ServerLevel level, Colony colony) {
         Animal animal = (Animal) target;
-        ColonyStorage.Box box = ColonyStorage.deliveries(level, colony).find(animal::isFood);
+        ColonyStorage.Box box = ownFirst(level, colony, ColonyStorage.deliveries(level, colony)).find(animal::isFood);
         if (box == null) {
             task = null;
             target = null;

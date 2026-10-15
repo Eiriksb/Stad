@@ -38,15 +38,16 @@ public final class Guide {
                     + " the architect's table (Grove), or a grove of their own when there are no trees.", "Trees on the town's land, or saplings in the town hall."}),
             Map.entry(Jobs.COURIER, new String[]{"Carries what the builders and the town hall need from the warehouse, and empties the"
                     + " workplaces' chests into it.", "A warehouse."}),
-            Map.entry(Jobs.GUARD, new String[]{"Patrols the town, and fights monsters and raiders.", "A sword (and armour) in the town hall."}),
+            Map.entry(Jobs.GUARD, new String[]{"Patrols the town, and fights monsters and raiders.",
+                    "A sword (and armour) in the town hall, or given to them (sneak and right-click them)."}),
             Map.entry(Jobs.COOK, new String[]{"Bakes bread (three wheat to a loaf), cooks meat, fish and potatoes, and brings the food to the"
                     + " town hall. Cooked food fills far more than raw.", "A furnace, smoker or campfire on the town's land, and something to cook."}),
             Map.entry(Jobs.FISHER, new String[]{"Fishes from the shore.", "A pond or river on the town's land (eight blocks of open water or more)."}),
             Map.entry(Jobs.SHEPHERD, new String[]{"Brings in animals from nearby (into a pen, if you design one at the architect's table), shears"
                     + " the sheep, feeds the animals so they breed, and butchers the extras.", "Sheep, cows, pigs or chickens in or near town, and wheat, carrots or seeds to feed them."}),
             Map.entry(Jobs.MINER, new String[]{"Digs the town's mine deeper, layer by layer, for stone, coal and ore.", "A Mine (from the building plans)."}),
-            Map.entry(Jobs.SMITH, new String[]{"Makes the tools the workers are short of, mends worn ones and smelts ore.",
-                    "A smithy (anvil, furnace and chest), and cobblestone or iron, and planks."}),
+            Map.entry(Jobs.SMITH, new String[]{"Makes the tools the workers are short of and armour for the guards, mends worn ones, and smelts"
+                    + " ore in the furnace.", "A smithy (anvil, furnace and chest), cobblestone or iron and planks, and coal or charcoal to smelt with."}),
             Map.entry(Jobs.HEALER, new String[]{"Treats the ill and the wounded.", "Nothing; an infirmary gives the ill a bed."}),
             Map.entry(Jobs.MERCHANT, new String[]{"Sells the town's spare goods to players and buys what it's short of, for emeralds.",
                     "Emeralds in the town hall; a market or a market square (a stall each) to stand at."}),

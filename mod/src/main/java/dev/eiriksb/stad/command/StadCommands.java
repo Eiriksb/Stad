@@ -100,6 +100,7 @@ public final class StadCommands {
                                 .then(Commands.argument("text", StringArgumentType.greedyString()).executes(StadCommands::talk))))
                         .then(Commands.literal("history").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::history)))
                         .then(Commands.literal("trade").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::trade)))
+                        .then(Commands.literal("gear").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::gear)))
                         .then(Commands.literal("voice").requires(s -> s.hasPermission(2))
                                 .then(Commands.argument("citizens", EntityArgument.entities()).executes(StadCommands::voice)))
                         .then(Commands.literal("status").requires(s -> s.hasPermission(2))
@@ -474,6 +475,17 @@ public final class StadCommands {
         }
         String why = dev.eiriksb.stad.colony.Trading.open(player, c);
         return why == null ? 1 : fail(ctx.getSource(), why);
+    }
+
+    /** A citizen's armour, hands and pockets (their town's officers). */
+    private static int gear(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        CitizenEntity c = near(ctx, player);
+        if (c == null) {
+            return fail(ctx.getSource(), "That citizen isn't nearby.");
+        }
+        dev.eiriksb.stad.citizen.CitizenMenu.open(player, c);
+        return 1;
     }
 
     /** Admins: how citizens sound (their voice description, pitch and pace). */

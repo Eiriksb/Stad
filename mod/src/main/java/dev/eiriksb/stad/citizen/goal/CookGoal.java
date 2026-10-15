@@ -92,15 +92,18 @@ public class CookGoal extends WorkGoal {
         return ingredient(s) && (!s.is(Items.WHEAT) || s.getCount() >= WHEAT_PER_BREAD);
     }
 
-    /** Where the ingredients are: the warehouses (farmers, fishers and the shepherd bring them there) and the town hall. */
-    private static ColonyStorage stores(ServerLevel level, Colony colony) {
+    /**
+     * Where the ingredients are: the kitchen's own chests, the warehouses (farmers, fishers and the shepherd bring them
+     * there) and the town hall.
+     */
+    private ColonyStorage stores(ServerLevel level, Colony colony) {
         java.util.List<ColonyStorage.Box> boxes = new java.util.ArrayList<>(ColonyStorage.deliveries(level, colony).boxes());
         for (ColonyStorage.Box b : ColonyStorage.townHall(level, colony).boxes()) {
             if (boxes.stream().noneMatch(x -> x.pos().equals(b.pos()))) {
                 boxes.add(b);
             }
         }
-        return ColonyStorage.of(boxes);
+        return ownFirst(level, colony, ColonyStorage.of(boxes));
     }
 
     @Override

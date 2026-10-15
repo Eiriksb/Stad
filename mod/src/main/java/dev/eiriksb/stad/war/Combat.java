@@ -164,6 +164,28 @@ public final class Combat {
         }
     }
 
+    /** The armour slots, in the order the smith makes them (the chestplate guards the most). */
+    public static final EquipmentSlot[] ARMOUR = {EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.HEAD, EquipmentSlot.FEET};
+
+    /** How many pieces for a slot the town's guards are short of: guards without one, less the spares in the stores. */
+    public static int armourShortage(ServerLevel level, Colony colony, EquipmentSlot slot) {
+        int lacking = 0;
+        for (dev.eiriksb.stad.colony.CitizenRecord r : colony.citizens()) {
+            if (Jobs.GUARD.equals(r.job) && level.getEntity(r.uuid) instanceof CitizenEntity e && guard(e) && e.getItemBySlot(slot).isEmpty()) {
+                lacking++;
+            }
+        }
+        if (lacking == 0) {
+            return 0;
+        }
+        int spare = ColonyStorage.supply(level, colony).count(st -> armourFor(st, slot)) + ColonyStorage.warehouses(level, colony).count(st -> armourFor(st, slot));
+        return Math.max(0, lacking - spare);
+    }
+
+    static boolean armourFor(ItemStack st, EquipmentSlot slot) {
+        return st.getItem() instanceof net.minecraft.world.item.ArmorItem a && a.getEquipmentSlot() == slot;
+    }
+
     /** Whether a guard still needs a sword (for the town's requests). */
     public static boolean unarmed(CitizenEntity c) {
         return guard(c) && !(c.getItemBySlot(EquipmentSlot.MAINHAND).getItem() instanceof SwordItem);

@@ -54,12 +54,12 @@ too.
 | Farmer | marks out a field, levels and tills it round a water hole it digs, sows it, harvests and replants | seeds in the town hall (or picked from the grass), and flat grass or dirt |
 | Lumberjack | fells natural trees, top down, and replants; plants a grove when there are none | trees on the town's land, or saplings in the town hall |
 | Courier | carries food and materials from the warehouse to where they're needed | a warehouse |
-| Guard | patrols, fights monsters and raiders | a sword (and armour) in the town's stores |
+| Guard | patrols, fights monsters and raiders | a sword (and armour) in the town's stores, or given to them |
 | Cook | bakes bread from wheat, cooks meat, fish and potatoes, and brings it to the town hall | a furnace, smoker or campfire on the town's land |
 | Fisher | fishes from the shore | a pond or river on the town's land (eight blocks of water or more) |
 | Shepherd | brings in animals from just outside town, shears sheep, feeds the animals so they breed, butchers the extras, picks up eggs and wool | sheep, cows, pigs or chickens in or near town, and what they eat |
 | Miner | digs the town's mine down to bedrock, strip-mining for ore on the way | a **mine** (Medieval pack, or design one at the table) or a **quarry** |
-| Smith | makes the tools the workers are short of, mends worn ones, smelts ore | a **smithy** (anvil and furnace) |
+| Smith | makes the tools the workers are short of and armour for the guards, mends worn ones, smelts ore in the furnace | a **smithy** (anvil and furnace), and coal or charcoal to smelt with |
 | Healer | treats the ill and the wounded | nothing; an **infirmary** gives the ill a bed |
 | Merchant | sells the town's spare goods and buys what it needs, for emeralds | nothing; a **market** to stand at |
 | Teacher | teaches the town's children | a **school** (a lectern) |
@@ -125,8 +125,15 @@ alone, and don't dig beside water.
 
 **Skills and tools.** Citizens get better at a job the more they do it, from novice to master (their card shows it).
 Farmers, lumberjacks, miners, fishers and shepherds need a real hoe, axe, pickaxe, rod or shears: put some in the town
-hall, or get a **smith**, who makes them from what's in the stores, mends worn ones and smelts the miner's ore.
-Without a tool a worker makes do, slowly, and the town asks for one.
+hall, or get a **smith**, who makes them from what's in the stores, mends worn ones and smelts the miner's ore in
+the smithy's furnace (with coal or charcoal from the stores). Without a tool a worker makes do, slowly, and the town
+asks for one.
+
+**Gear.** Sneak and right-click a citizen (or press **Gear** on their screen) to see their armour, what they hold,
+their own things and what they carry for work. In a young town, hand things to them there: put bread, a tool or
+armour in their own things and they'll eat it, use it and wear it. Their job also uses seeds, saplings, feed, coal
+and materials from there before the town's stores. Workplaces, a warehouse, a smith and couriers take over as the
+town grows.
 
 **Illness.** Now and then someone falls ill and stays in bed for a few days; a **healer** gets them up again sooner.
 

@@ -62,7 +62,6 @@ public class CourierGoal extends WorkGoal {
         if (request == null) {
             haul = nextHaul(level, colony);
             if (haul != null) {
-                haulWhat = CourierGoal::haulable;
                 haulWhy = "Fetching from the workplaces";
             } else if (tidying != null) {
                 haul = tidying;
@@ -86,10 +85,15 @@ public class CourierGoal extends WorkGoal {
             if (!b.done() || b.type() == null || !HAULED.contains(b.type())) {
                 continue;
             }
-            for (ColonyStorage.Box box : dev.eiriksb.stad.colony.Workplaces.storage(level, b).boxes()) {
-                if (hasHaul(box) && box.pos().distSqr(citizen.blockPosition()) < bestDist) {
+            ColonyStorage own = dev.eiriksb.stad.colony.Workplaces.storage(level, b);
+            java.util.function.Predicate<ItemStack> stock = stock(b.type());
+            boolean spare = own.count(stock) > STOCK; // more than the workplace keeps for itself
+            java.util.function.Predicate<ItemStack> what = st -> haulable(st) && (spare || !stock.test(st));
+            for (ColonyStorage.Box box : own.boxes()) {
+                if (hasHaul(box, what) && box.pos().distSqr(citizen.blockPosition()) < bestDist) {
                     best = box;
                     bestDist = box.pos().distSqr(citizen.blockPosition());
+                    haulWhat = what;
                 }
             }
         }
@@ -162,9 +166,23 @@ public class CourierGoal extends WorkGoal {
         return !s.isEmpty() && dev.eiriksb.stad.citizen.Tools.kindOf(s) == null;
     }
 
-    private static boolean hasHaul(ColonyStorage.Box box) {
+    /** how much of its working stock a workplace keeps (the rest is carried on) */
+    static final int STOCK = 64;
+
+    /** What a workplace keeps for its own work rather than sending on: the barn's feed, the lumber camp's saplings. */
+    static java.util.function.Predicate<ItemStack> stock(net.minecraft.resources.ResourceLocation type) {
+        if (dev.eiriksb.stad.building.BuildingDef.BARN.equals(type)) {
+            return ShepherdGoal::feed;
+        }
+        if (dev.eiriksb.stad.building.BuildingDef.LUMBER_CAMP.equals(type)) {
+            return st -> st.is(net.minecraft.tags.ItemTags.SAPLINGS);
+        }
+        return st -> false;
+    }
+
+    private static boolean hasHaul(ColonyStorage.Box box, java.util.function.Predicate<ItemStack> what) {
         for (int i = 0; i < box.container().getContainerSize(); i++) {
-            if (haulable(box.container().getItem(i))) {
+            if (what.test(box.container().getItem(i))) {
                 return true;
             }
         }

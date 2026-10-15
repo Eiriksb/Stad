@@ -18,6 +18,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.AbstractFurnaceBlock;
 import net.minecraft.world.level.block.AnvilBlock;
+import net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity;
+import net.minecraft.world.item.crafting.RecipeType;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,17 +29,31 @@ import java.util.Optional;
 
 /**
  * The smith (PLAN.md §6.9), at the smithy's anvil and furnace: makes the tools the town's workers are short of (and
- * swords for unarmed guards) from what's in the stores, mends worn tools, and smelts the miner's ore. What they make
- * goes to the town's stores, where the workers take their tools from.
+ * swords and armour for the guards) from what's in the stores, mends worn tools and armour, and smelts the miner's
+ * ore in the smithy's real furnace (a blast furnace if it has one), burning the town's coal or charcoal: they load it,
+ * get on with other work while it burns, and take out what it's made. What they make goes to the town's stores, where
+ * the workers take their tools from.
  */
 public class SmithGoal extends WorkGoal {
-    enum Kind { MAKE, MEND, SMELT }
+    enum Kind { MAKE, MEND, LOAD, COLLECT }
 
-    /** What the smith is doing: making {@code target} out of {@code bill}, mending {@code tool} with {@code units} of {@code repair}, or smelting. */
+    /**
+     * What the smith is doing: making {@code target} out of {@code bill}, mending {@code tool} with {@code units} of
+     * {@code repair}, loading the furnace with {@code units} of the ore {@code target} (or none: just fuel) and
+     * {@code bill}'s fuel, or taking out what it's made.
+     */
     record Task(Kind kind, Item target, Map<Item, Integer> bill, ItemStack tool, Item repair, int units) {}
 
-    /** how much ore they fetch at a time */
+    /** how much ore they put in the furnace at a time */
     static final int ORE_BATCH = 16;
+    /** how many items a piece of coal or charcoal smelts (a block of coal, ten times that) */
+    static final int PER_COAL = 8;
+    /** what armour they make for a guard short of it, best first, by slot */
+    static final Map<net.minecraft.world.entity.EquipmentSlot, List<Item>> ARMOUR = Map.of(
+            net.minecraft.world.entity.EquipmentSlot.CHEST, List.of(net.minecraft.world.item.Items.IRON_CHESTPLATE, net.minecraft.world.item.Items.LEATHER_CHESTPLATE),
+            net.minecraft.world.entity.EquipmentSlot.LEGS, List.of(net.minecraft.world.item.Items.IRON_LEGGINGS, net.minecraft.world.item.Items.LEATHER_LEGGINGS),
+            net.minecraft.world.entity.EquipmentSlot.HEAD, List.of(net.minecraft.world.item.Items.IRON_HELMET, net.minecraft.world.item.Items.LEATHER_HELMET),
+            net.minecraft.world.entity.EquipmentSlot.FEET, List.of(net.minecraft.world.item.Items.IRON_BOOTS, net.minecraft.world.item.Items.LEATHER_BOOTS));
 
     private Task task;
     private boolean fetched;
@@ -60,7 +76,8 @@ public class SmithGoal extends WorkGoal {
         return switch (task.kind) {
             case MAKE -> task.bill.containsKey(s.getItem());
             case MEND -> s.is(task.repair);
-            case SMELT -> Smithing.ore(s);
+            case LOAD -> s.is(task.target) && task.target != null || Smithing.fuel(s);
+            case COLLECT -> false;
         };
     }
 
@@ -73,13 +90,36 @@ public class SmithGoal extends WorkGoal {
         return find(colony, s -> s.getBlock() instanceof AnvilBlock);
     }
 
+    /** The smithy's furnace for ore: a blast furnace if there is one, else a furnace (a smoker only cooks food). */
     private Optional<BlockPos> furnace(Colony colony) {
-        return find(colony, s -> s.getBlock() instanceof AbstractFurnaceBlock);
+        Optional<BlockPos> blast = find(colony, s -> s.getBlock() instanceof net.minecraft.world.level.block.BlastFurnaceBlock);
+        return blast.isPresent() ? blast : find(colony, s -> s.getBlock() instanceof net.minecraft.world.level.block.FurnaceBlock);
     }
+
+    /** The furnace's block entity, when it's really there. */
+    private Optional<AbstractFurnaceBlockEntity> oven(ServerLevel level, Colony colony) {
+        return furnace(colony).map(level::getBlockEntity).filter(AbstractFurnaceBlockEntity.class::isInstance).map(AbstractFurnaceBlockEntity.class::cast);
+    }
+
+    private static net.minecraft.world.item.crafting.RecipeType<? extends net.minecraft.world.item.crafting.AbstractCookingRecipe> recipes(AbstractFurnaceBlockEntity f) {
+        return f instanceof net.minecraft.world.level.block.entity.BlastFurnaceBlockEntity ? RecipeType.BLASTING : RecipeType.SMELTING;
+    }
+
+    /** Whether this furnace smelts it. */
+    private static boolean smeltable(ServerLevel level, AbstractFurnaceBlockEntity f, ItemStack s) {
+        return Smithing.ore(s) && level.getRecipeManager().getRecipeFor(recipes(f), new net.minecraft.world.item.crafting.SingleRecipeInput(s), level).isPresent();
+    }
+
+    /** Whether the fire's out with something still waiting in it. */
+    private static boolean outOfFuel(AbstractFurnaceBlockEntity f) {
+        return !f.getItem(SLOT_INPUT).isEmpty() && f.getItem(SLOT_FUEL).isEmpty() && !f.getBlockState().getValue(AbstractFurnaceBlock.LIT);
+    }
+
+    private static final int SLOT_INPUT = 0, SLOT_FUEL = 1, SLOT_RESULT = 2;
 
     /** Where the smith looks: their smithy, the town's stores, and every workplace (where tools are kept). */
     private List<ColonyStorage> stores(ServerLevel level, Colony colony) {
-        List<ColonyStorage> out = new ArrayList<>(Tools.stores(level, colony, workplace(colony)));
+        List<ColonyStorage> out = new ArrayList<>(Tools.stores(level, colony, citizen, workplace(colony)));
         for (Building b : colony.buildings()) {
             if (b.done() && dev.eiriksb.stad.colony.Workplaces.isWorkplace(b) && !workplace(colony).map(w -> w.id == b.id).orElse(false)) {
                 out.add(dev.eiriksb.stad.colony.Workplaces.storage(level, b));
@@ -105,15 +145,40 @@ public class SmithGoal extends WorkGoal {
         return task != null;
     }
 
-    /** What most needs doing: tools the town is short of, then mending, then smelting. */
+    /**
+     * What most needs doing: taking out what the furnace made and loading it with ore (it works while they do the
+     * rest), then tools the town is short of, then armour for the guards, then mending.
+     */
     Task plan(ServerLevel level, Colony colony) {
         List<ColonyStorage> stores = stores(level, colony);
         Map<Item, Integer> stock = Smithing.stock(stores);
+        Optional<AbstractFurnaceBlockEntity> oven = oven(level, colony);
+        if (oven.isPresent()) {
+            AbstractFurnaceBlockEntity f = oven.get();
+            if (!f.getItem(SLOT_RESULT).isEmpty()) {
+                return new Task(Kind.COLLECT, null, Map.of(), ItemStack.EMPTY, null, 0);
+            }
+            Task load = load(level, f, stores, stock);
+            if (load != null) {
+                return load;
+            }
+        }
         for (Tools.Kind k : Tools.Kind.values()) {
             if (Tools.shortage(level, colony, k) <= 0) {
                 continue;
             }
             for (Item item : k.made) {
+                Map<Item, Integer> bill = Smithing.bill(level, stock, item);
+                if (bill != null) {
+                    return new Task(Kind.MAKE, item, bill, ItemStack.EMPTY, null, 0);
+                }
+            }
+        }
+        for (net.minecraft.world.entity.EquipmentSlot slot : dev.eiriksb.stad.war.Combat.ARMOUR) {
+            if (dev.eiriksb.stad.war.Combat.armourShortage(level, colony, slot) <= 0) {
+                continue;
+            }
+            for (Item item : ARMOUR.get(slot)) {
                 Map<Item, Integer> bill = Smithing.bill(level, stock, item);
                 if (bill != null) {
                     return new Task(Kind.MAKE, item, bill, ItemStack.EMPTY, null, 0);
@@ -139,15 +204,52 @@ public class SmithGoal extends WorkGoal {
                 return new Task(Kind.MEND, tool.getItem(), Map.of(), tool, repair, Math.max(1, units));
             }
         }
-        if (furnace(colony).isPresent()) {
-            for (ColonyStorage s : stores) {
-                ColonyStorage.Box b = s.find(st -> Smithing.ore(st) && !Smithing.smelted(level, st).isEmpty());
-                if (b != null) {
-                    return new Task(Kind.SMELT, null, Map.of(), ItemStack.EMPTY, null, 0);
+        return null;
+    }
+
+    /**
+     * Loading the furnace, when it's empty and there's ore it smelts (a batch of one kind, with the coal to smelt it),
+     * or when its fire has gone out with ore still in it (just the coal). Null when there's nothing to load or nothing
+     * to burn.
+     */
+    private Task load(ServerLevel level, AbstractFurnaceBlockEntity f, List<ColonyStorage> stores, Map<Item, Integer> stock) {
+        Item ore = null;
+        int units = 0;
+        if (f.getItem(SLOT_INPUT).isEmpty()) {
+            for (Map.Entry<Item, Integer> e : stock.entrySet()) {
+                if (smeltable(level, f, new ItemStack(e.getKey()))) {
+                    ore = e.getKey();
+                    units = Math.min(ORE_BATCH, e.getValue());
+                    break;
                 }
             }
+            if (ore == null) {
+                return null;
+            }
+        } else if (!outOfFuel(f)) {
+            return null;
         }
-        return null;
+        int toSmelt = units + f.getItem(SLOT_INPUT).getCount();
+        ItemStack inFuel = f.getItem(SLOT_FUEL);
+        int covered = inFuel.isEmpty() ? 0 : inFuel.getCount() * (inFuel.is(net.minecraft.world.item.Items.COAL_BLOCK) ? PER_COAL * 10 : PER_COAL);
+        Map<Item, Integer> fuel = new java.util.HashMap<>();
+        if (covered < toSmelt) {
+            int need = (toSmelt - covered + PER_COAL - 1) / PER_COAL;
+            for (Map.Entry<Item, Integer> e : stock.entrySet()) {
+                if (Smithing.fuel(new ItemStack(e.getKey())) && (inFuel.isEmpty() || inFuel.is(e.getKey()))) {
+                    int n = e.getKey() == net.minecraft.world.item.Items.COAL_BLOCK ? (need + 9) / 10 : need;
+                    fuel.put(e.getKey(), Math.min(n, e.getValue()));
+                    break;
+                }
+            }
+            if (fuel.isEmpty() && (inFuel.isEmpty() && !f.getBlockState().getValue(AbstractFurnaceBlock.LIT))) {
+                return null; // nothing to burn: see blocked()
+            }
+        }
+        if (ore == null && fuel.isEmpty()) {
+            return null;
+        }
+        return new Task(Kind.LOAD, ore, fuel, ItemStack.EMPTY, null, units);
     }
 
     @Override
@@ -179,6 +281,14 @@ public class SmithGoal extends WorkGoal {
                         + " in the town hall";
             }
         }
+        Optional<AbstractFurnaceBlockEntity> oven = oven(level, colony);
+        if (oven.isPresent() && !oven.get().getBlockState().getValue(AbstractFurnaceBlock.LIT) && oven.get().getItem(SLOT_FUEL).isEmpty()) {
+            Map<Item, Integer> stock = Smithing.stock(stores(level, colony));
+            boolean ore = outOfFuel(oven.get()) || stock.keySet().stream().anyMatch(i -> smeltable(level, oven.get(), new ItemStack(i)));
+            if (ore && stock.keySet().stream().noneMatch(i -> Smithing.fuel(new ItemStack(i)))) {
+                return "There's ore to smelt, but nothing to burn: put coal or charcoal in the town hall";
+            }
+        }
         return null;
     }
 
@@ -193,7 +303,7 @@ public class SmithGoal extends WorkGoal {
 
     @Override
     protected String idle(ServerLevel level, Colony colony) {
-        return "Nothing to make or mend";
+        return oven(level, colony).filter(f -> !f.getItem(SLOT_INPUT).isEmpty()).isPresent() ? "Waiting for the furnace" : "Nothing to make or mend";
     }
 
     @Override
@@ -204,7 +314,8 @@ public class SmithGoal extends WorkGoal {
         return switch (task.kind()) {
             case MAKE -> "Making " + task.target().getDescription().getString().toLowerCase(java.util.Locale.ROOT);
             case MEND -> "Mending " + task.tool().getHoverName().getString().toLowerCase(java.util.Locale.ROOT);
-            case SMELT -> "Smelting ore";
+            case LOAD -> task.target() == null ? "Stoking the furnace" : "Putting " + task.target().getDescription().getString().toLowerCase(java.util.Locale.ROOT) + " in the furnace";
+            case COLLECT -> "Taking what the furnace made";
         };
     }
 
@@ -213,11 +324,15 @@ public class SmithGoal extends WorkGoal {
         if (task == null) {
             return;
         }
-        if (!fetched) {
+        if (!fetched && task.kind != Kind.COLLECT) {
             fetch(level, colony);
             return;
         }
-        Optional<BlockPos> at = task.kind == Kind.SMELT ? furnace(colony) : anvil(colony);
+        if (task.kind == Kind.COLLECT && !fetched) {
+            fetched = true; // nothing to fetch: straight to the furnace
+        }
+        boolean atFurnace = task.kind == Kind.LOAD || task.kind == Kind.COLLECT;
+        Optional<BlockPos> at = atFurnace ? furnace(colony) : anvil(colony);
         if (at.isEmpty()) {
             task = null;
             return;
@@ -230,7 +345,7 @@ public class SmithGoal extends WorkGoal {
         if (--cooldown > 0) {
             if (cooldown % 10 == 0) {
                 citizen.swing(InteractionHand.MAIN_HAND);
-                level.sendParticles(task.kind == Kind.SMELT ? ParticleTypes.SMOKE : ParticleTypes.CRIT, p.getX() + 0.5, p.getY() + 1.1,
+                level.sendParticles(atFurnace ? ParticleTypes.SMOKE : ParticleTypes.CRIT, p.getX() + 0.5, p.getY() + 1.1,
                         p.getZ() + 0.5, 3, 0.2, 0.1, 0.2, 0.02);
             }
             return;
@@ -238,7 +353,8 @@ public class SmithGoal extends WorkGoal {
         switch (task.kind) {
             case MAKE -> make(level, p);
             case MEND -> mend(level, p);
-            case SMELT -> smelt(level, p);
+            case LOAD -> load(level, p);
+            case COLLECT -> collect(level, p);
         }
     }
 
@@ -250,7 +366,8 @@ public class SmithGoal extends WorkGoal {
         ColonyStorage.Box box = switch (task.kind) {
             case MAKE -> stores.find(s -> Smithing.plain(s) && task.bill.containsKey(s.getItem()));
             case MEND -> stores.find(s -> s == task.tool);
-            case SMELT -> stores.find(Smithing::ore);
+            case LOAD -> stores.find(s -> Smithing.plain(s) && (task.target != null && s.is(task.target) || task.bill.containsKey(s.getItem())));
+            case COLLECT -> null;
         };
         if (box == null) {
             task = null;
@@ -280,11 +397,19 @@ public class SmithGoal extends WorkGoal {
                 citizen.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, t); // in hand at the anvil
                 stores.takeUpTo(s -> Smithing.plain(s) && s.is(task.repair), task.units).forEach(this::pocket);
             }
-            case SMELT -> stores.takeUpTo(s -> Smithing.ore(s) && !Smithing.smelted(level, s).isEmpty(), ORE_BATCH).forEach(this::pocket);
+            case LOAD -> {
+                if (task.target != null) {
+                    stores.takeUpTo(s -> Smithing.plain(s) && s.is(task.target), task.units).forEach(this::pocket);
+                }
+                for (Map.Entry<Item, Integer> e : task.bill.entrySet()) {
+                    stores.takeUpTo(s -> Smithing.plain(s) && s.is(e.getKey()), e.getValue()).forEach(this::pocket);
+                }
+            }
+            case COLLECT -> {}
         }
         citizen.swing(InteractionHand.MAIN_HAND);
         fetched = true;
-        cooldown = pace(task.kind == Kind.SMELT ? 40 : task.kind == Kind.MEND ? 60 : 80);
+        cooldown = pace(task.kind == Kind.LOAD ? 20 : task.kind == Kind.MEND ? 60 : 80);
         approach.reset();
     }
 
@@ -351,19 +476,49 @@ public class SmithGoal extends WorkGoal {
         done();
     }
 
-    private void smelt(ServerLevel level, BlockPos furnace) {
-        SimpleContainer inv = citizen.inventory();
-        for (int i = 0; i < inv.getContainerSize(); i++) {
-            ItemStack s = inv.getItem(i);
-            ItemStack out = Smithing.ore(s) ? Smithing.smelted(level, s) : ItemStack.EMPTY;
-            if (!out.isEmpty()) {
-                s.shrink(1);
-                pocket(out);
-                level.playSound(null, furnace, SoundEvents.FURNACE_FIRE_CRACKLE, SoundSource.BLOCKS, 0.8f, 1.0f);
-                worked(1);
-                cooldown = pace(40);
-                return;
+    /** Puts the ore and the fuel they brought in the furnace (what doesn't fit goes back to the stores with the rest). */
+    private void load(ServerLevel level, BlockPos furnace) {
+        if (level.getBlockEntity(furnace) instanceof AbstractFurnaceBlockEntity f) {
+            SimpleContainer inv = citizen.inventory();
+            for (int i = 0; i < inv.getContainerSize(); i++) {
+                ItemStack s = inv.getItem(i);
+                if (task.target != null && s.is(task.target) && smeltable(level, f, s)) {
+                    inv.setItem(i, into(f, SLOT_INPUT, s));
+                } else if (Smithing.fuel(s) && task.bill.containsKey(s.getItem())) {
+                    inv.setItem(i, into(f, SLOT_FUEL, s));
+                }
             }
+            f.setChanged();
+            level.playSound(null, furnace, SoundEvents.FIRECHARGE_USE, SoundSource.BLOCKS, 0.5f, 1.0f);
+            worked(1);
+        }
+        done();
+    }
+
+    /** Puts what fits of a stack into a furnace slot; returns the rest. */
+    private static ItemStack into(AbstractFurnaceBlockEntity f, int slot, ItemStack s) {
+        ItemStack there = f.getItem(slot);
+        if (there.isEmpty()) {
+            f.setItem(slot, s);
+            return ItemStack.EMPTY;
+        }
+        if (!ItemStack.isSameItemSameComponents(there, s)) {
+            return s;
+        }
+        int n = Math.min(s.getCount(), there.getMaxStackSize() - there.getCount());
+        there.grow(n);
+        s.shrink(n);
+        return s.isEmpty() ? ItemStack.EMPTY : s;
+    }
+
+    /** Takes out what the furnace has made, to go to the stores. */
+    private void collect(ServerLevel level, BlockPos furnace) {
+        if (level.getBlockEntity(furnace) instanceof AbstractFurnaceBlockEntity f && !f.getItem(SLOT_RESULT).isEmpty()) {
+            ItemStack out = f.removeItem(SLOT_RESULT, f.getItem(SLOT_RESULT).getCount());
+            pocket(out);
+            f.setChanged();
+            level.playSound(null, furnace, SoundEvents.ITEM_PICKUP, SoundSource.BLOCKS, 0.5f, 1.0f);
+            worked(out.getCount());
         }
         done();
     }

@@ -770,6 +770,38 @@ formant's share (bright: wide; hardly any: round or oo); shapes are held two fra
 `CitizenSpeechPayload` (line and emotion) to players within 32 blocks: the emotion sets brows and resting mouth for a
 while, and the line is mouthed letter by letter when no voice is heard within 1.5 s (straight away without SVC).
 
+### 6.18 Gear, citizens' own things, and the smith's forge
+
+The early game is done by hand and the late game by buildings: a new town's citizens get their tools, food and armour
+from the player, and workplaces, warehouses, the smith and couriers take that over as the town grows.
+
+**Gear.** `CitizenMenu` (`stad:citizen` menu, `CitizenGearScreen` on the client) shows four armour slots, both hands,
+`belongings()` (9 slots) and `inventory()` (the work pockets, 18 slots), with the player's inventory. Open it by
+sneaking and right-clicking, or with `/stad citizen gear <uuid>` (the **Gear** button). It's for the town's officers
+(`OrderKind.ASSIGN_JOB.minRank`). Shift-clicking puts armour on and anything else in their own things. All equipment
+and both containers drop on death, whatever the cause (`dropCustomDeathLoot`).
+
+**Their own things** are never delivered (`WorkGoal.deliver` empties only `inventory()`).
+- `EatAtTownHallGoal` eats food from them first, without walking anywhere (food with effects excepted).
+- `CitizenEntity.dress()` (every 5 s) puts on armour from them and takes up a tool for the job.
+- `Tools.stores(level, colony, citizen, workplace)` and `WorkGoal.ownFirst` put `ownBox()` (a `ColonyStorage.Box` at
+  the citizen's feet) before the workplace and the town's stores. `Tools.equip` prefers a tool of their own over a
+  better one in the stores.
+- The cook, shepherd and lumberjack take from their workplace's chests first. `CourierGoal.stock` leaves a barn's feed
+  and a lumber camp's saplings there, up to `STOCK` (64).
+
+**The smith's forge.** `SmithGoal` uses the smithy's furnace block entity (a blast furnace before a furnace; a smoker
+never), in this order:
+1. COLLECT: take out the result.
+2. LOAD: put in up to 16 ore of one kind, plus coal or charcoal at 8 items each (a coal block does 80). This also
+   stokes a fire that went out with ore still inside.
+3. MAKE the tools workers lack.
+4. MAKE armour for guards (`Combat.armourShortage`, slots in `Combat.ARMOUR` order: iron, else leather).
+5. MEND tools and armour.
+
+While the furnace burns they do the rest. With ore but nothing to burn, `blocked()` says so. `Smithing.fuel` is coal,
+charcoal and coal blocks, so the town's wood is never burnt.
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).

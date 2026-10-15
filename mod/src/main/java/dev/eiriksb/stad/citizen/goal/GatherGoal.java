@@ -138,7 +138,7 @@ public class GatherGoal extends WorkGoal {
 
     /** What the town is short of that they could gather: what's been asked for, else the stock. */
     Set<Item> wanted(ServerLevel level, Colony colony) {
-        Map<Item, Integer> stock = new HashMap<>(Smithing.stock(Tools.stores(level, colony, workplace(colony))));
+        Map<Item, Integer> stock = new HashMap<>(Smithing.stock(Tools.stores(level, colony, citizen, workplace(colony))));
         for (int i = 0; i < citizen.inventory().getContainerSize(); i++) {
             ItemStack s = citizen.inventory().getItem(i);
             stock.merge(s.getItem(), s.getCount(), Integer::sum);

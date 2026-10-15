@@ -162,6 +162,28 @@
 - All drawn by script and painted in Krita (art/krita/entity/citizen), with the citizen model in Blockbench
   (art/blockbench/citizen.bbmodel) and a line-up of them (art/blockbench/citizens.png).
 
+**Kitting out your citizens**
+- Every citizen, whatever their job, has a gear screen: sneak and right-click them (or **Gear** on their screen) to
+  see the armour they wear, what's in each hand, **their own things** (nine slots) and what they're carrying for
+  work (eighteen slots now, up from nine). Officers can move anything in or out; shift-clicking armour puts it on.
+- Their own things are what you've given them, and work never hands them in. They eat their own food first, where
+  they stand. They put on armour from them and take up a tool for their job straight away. Their job uses those
+  seeds, saplings, feed, ingredients, coal and materials before the town's stores. So a new town is kitted out by hand
+  and the buildings take over as it grows: workplaces, a warehouse, a smith and couriers.
+- Any citizen wears the armour they're given, not just guards.
+- When a citizen dies, all their armour, tools and things drop, whoever killed them (a tool used to drop only when a
+  player did).
+- Workers take what they work with from their workplace's chests before the town's: the cook from the kitchen, the
+  shepherd's feed from the barn, the lumberjack's saplings from the lumber camp. Couriers leave a barn's feed and a
+  lumber camp's saplings there, up to a stack.
+
+**The smith's forge**
+- The smith smelts in the smithy's real furnace now (its blast furnace when it has one). They load it with a batch of
+  ore and the coal or charcoal to smelt it, get on with other work while it burns, and take out the ingots. With ore
+  but nothing to burn, they say so. Coal from the mine finally has a use.
+- The smith makes armour for guards who are short of it, iron if there's enough and leather if not, chestplate first.
+  They mend worn armour as well as tools.
+
 **Marking out where to build**
 - Sneak and right-click two corners with the building plans to mark out an area (outlined, with its size shown while
   you choose the second corner). Right-click inside it and the plans are for that area: the pack buildings that fit

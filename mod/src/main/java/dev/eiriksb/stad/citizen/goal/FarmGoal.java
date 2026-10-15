@@ -288,7 +288,7 @@ public class FarmGoal extends WorkGoal {
     }
 
     private ColonyStorage.Box seedStore(ServerLevel level, Colony colony, net.minecraft.world.item.Item seed) {
-        for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
+        for (ColonyStorage s : Tools.stores(level, colony, citizen, workplace(colony))) {
             ColonyStorage.Box b = s.find(st -> st.is(seed));
             if (b != null) {
                 return b;
@@ -298,13 +298,13 @@ public class FarmGoal extends WorkGoal {
     }
 
     private ColonyStorage.Box seedStore(ServerLevel level, Colony colony) {
-        for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
+        for (ColonyStorage s : Tools.stores(level, colony, citizen, workplace(colony))) {
             ColonyStorage.Box b = s.find(st -> st.is(Items.WHEAT_SEEDS));
             if (b != null) {
                 return b;
             }
         }
-        for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
+        for (ColonyStorage s : Tools.stores(level, colony, citizen, workplace(colony))) {
             ColonyStorage.Box b = s.find(FarmGoal::isSeed);
             if (b != null) {
                 return b;
@@ -435,7 +435,7 @@ public class FarmGoal extends WorkGoal {
         fields(colony).forEach(f -> Fields.crops(f).values().forEach(c -> asked.add(seedFor(c))));
         asked.add(Items.WHEAT_SEEDS);
         for (net.minecraft.world.item.Item seed : asked) {
-            for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
+            for (ColonyStorage s : Tools.stores(level, colony, citizen, workplace(colony))) {
                 for (ItemStack got : s.takeUpTo(st -> st.is(seed), want)) {
                     want -= got.getCount();
                     pocket(got);
@@ -443,7 +443,7 @@ public class FarmGoal extends WorkGoal {
             }
         }
         fetching = null;
-        for (ColonyStorage s : Tools.stores(level, colony, workplace(colony))) {
+        for (ColonyStorage s : Tools.stores(level, colony, citizen, workplace(colony))) {
             if (want <= 0) {
                 break;
             }

@@ -140,7 +140,15 @@ public final class Tools {
         return k != null && k != Kind.SWORD && !k.matches(c.getItemBySlot(EquipmentSlot.MAINHAND));
     }
 
-    /** Where a worker looks for a tool: their workplace, then the town hall, then the warehouses. */
+    /** Where a worker looks for a tool or supplies: their own things, their workplace, then the town hall, then the warehouses. */
+    public static List<ColonyStorage> stores(ServerLevel level, Colony colony, CitizenEntity c, Optional<Building> workplace) {
+        List<ColonyStorage> out = new ArrayList<>();
+        out.add(ColonyStorage.of(c.ownBox()));
+        out.addAll(stores(level, colony, workplace));
+        return out;
+    }
+
+    /** The town's places for tools: the workplace, then the town hall, then the warehouses. */
     public static List<ColonyStorage> stores(ServerLevel level, Colony colony, Optional<Building> workplace) {
         List<ColonyStorage> out = new ArrayList<>();
         workplace.ifPresent(b -> out.add(Workplaces.storage(level, b)));
@@ -166,7 +174,10 @@ public final class Tools {
         Optional<Building> workplace = c.record().flatMap(r -> Workplaces.of(colony, r));
         ColonyStorage best = null;
         ItemStack bestTool = ItemStack.EMPTY;
-        for (ColonyStorage s : stores(level, colony, workplace)) {
+        for (ColonyStorage s : stores(level, colony, c, workplace)) {
+            if (best != null && best.boxes().getFirst().container() == c.belongings()) {
+                break; // one of their own: that's the one they use
+            }
             for (ColonyStorage.Box b : s.boxes()) {
                 for (int i = 0; i < b.container().getContainerSize(); i++) {
                     ItemStack st = b.container().getItem(i);

@@ -194,7 +194,7 @@ public class BeekeeperGoal extends WorkGoal {
             return false;
         }
         List<ColonyStorage.Box> all = new ArrayList<>();
-        Tools.stores(level, colony, workplace(colony)).forEach(s -> all.addAll(s.boxes()));
+        Tools.stores(level, colony, citizen, workplace(colony)).forEach(s -> all.addAll(s.boxes()));
         ColonyStorage stores = ColonyStorage.of(all);
         ColonyStorage.Box box = stores.find(s -> Smithing.plain(s) && s.is(Items.GLASS_BOTTLE));
         if (box == null) {

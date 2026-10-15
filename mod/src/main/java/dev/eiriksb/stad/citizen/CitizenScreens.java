@@ -122,6 +122,10 @@ public final class CitizenScreens {
                     actions.add(new CitizenScreenPayload.Action("Stop working", "stad citizen job " + c.getUUID() + " none", false, YELLOW));
                 }
             }
+            if (CitizenMenu.allowed(player, c)) {
+                actions.add(new CitizenScreenPayload.Action("Gear", "stad citizen gear " + c.getUUID(), false, AQUA,
+                        "Their armour, what they hold and what's in their pockets (or sneak and right-click them)"));
+            }
             if (rank.atLeast(OrderKind.ASSIGN_HOME.minRank)) {
                 actions.add(new CitizenScreenPayload.Action("Give them the house I'm in", "stad adopt give " + c.getUUID(), false, GREEN));
             }

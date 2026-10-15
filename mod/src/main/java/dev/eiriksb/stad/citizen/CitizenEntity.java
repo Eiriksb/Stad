@@ -30,7 +30,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -69,8 +71,17 @@ public class CitizenEntity extends PathfinderMob {
     private int colonyId;
     private float hunger = MAX_NEED;
     private float rest = MAX_NEED;
-    /** what they carry for work: harvests, logs, deliveries */
-    private final SimpleContainer inventory = new SimpleContainer(9);
+    /** how many pockets they have */
+    public static final int POCKETS = 18;
+    /** what they carry for work: harvests, logs, deliveries (taken to the stores) */
+    private final SimpleContainer inventory = new SimpleContainer(POCKETS);
+    /** how many of their own things they keep */
+    public static final int BELONGINGS = 9;
+    /**
+     * their own things, given to them (their gear screen): never handed in. They eat their own food first, and their
+     * job takes its tools, armour and supplies from here before the town's stores.
+     */
+    private final SimpleContainer belongings = new SimpleContainer(BELONGINGS);
     /** game time they were born (children) */
     private long born;
 
@@ -338,6 +349,36 @@ public class CitizenEntity extends PathfinderMob {
         return inventory;
     }
 
+    public SimpleContainer belongings() {
+        return belongings;
+    }
+
+    /** Their own things as one of the places their job takes from (where they stand: no walk to it). */
+    public dev.eiriksb.stad.building.ColonyStorage.Box ownBox() {
+        return new dev.eiriksb.stad.building.ColonyStorage.Box(blockPosition(), belongings);
+    }
+
+    /** Puts on armour from their own things where they're wearing none, and takes up their own tool for their job. */
+    void dress() {
+        Tools.Kind k = Tools.of(job().orElse(null));
+        if (k != null && k != Tools.Kind.SWORD && Tools.lacking(this) && getMainHandItem().isEmpty()) {
+            for (int i = 0; i < belongings.getContainerSize(); i++) {
+                if (k.matches(belongings.getItem(i))) {
+                    setItemSlot(EquipmentSlot.MAINHAND, belongings.removeItemNoUpdate(i));
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < belongings.getContainerSize(); i++) {
+            ItemStack st = belongings.getItem(i);
+            for (EquipmentSlot slot : dev.eiriksb.stad.war.Combat.ARMOUR) {
+                if (!st.isEmpty() && getItemBySlot(slot).isEmpty() && CitizenMenu.fits(st, slot)) {
+                    setItemSlot(slot, st.split(1));
+                }
+            }
+        }
+    }
+
     /** Working hours: daytime, awake, fed, and not taking the afternoon off when their plan says to rest. */
     public boolean canWork() {
         if (isSleeping() || isNight() || hunger < 4 || isBaby() || ill()) {
@@ -473,6 +514,7 @@ public class CitizenEntity extends PathfinderMob {
             if (tickCount % 100 == 0) {
                 trainedAsGuard(dev.eiriksb.stad.colony.Jobs.GUARD.equals(job().orElse(null)));
                 Tools.tidy(this);
+                dress();
                 Status.watch(this);
             }
             if (tickCount % 100 == 0) {
@@ -549,6 +591,10 @@ public class CitizenEntity extends PathfinderMob {
             }
             return InteractionResult.SUCCESS;
         }
+        if (hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sp && sp.isShiftKeyDown() && CitizenMenu.allowed(sp, this)) {
+            CitizenMenu.open(sp, this); // sneak and right-click: their gear
+            return InteractionResult.SUCCESS;
+        }
         if (hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sp) {
             CitizenInteraction.show(sp, this);
             return InteractionResult.SUCCESS;
@@ -568,6 +614,7 @@ public class CitizenEntity extends PathfinderMob {
         tag.putFloat("Hunger", hunger);
         tag.putFloat("Rest", rest);
         tag.put("Inventory", inventory.createTag(registryAccess()));
+        tag.put("Belongings", belongings.createTag(registryAccess()));
         tag.putBoolean("Child", isBaby());
         tag.putLong("Born", born);
         tag.put("Genes", genes().save());
@@ -583,6 +630,7 @@ public class CitizenEntity extends PathfinderMob {
         hunger = tag.contains("Hunger") ? tag.getFloat("Hunger") : MAX_NEED;
         rest = tag.contains("Rest") ? tag.getFloat("Rest") : MAX_NEED;
         inventory.fromTag(tag.getList("Inventory", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
+        belongings.fromTag(tag.getList("Belongings", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
         entityData.set(CHILD, tag.getBoolean("Child"));
         born = tag.getLong("Born");
         genes = Genes.load(tag.getCompound("Genes"));
@@ -600,8 +648,17 @@ public class CitizenEntity extends PathfinderMob {
 
     @Override
     protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean recentlyHit) {
+        for (EquipmentSlot slot : CitizenMenu.GEAR) { // the town's tools and armour, all of it, whoever killed them
+            ItemStack st = getItemBySlot(slot);
+            if (!st.isEmpty() && !net.minecraft.world.item.enchantment.EnchantmentHelper.has(st,
+                    net.minecraft.world.item.enchantment.EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP)) {
+                spawnAtLocation(st);
+            }
+            setItemSlot(slot, ItemStack.EMPTY);
+        }
         super.dropCustomDeathLoot(level, source, recentlyHit);
         net.minecraft.world.Containers.dropContents(level, blockPosition(), inventory);
+        net.minecraft.world.Containers.dropContents(level, blockPosition(), belongings);
     }
 
     @Override
