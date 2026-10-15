@@ -47,7 +47,7 @@ public final class Request {
             return false;
         }
         if (FOOD.equals(what)) {
-            return s.has(DataComponents.FOOD);
+            return Homes.edible(s);
         }
         return BuiltInRegistries.ITEM.getKey(s.getItem()).toString().equals(what);
     }

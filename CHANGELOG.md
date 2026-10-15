@@ -170,6 +170,10 @@
   they stand. They put on armour from them and take up a tool for their job straight away. Their job uses those
   seeds, saplings, feed, ingredients, coal and materials before the town's stores. So a new town is kitted out by hand
   and the buildings take over as it grows: workplaces, a warehouse, a smith and couriers.
+- **Food at home**: a house's chests are its pantry, for the people who sleep there. Hungry citizens eat at home or
+  at the town hall, whichever is nearer and has food. Stock a house by hand early on; later, couriers keep each
+  pantry stocked (six meals a head, topped up when it falls under three) from the warehouses or the town hall's
+  spare food. The town hall always keeps three meals a head for everyone. Workplaces' chests are never pantries.
 - Any citizen wears the armour they're given, not just guards.
 - When a citizen dies, all their armour, tools and things drop, whoever killed them (a tool used to drop only when a
   player did).

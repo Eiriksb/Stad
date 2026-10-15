@@ -110,9 +110,9 @@ public final class StadAdapter implements VillagerAdapter {
         f.context.add(c.home().isPresent() ? "You have a bed of your own in town."
                 : "You have no home or bed in town and sleep on the ground; you'd love a bed of your own.");
         if (c.hunger() < 4) {
-            f.context.add(EatAtTownHallGoal.townHasFood(c) ? "You're very hungry." : "You're starving: there's no food in the town hall.");
+            f.context.add(EatAtTownHallGoal.townHasFood(c) ? "You're very hungry." : "You're starving: there's no food at home or in the town hall.");
         } else if (c.hunger() < 8) {
-            f.context.add(EatAtTownHallGoal.townHasFood(c) ? "You're getting hungry." : "You're hungry, and the town hall has no food.");
+            f.context.add(EatAtTownHallGoal.townHasFood(c) ? "You're getting hungry." : "You're hungry, and there's no food at home or in the town hall.");
         }
         if (c.rest() < 5) {
             f.context.add("You're exhausted.");

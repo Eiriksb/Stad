@@ -22,15 +22,33 @@ public final class Requests {
         int people = Math.max(1, colony.population());
         int food = level.getBlockEntity(colony.center) instanceof TownHallBlockEntity hall
                 ? countFood(hall) : 0;
-        if (food < Math.max(6, people * 3)) {
+        if (food < hallMinimum(colony)) {
             colony.need(Request.FOOD, Math.max(8, people * 4) - food, colony.center, "the town hall", "so nobody goes hungry", now);
         } else {
             colony.request(Request.FOOD, colony.center).ifPresent(r -> colony.removeRequest(r.id));
         }
+        Set<Integer> wanted = new HashSet<>();
+        // Food for each house's pantry, for the people who sleep there.
+        for (Building house : colony.buildings()) {
+            if (!house.done()) {
+                continue;
+            }
+            java.util.List<CitizenRecord> residents = Homes.residents(colony, house);
+            ColonyStorage pantry = residents.isEmpty() ? null : Homes.pantry(level, house);
+            if (pantry == null || pantry.isEmpty()) {
+                continue;
+            }
+            int stocked = pantry.count(Homes::edible);
+            java.util.Optional<Request> asked = colony.request(Request.FOOD, pantry.boxes().getFirst().pos());
+            if (stocked < residents.size() * Homes.PANTRY_LOW || asked.isPresent() && stocked < residents.size() * Homes.PANTRY_FULL) {
+                String who = residents.size() == 1 ? residents.getFirst().name.split(" ")[0] : "the " + residents.size() + " who live there";
+                wanted.add(colony.need(Request.FOOD, residents.size() * Homes.PANTRY_FULL - stocked, pantry.boxes().getFirst().pos(), "the " + house.name,
+                        "for " + who + " to eat at home", now).id);
+            }
+        }
         // What builders are waiting for, brought to their hut (or the town hall).
         BlockPos dest = builderSupply(level, colony);
         String destName = dest.equals(colony.center) ? "the town hall" : "the builder's hut";
-        Set<Integer> wanted = new HashSet<>();
         for (Building b : colony.buildings()) {
             if (b.status == Building.Status.WAITING) {
                 for (Map.Entry<Item, Integer> m : b.missing.entrySet()) {
@@ -58,10 +76,15 @@ public final class Requests {
             }
         }
         for (Request r : colony.requests()) {
-            if (!Request.FOOD.equals(r.what) && !wanted.contains(r.id)) {
+            if (!(Request.FOOD.equals(r.what) && r.dest.equals(colony.center)) && !wanted.contains(r.id)) {
                 colony.removeRequest(r.id);
             }
         }
+    }
+
+    /** How much food the town hall keeps for everyone (couriers only take its spare food to the houses). */
+    public static int hallMinimum(Colony colony) {
+        return Math.max(6, Math.max(1, colony.population()) * 3);
     }
 
     private static int countFood(Container c) {

@@ -80,6 +80,33 @@ public final class Homes {
         return colony.buildings().stream().filter(b -> b.done() && inside(bed, b)).findFirst();
     }
 
+    /** how much food a house keeps per person who sleeps there: topped up to {@link #PANTRY_FULL} when it's under {@link #PANTRY_LOW} */
+    public static final int PANTRY_LOW = 3, PANTRY_FULL = 6;
+
+    /** The house a citizen sleeps in, if it's one of the town's buildings. */
+    public static java.util.Optional<Building> houseOf(Colony colony, CitizenRecord r) {
+        return r.home == null ? java.util.Optional.empty() : houseOf(colony, r.home);
+    }
+
+    /** Who sleeps in a house. */
+    public static List<CitizenRecord> residents(Colony colony, Building house) {
+        return colony.citizens().stream().filter(r -> inside(r.home, house)).toList();
+    }
+
+    /** A house's pantry: its chests and barrels, for the people who sleep there to eat from. */
+    public static dev.eiriksb.stad.building.ColonyStorage pantry(ServerLevel level, Building house) {
+        if (Workplaces.isWorkplace(house)) {
+            return dev.eiriksb.stad.building.ColonyStorage.of(List.of()); // a workplace's chests are for its work
+        }
+        return Workplaces.storage(level, house);
+    }
+
+    /** Something fit to eat (not rotten flesh, a pufferfish or a suspicious stew). */
+    public static boolean edible(net.minecraft.world.item.ItemStack s) {
+        var f = s.get(net.minecraft.core.component.DataComponents.FOOD);
+        return f != null && f.effects().isEmpty();
+    }
+
     public static int freeBeds(ServerLevel level, Colony colony) {
         long homed = colony.citizens().stream().filter(c -> c.home != null).count();
         return (int) Math.max(0, beds(level, colony).size() - homed);

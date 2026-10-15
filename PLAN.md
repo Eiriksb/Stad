@@ -790,6 +790,12 @@ and both containers drop on death, whatever the cause (`dropCustomDeathLoot`).
 - The cook, shepherd and lumberjack take from their workplace's chests first. `CourierGoal.stock` leaves a barn's feed
   and a lumber camp's saplings there, up to `STOCK` (64).
 
+**Pantries.** A house's containers are its pantry (`Homes.pantry`; workplaces have none), for its residents (citizens
+whose bed is inside). `EatAtTownHallGoal` eats from their own things first, then from the nearer of the pantry's chests
+and the town hall, wherever there's food (`Homes.edible`: food without effects). `Requests.update` asks for food for a
+pantry under `PANTRY_LOW` (3) a head, filling it to `PANTRY_FULL` (6), delivered to its first chest. Couriers fetch it
+from the warehouses, or from the town hall's food beyond `Requests.hallMinimum` (3 a head, at least 6).
+
 **The smith's forge.** `SmithGoal` uses the smithy's furnace block entity (a blast furnace before a furnace; a smoker
 never), in this order:
 1. COLLECT: take out the result.

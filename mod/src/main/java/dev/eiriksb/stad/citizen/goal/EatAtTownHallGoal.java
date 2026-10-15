@@ -1,10 +1,13 @@
 package dev.eiriksb.stad.citizen.goal;
 
 import dev.eiriksb.stad.block.TownHallBlockEntity;
+import dev.eiriksb.stad.building.ColonyStorage;
 import dev.eiriksb.stad.citizen.CitizenEntity;
 import dev.eiriksb.stad.colony.Colony;
+import dev.eiriksb.stad.colony.Homes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -12,12 +15,18 @@ import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Optional;
 
-/** A hungry citizen eats their own food where they are (what they've been given), or walks to the town hall and eats from its storage. */
+/**
+ * A hungry citizen eats: their own food where they stand (what they've been given), or the food in their home's
+ * pantry or the town hall, whichever of the two is nearer (and has some).
+ */
 public class EatAtTownHallGoal extends Goal {
     static final float HUNGRY = 8f;
     private final CitizenEntity citizen;
-    private BlockPos hall;
+    /** where they're going to eat (a pantry chest or the town hall), or null when eating their own */
+    private BlockPos table;
     private final Movement.Approach approach = new Movement.Approach();
     /** ticks until the next bite (goals don't tick every game tick, so count rather than use tickCount) */
     private int chew;
@@ -32,29 +41,73 @@ public class EatAtTownHallGoal extends Goal {
         if (citizen.hunger() >= HUNGRY || citizen.isSleeping()) {
             return false;
         }
-        hall = citizen.colony().map(c -> c.center).orElse(null);
-        return ownFood() >= 0 || hall != null && townHall() != null && townHall().hasFood();
+        return choose();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return citizen.hunger() < CitizenEntity.MAX_NEED - 4 && (ownFood() >= 0 || hall != null && townHall() != null && townHall().hasFood());
+        return citizen.hunger() < CitizenEntity.MAX_NEED - 4 && (ownFood() >= 0 || table != null && foodAt(table));
+    }
+
+    /** Picks where to eat; false when there's nothing to eat anywhere. */
+    private boolean choose() {
+        if (ownFood() >= 0) {
+            table = null;
+            return true;
+        }
+        table = null;
+        double best = Double.MAX_VALUE;
+        for (BlockPos p : tables()) {
+            double d = p.distSqr(citizen.blockPosition());
+            if (d < best && foodAt(p)) {
+                best = d;
+                table = p;
+            }
+        }
+        return table != null;
+    }
+
+    /** Where they might eat: the chests of their house, and the town hall. */
+    private List<BlockPos> tables() {
+        Colony colony = citizen.colony().orElse(null);
+        if (colony == null || !(citizen.level() instanceof ServerLevel level)) {
+            return List.of();
+        }
+        List<BlockPos> out = new java.util.ArrayList<>();
+        citizen.record().flatMap(r -> Homes.houseOf(colony, r)).ifPresent(h -> Homes.pantry(level, h).boxes().forEach(b -> out.add(b.pos())));
+        out.add(colony.center);
+        return out;
+    }
+
+    private boolean foodAt(BlockPos p) {
+        var be = citizen.level().getBlockEntity(p);
+        if (be instanceof TownHallBlockEntity hall) {
+            return hall.hasFood();
+        }
+        return be instanceof net.minecraft.world.Container c && ColonyStorage.of(new ColonyStorage.Box(p, c)).count(Homes::edible) > 0;
+    }
+
+    private ItemStack takeAt(BlockPos p) {
+        var be = citizen.level().getBlockEntity(p);
+        if (be instanceof TownHallBlockEntity hall) {
+            return hall.takeFood();
+        }
+        if (be instanceof net.minecraft.world.Container c) {
+            List<ItemStack> got = ColonyStorage.of(new ColonyStorage.Box(p, c)).takeUpTo(Homes::edible, 1);
+            return got.isEmpty() ? ItemStack.EMPTY : got.getFirst();
+        }
+        return ItemStack.EMPTY;
     }
 
     /** The slot of something to eat in their own things, or -1. */
     private int ownFood() {
         var own = citizen.belongings();
         for (int i = 0; i < own.getContainerSize(); i++) {
-            FoodProperties f = own.getItem(i).get(DataComponents.FOOD);
-            if (f != null && f.effects().isEmpty()) { // not rotten flesh or a suspicious stew
+            if (Homes.edible(own.getItem(i))) {
                 return i;
             }
         }
         return -1;
-    }
-
-    private TownHallBlockEntity townHall() {
-        return citizen.level().getBlockEntity(hall) instanceof TownHallBlockEntity t ? t : null;
     }
 
     @Override
@@ -79,18 +132,18 @@ public class EatAtTownHallGoal extends Goal {
             }
             return;
         }
-        if (hall == null || townHall() == null) {
+        if (table == null) {
             return;
         }
-        citizen.getLookControl().setLookAt(hall.getX() + 0.5, hall.getY() + 0.5, hall.getZ() + 0.5);
-        if (citizen.blockPosition().closerToCenterThan(hall.getCenter(), 2.5)) {
+        citizen.getLookControl().setLookAt(table.getX() + 0.5, table.getY() + 0.5, table.getZ() + 0.5);
+        if (citizen.blockPosition().closerToCenterThan(table.getCenter(), 2.5)) {
             citizen.getNavigation().stop();
             if (--chew <= 0) {
                 chew = 30;
-                bite(townHall().takeFood());
+                bite(takeAt(table));
             }
         } else {
-            approach.tick(citizen, hall, 2.0, 0.65); // with the shortcut, if they're walled in (a house going up round them)
+            approach.tick(citizen, table, 2.0, 0.65); // with the shortcut, if they're walled in (a house going up round them)
         }
     }
 
@@ -108,12 +161,8 @@ public class EatAtTownHallGoal extends Goal {
         citizen.getNavigation().stop();
     }
 
-    /** For prompts: whether there's food for them at all (their own, or the town's). */
+    /** For prompts: whether there's food for them at all (their own, at home, or the town's). */
     public static boolean townHasFood(CitizenEntity c) {
-        if (new EatAtTownHallGoal(c).ownFood() >= 0) {
-            return true;
-        }
-        Colony colony = c.colony().orElse(null);
-        return colony != null && c.level().getBlockEntity(colony.center) instanceof TownHallBlockEntity t && t.hasFood();
+        return new EatAtTownHallGoal(c).choose();
     }
 }

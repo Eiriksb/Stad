@@ -51,12 +51,12 @@ public class CourierGoal extends WorkGoal {
     @Override
     protected boolean hasWork(ServerLevel level, Colony colony) {
         if (request != null && colony.requests().contains(request) && request.count > 0) {
-            return carrying() > 0 || warehouses(level, colony).count(request::matches) > 0;
+            return carrying() > 0 || sources(level, colony, request).count(request::matches) > 0;
         }
         ColonyStorage w = warehouses(level, colony);
-        Optional<Request> next = w.isEmpty() ? Optional.empty() : colony.requests().stream()
+        Optional<Request> next = colony.requests().stream()
                 .filter(r -> r.courier == null || r.courier.equals(citizen.getUUID()))
-                .filter(r -> w.count(r::matches) > 0).findFirst();
+                .filter(r -> sources(level, colony, r).count(r::matches) > 0).findFirst();
         next.ifPresent(r -> r.courier = citizen.getUUID());
         request = next.orElse(null);
         if (request == null) {
@@ -189,6 +189,25 @@ public class CourierGoal extends WorkGoal {
         return false;
     }
 
+    /**
+     * Where a request is fetched from: the warehouses, and for a house's pantry also the town hall's spare food (what
+     * it has beyond what it keeps for everyone).
+     */
+    private static ColonyStorage sources(ServerLevel level, Colony colony, Request r) {
+        ColonyStorage w = warehouses(level, colony);
+        if (Request.FOOD.equals(r.what) && !r.dest.equals(colony.center) && hallSpare(level, colony) > 0) {
+            java.util.List<ColonyStorage.Box> boxes = new java.util.ArrayList<>(w.boxes());
+            boxes.addAll(ColonyStorage.townHall(level, colony).boxes());
+            return ColonyStorage.of(boxes);
+        }
+        return w;
+    }
+
+    /** How much food the town hall has beyond what it keeps for everyone. */
+    private static int hallSpare(ServerLevel level, Colony colony) {
+        return ColonyStorage.townHall(level, colony).count(ColonyStorage::isFood) - dev.eiriksb.stad.colony.Requests.hallMinimum(colony);
+    }
+
     private static ColonyStorage warehouses(ServerLevel level, Colony colony) {
         return ColonyStorage.warehouses(level, colony);
     }
@@ -255,11 +274,14 @@ public class CourierGoal extends WorkGoal {
             return;
         }
         if (carrying() == 0) {
-            ColonyStorage.Box box = warehouses(level, colony).find(request::matches);
+            ColonyStorage.Box box = sources(level, colony, request).find(request::matches);
             if (box == null || !approach.tick(citizen, box.pos(), 2.8, 0.65)) {
                 return;
             }
             int left = Math.min(request.count, 64 * 4);
+            if (box.pos().equals(colony.center)) {
+                left = Math.min(left, hallSpare(level, colony)); // the town hall keeps enough for everyone
+            }
             for (int i = 0; i < box.container().getContainerSize() && left > 0; i++) {
                 ItemStack s = box.container().getItem(i);
                 if (request.matches(s)) {

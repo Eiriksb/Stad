@@ -135,6 +135,10 @@ armour in their own things and they'll eat it, use it and wear it. Their job als
 and materials from there before the town's stores. Workplaces, a warehouse, a smith and couriers take over as the
 town grows.
 
+**Food at home.** A house's chest is its pantry. Citizens eat there or at the town hall, whichever is nearer. Fill it
+yourself at first; once you have a courier, they keep every house stocked from the warehouse and the town hall's
+spare food.
+
 **Illness.** Now and then someone falls ill and stays in bed for a few days; a **healer** gets them up again sooner.
 
 **Trading.** Put emeralds in the town hall and make someone the **merchant**: players can then sneak and right-click

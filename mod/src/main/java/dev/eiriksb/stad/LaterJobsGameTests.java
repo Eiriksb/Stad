@@ -213,7 +213,53 @@ public final class LaterJobsGameTests {
         });
     }
 
-    @GameTest(template = "lot", batch = "gear", timeoutTicks = 400)
+    /** A cottage with {@code who} sleeping in it; returns the house. */
+    private static Building homeIn(GameTestHelper helper, Colony colony, CitizenEntity who) {
+        Building house = built(helper, colony, "stad:medieval/cottage", new BlockPos(3, G - 1, 3));
+        BlockPos bed = dev.eiriksb.stad.colony.Homes.freeBed(helper.getLevel(), colony, house, who.getUUID());
+        helper.assertTrue(bed != null, "a bed in the cottage");
+        colony.citizen(who.getUUID()).orElseThrow().home = bed;
+        return house;
+    }
+
+    @GameTest(template = "lot", batch = "pantry", timeoutTicks = 1200)
+    public static void citizensEatAtHome(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        CitizenEntity c = worker(helper, colony, Jobs.FARMER, 12, 12);
+        Building house = homeIn(helper, colony, c);
+        var pantry = dev.eiriksb.stad.colony.Homes.pantry(helper.getLevel(), house);
+        helper.assertTrue(!pantry.isEmpty(), "the cottage's chest is its pantry");
+        pantry.boxes().getFirst().container().setItem(0, new ItemStack(Items.BREAD, 4));
+        c.setHunger(4); // nothing in the town hall: home it is
+        helper.succeedWhen(() -> {
+            helper.assertTrue(c.hunger() > 8 && pantry.count(Items.BREAD) < 4, "ate at home: hunger " + c.hunger() + ", bread " + pantry.count(Items.BREAD));
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "pantry_courier", timeoutTicks = 2400)
+    public static void couriersStockThePantries(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        CitizenEntity farmer = worker(helper, colony, Jobs.FARMER, 12, 12);
+        CitizenEntity courier = worker(helper, colony, Jobs.COURIER, 13, 13);
+        Building house = homeIn(helper, colony, farmer);
+        var pantry = dev.eiriksb.stad.colony.Homes.pantry(helper.getLevel(), house);
+        hall(helper).storage().addItem(new ItemStack(Items.BREAD, 30)); // the town hall keeps 6 of it
+        helper.succeedWhen(() -> {
+            dev.eiriksb.stad.colony.Requests.update(helper.getLevel(), colony);
+            int home = pantry.count(Items.BREAD), left = ColonyStorage.townHall(helper.getLevel(), colony).count(Items.BREAD);
+            helper.assertTrue(home >= dev.eiriksb.stad.colony.Homes.PANTRY_FULL, "the courier stocked the cottage: " + home + "; courier "
+                    + courier.activity() + "; requests " + colony.requests().stream().map(dev.eiriksb.stad.colony.Request::label).toList());
+            helper.assertTrue(left >= dev.eiriksb.stad.colony.Requests.hallMinimum(colony), "the town hall kept its share: " + left);
+            cleanUp(helper, colony, owner);
+        });
+    }
+
+    @GameTest(template = "lot", batch = "gear_drops", timeoutTicks = 400)
     public static void aCitizensGearDropsWhenTheyDie(GameTestHelper helper) {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();
         Colony colony = found(helper, owner);
