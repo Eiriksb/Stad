@@ -158,8 +158,7 @@
   sound (open vowels, bright ones, round ones, hiss, a hum), and the mouth makes that shape. Without a voice, it says
   the written line instead. Their brows and mouth show how they feel about what they said (happy, sad, cross,
   surprised, sleepy...).
-- Citizens chatting among themselves show it on their faces too (with They Will Talk 0.3.0-alpha.9 or newer; older
-  ones only for replies to players).
+- Citizens chatting among themselves show it on their faces too.
 - All drawn by script and painted in Krita (art/krita/entity/citizen), with the citizen model in Blockbench
   (art/blockbench/citizen.bbmodel) and a line-up of them (art/blockbench/citizens.png).
 
@@ -183,7 +182,8 @@
   as each is done, until they all are. U hides it and shows it again (it remembers).
 
 **Smoother**
-- Needs They Will Talk 0.3.0-alpha.7, whose citizens' voices (Q8) are clearly cleaner.
+- Needs They Will Talk 0.3.0-alpha.9: its every-line hook for the faces, and no voice crashes on a full GPU (alpha.7
+  already made the citizens' voices clearly cleaner).
 - Citizens don't jump across town any more on a long walk: they only take the shortcut when they've stopped getting
   any closer for ten seconds (with a puff of cloud), not eight seconds after setting off.
 - Builders leave the ground as it is: where a building or a path wants dirt or grass and there's grass (or dirt,

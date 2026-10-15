@@ -40,16 +40,10 @@ public final class StadConversations implements ConversationHook {
             for (ServerLevel level : server.getAllLevels()) {
                 if (level.getEntity(turn.villager()) instanceof CitizenEntity c) {
                     c.hadCompany();
-                    if (!SPOKE) {
-                        show(c, reply, emotion); // an older They Will Talk, without spoke(): replies to players at least
-                    }
                 }
             }
         });
     }
-
-    /** whether They Will Talk tells hooks about every line said ({@link #spoke}, since 0.3.0-alpha.9) */
-    private static final boolean SPOKE = java.util.Arrays.stream(ConversationHook.class.getMethods()).anyMatch(m -> m.getName().equals("spoke"));
 
     /** Any line a citizen says (a reply, or chatting with another): their face shows it. */
     @Override
