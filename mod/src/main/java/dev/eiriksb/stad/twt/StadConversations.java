@@ -40,16 +40,39 @@ public final class StadConversations implements ConversationHook {
             for (ServerLevel level : server.getAllLevels()) {
                 if (level.getEntity(turn.villager()) instanceof CitizenEntity c) {
                     c.hadCompany();
-                    // the players who can see their face: how they feel, and the line to mouth when there's no voice
-                    var line = new dev.eiriksb.stad.net.CitizenSpeechPayload(c.getUUID(), reply, emotion == null ? "neutral" : emotion);
-                    for (ServerPlayer p : level.players()) {
-                        if (p.distanceToSqr(c) < 32 * 32 && p.connection.hasChannel(dev.eiriksb.stad.net.CitizenSpeechPayload.TYPE)) {
-                            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, line);
-                        }
+                    if (!SPOKE) {
+                        show(c, reply, emotion); // an older They Will Talk, without spoke(): replies to players at least
                     }
                 }
             }
         });
+    }
+
+    /** whether They Will Talk tells hooks about every line said ({@link #spoke}, since 0.3.0-alpha.9) */
+    private static final boolean SPOKE = java.util.Arrays.stream(ConversationHook.class.getMethods()).anyMatch(m -> m.getName().equals("spoke"));
+
+    /** Any line a citizen says (a reply, or chatting with another): their face shows it. */
+    @Override
+    public void spoke(java.util.UUID villager, String text, String emotion) {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null) {
+            return;
+        }
+        for (ServerLevel level : server.getAllLevels()) {
+            if (level.getEntity(villager) instanceof CitizenEntity c) {
+                show(c, text, emotion);
+            }
+        }
+    }
+
+    /** Tells the players who can see a citizen's face what they said and how they felt (to mouth it when there's no voice). */
+    private static void show(CitizenEntity c, String text, String emotion) {
+        var line = new dev.eiriksb.stad.net.CitizenSpeechPayload(c.getUUID(), text, emotion == null ? "neutral" : emotion);
+        for (ServerPlayer p : ((ServerLevel) c.level()).players()) {
+            if (p.distanceToSqr(c) < 32 * 32 && p.connection.hasChannel(dev.eiriksb.stad.net.CitizenSpeechPayload.TYPE)) {
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, line);
+            }
+        }
     }
 
     /**

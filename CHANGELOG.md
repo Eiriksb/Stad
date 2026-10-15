@@ -158,6 +158,8 @@
   sound (open vowels, bright ones, round ones, hiss, a hum), and the mouth makes that shape. Without a voice, it says
   the written line instead. Their brows and mouth show how they feel about what they said (happy, sad, cross,
   surprised, sleepy...).
+- Citizens chatting among themselves show it on their faces too (with They Will Talk 0.3.0-alpha.9 or newer; older
+  ones only for replies to players).
 - All drawn by script and painted in Krita (art/krita/entity/citizen), with the citizen model in Blockbench
   (art/blockbench/citizen.bbmodel) and a line-up of them (art/blockbench/citizens.png).
 

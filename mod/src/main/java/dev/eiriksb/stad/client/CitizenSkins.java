@@ -355,7 +355,7 @@ public final class CitizenSkins {
         int[] bc = cellOf(fp, "brows");
         int browX = bc[0] + l.born(Looks.BROW) % list(fp.get("brows")).size() * bc[2];
         int brow = mix(hair, 0, 0.25f);
-        int[][] lift = {{1, 1}, {0, 0}, {1, 2}, {2, 0}}; // the outer end's row, the inner end's
+        int[][] lift = {{1, 1}, {0, 0}, {0, 2}, {2, 0}}; // the outer end's row, the inner end's (cross and sad tilt by a pixel)
         for (int e = 0; e < 4; e++) {
             for (int y = 0; y < 2; y++) {
                 for (int x = 0; x < 5; x++) {

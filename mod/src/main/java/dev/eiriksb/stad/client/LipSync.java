@@ -51,6 +51,7 @@ public final class LipSync {
         synchronized (m) {
             if (now - m.lastHeard > 400) {
                 m.shapes.clear(); // a new stretch of speech: drop anything mouthed from its letters
+                m.current = -1;
                 m.nextHeard = now + DELAY_MS;
             }
             m.lastHeard = now;
@@ -197,6 +198,7 @@ public final class LipSync {
             }
             long at = now + (voices ? WAIT_FOR_VOICE_MS : 0);
             m.shapes.clear();
+            m.current = -1; // not still saying the last line
             for (char ch : text.toLowerCase().toCharArray()) {
                 int shape = switch (ch) {
                     case 'a', 'æ', 'å' -> OPEN;
@@ -236,7 +238,7 @@ public final class LipSync {
                 m.currentAt = s.at();
             }
             if (m.current < 0) {
-                return m.shapes.isEmpty() ? -1 : REST; // waiting for the first
+                return -1; // not started yet (waiting to see if a voice says it): their face as it is
             }
             if (m.shapes.isEmpty() && now - m.currentAt > 120) {
                 m.current = -1; // nothing after it: done

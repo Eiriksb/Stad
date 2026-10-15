@@ -36,6 +36,17 @@ final class DevCommands {
                             PacketDistributor.sendToPlayer(p, new DevUiPayload(StringArgumentType.getString(ctx, "script")));
                             ctx.getSource().sendSuccess(() -> Component.literal("Sent."), false);
                             return 1;
-                        }))));
+                        }))))
+                // a citizen's face says a line feeling something, as when They Will Talk has them say it (no voice)
+                .then(Commands.literal("say").then(Commands.argument("citizen", EntityArgument.entity())
+                        .then(Commands.argument("emotion", StringArgumentType.word())
+                                .then(Commands.argument("text", StringArgumentType.greedyString()).executes(ctx -> {
+                                    if (EntityArgument.getEntity(ctx, "citizen") instanceof dev.eiriksb.stad.citizen.CitizenEntity c) {
+                                        new dev.eiriksb.stad.twt.StadConversations().spoke(c.getUUID(), StringArgumentType.getString(ctx, "text"),
+                                                StringArgumentType.getString(ctx, "emotion"));
+                                        ctx.getSource().sendSuccess(() -> Component.literal("Said."), false);
+                                    }
+                                    return 1;
+                                })))));
     }
 }
