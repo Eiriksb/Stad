@@ -259,6 +259,38 @@ public final class LaterJobsGameTests {
         });
     }
 
+    @GameTest(template = "lot", batch = "giving", timeoutTicks = 400)
+    public static void handingThingsOverAndFindingThem(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.getLevel().setDayTime(1000);
+        Colony colony = found(helper, owner);
+        CitizenEntity c = worker(helper, colony, Jobs.MINER, 12, 12);
+        owner.setGameMode(net.minecraft.world.level.GameType.SURVIVAL); // in creative, what's handed over is a copy
+        java.util.function.Consumer<ItemStack> hand = st -> {
+            owner.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, st);
+            c.interact(owner, net.minecraft.world.InteractionHand.MAIN_HAND);
+        };
+        hand.accept(new ItemStack(Items.IRON_CHESTPLATE));
+        helper.assertTrue(c.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE) && owner.getMainHandItem().isEmpty(), "armour put on");
+        hand.accept(new ItemStack(Items.STONE_PICKAXE));
+        helper.assertTrue(c.getMainHandItem().is(Items.STONE_PICKAXE), "a miner takes a pickaxe in hand: " + c.getMainHandItem());
+        hand.accept(new ItemStack(Items.BREAD, 5));
+        helper.assertTrue(c.belongings().countItem(Items.BREAD) == 5 && owner.getMainHandItem().isEmpty(), "the bread is theirs now");
+        hand.accept(new ItemStack(Items.DIRT, 3)); // not something to hand over: the screen opens instead, the dirt stays
+        helper.assertTrue(owner.getMainHandItem().getCount() == 3 && c.belongings().countItem(Items.DIRT) == 0, "dirt isn't handed over");
+        owner.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        // which way they are
+        owner.teleportTo(c.getX(), c.getY(), c.getZ() + 20); // twenty blocks south of them
+        String where = dev.eiriksb.stad.command.StadCommands.whereFrom(owner, c, colony);
+        helper.assertTrue(where.startsWith("20 blocks north"), "they're north: " + where);
+        helper.succeedWhen(() -> {
+            helper.assertTrue(!c.shownStatus().isEmpty() && !c.shownStatus().contains(": "), "what they're doing, short, for under their name: "
+                    + c.shownStatus());
+            helper.assertTrue(c.shownProblem(), "no mine: something's stopping them: " + c.shownStatus());
+            cleanUp(helper, colony, owner);
+        });
+    }
+
     @GameTest(template = "lot", batch = "gear_drops", timeoutTicks = 400)
     public static void aCitizensGearDropsWhenTheyDie(GameTestHelper helper) {
         ServerPlayer owner = helper.makeMockServerPlayerInLevel();

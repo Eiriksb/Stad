@@ -101,6 +101,7 @@ public final class StadCommands {
                         .then(Commands.literal("history").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::history)))
                         .then(Commands.literal("trade").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::trade)))
                         .then(Commands.literal("gear").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::gear)))
+                        .then(Commands.literal("find").then(Commands.argument("uuid", StringArgumentType.word()).executes(StadCommands::find)))
                         .then(Commands.literal("voice").requires(s -> s.hasPermission(2))
                                 .then(Commands.argument("citizens", EntityArgument.entities()).executes(StadCommands::voice)))
                         .then(Commands.literal("status").requires(s -> s.hasPermission(2))
@@ -475,6 +476,40 @@ public final class StadCommands {
         }
         String why = dev.eiriksb.stad.colony.Trading.open(player, c);
         return why == null ? 1 : fail(ctx.getSource(), why);
+    }
+
+    /** Where one of your town's citizens is: they glow for a while, and you're told which way and how far. */
+    private static int find(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        UUID id;
+        try {
+            id = UUID.fromString(StringArgumentType.getString(ctx, "uuid"));
+        } catch (IllegalArgumentException e) {
+            return fail(ctx.getSource(), "No such citizen.");
+        }
+        var colony = ColonyManager.get(player.server).ofCitizen(id);
+        if (colony.isEmpty() || !colony.get().rank(player.getUUID()).atLeast(dev.eiriksb.stad.colony.Rank.MEMBER)) {
+            return fail(ctx.getSource(), "That isn't one of your town's citizens.");
+        }
+        String name = colony.get().citizen(id).map(r -> r.name).orElse("They");
+        if (!(player.serverLevel().getEntity(id) instanceof CitizenEntity c)) {
+            return fail(ctx.getSource(), name + " is away: nowhere near anyone just now.");
+        }
+        c.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.GLOWING, 200, 0, false, false));
+        ctx.getSource().sendSuccess(() -> Component.literal(name + " is " + whereFrom(player, c, colony.get()) + ". They glow for a few seconds.")
+                .withStyle(ChatFormatting.AQUA), false);
+        return 1;
+    }
+
+    /** "42 blocks north-east of you, at the farmhouse" */
+    public static String whereFrom(ServerPlayer player, CitizenEntity c, dev.eiriksb.stad.colony.Colony colony) {
+        double dx = c.getX() - player.getX(), dz = c.getZ() - player.getZ();
+        int dist = (int) Math.round(Math.sqrt(dx * dx + dz * dz));
+        String[] dirs = {"south", "south-west", "west", "north-west", "north", "north-east", "east", "south-east"};
+        String dir = dirs[Math.floorMod((int) Math.round(Math.toDegrees(Math.atan2(-dx, dz)) / 45), 8)];
+        String at = colony.buildings().stream().filter(b -> b.done() && b.placement().map(p -> p.bounds().isInside(c.blockPosition())).orElse(false))
+                .findFirst().map(b -> ", at the " + b.name).orElse("");
+        return (dist < 3 ? "right here" : dist + " blocks " + dir + " of you") + at;
     }
 
     /** A citizen's armour, hands and pockets (their town's officers). */

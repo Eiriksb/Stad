@@ -162,6 +162,16 @@
 - All drawn by script and painted in Krita (art/krita/entity/citizen), with the citizen model in Blockbench
   (art/blockbench/citizen.bbmodel) and a line-up of them (art/blockbench/citizens.png).
 
+**Handier citizens**
+- **Hand things over**: right-click one of your town's citizens holding food, a tool or weapon, armour, seeds, saplings
+  or coal and they take it (the whole stack). Armour goes on where they're wearing none, a tool for their job into
+  their hand when they're without one, the rest into their own things. In creative it's a copy.
+- **What they're doing** shows under their name when you're within 12 blocks ("Felling a tree", "Asleep"), in red when
+  something's stopping them ("No seeds"). The full reason and what would fix it are on their screen.
+- **Find them**: click a citizen in the town hall's Citizens tab (or under "Can't work") and the screen closes while
+  they glow for ten seconds. Chat says how far away and which way they are, and which building they're in
+  (`/stad citizen find <uuid>`).
+
 **Kitting out your citizens**
 - Every citizen, whatever their job, has a gear screen: sneak and right-click them (or **Gear** on their screen) to
   see the armour they wear, what's in each hand, **their own things** (nine slots) and what they're carrying for

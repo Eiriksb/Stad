@@ -34,6 +34,25 @@ public final class CitizenRenderer extends HumanoidMobRenderer<CitizenEntity, Pl
         super.render(citizen, yaw, partialTicks, pose, buffers, light);
     }
 
+    /** how near you have to be to see what they're doing under their name */
+    private static final double STATUS_RANGE = 12;
+
+    /** Their name, and under it what they're doing (in red when something's stopping them) when you're near. */
+    @Override
+    protected void renderNameTag(CitizenEntity citizen, net.minecraft.network.chat.Component name, PoseStack pose, MultiBufferSource buffers,
+                                 int light, float partialTick) {
+        super.renderNameTag(citizen, name, pose, buffers, light, partialTick);
+        String status = citizen.shownStatus();
+        if (status.isEmpty() || entityRenderDispatcher.distanceToSqr(citizen) > STATUS_RANGE * STATUS_RANGE) {
+            return;
+        }
+        pose.pushPose();
+        pose.translate(0, -0.26, 0); // a line lower
+        super.renderNameTag(citizen, net.minecraft.network.chat.Component.literal(status)
+                .withStyle(citizen.shownProblem() ? net.minecraft.ChatFormatting.RED : net.minecraft.ChatFormatting.GRAY), pose, buffers, light, partialTick);
+        pose.popPose();
+    }
+
     @Override
     public ResourceLocation getTextureLocation(CitizenEntity citizen) {
         return CitizenSkins.get(citizen.shownLooks(), citizen.isFemale(), citizen.shownJob(), citizen.isBaby()).skin();

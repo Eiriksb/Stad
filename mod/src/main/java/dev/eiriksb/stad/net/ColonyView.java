@@ -21,7 +21,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
     public record Member(String name, Rank rank) {}
 
     /** a citizen, and what they're doing (or what's stopping them: {@code problem}) */
-    public record Citizen(String name, String job, boolean home, int hunger, int rest, int happiness, String status, boolean problem) {}
+    public record Citizen(java.util.UUID uuid, String name, String job, boolean home, int hunger, int rest, int happiness, String status, boolean problem) {}
 
     public record Step(String text, boolean done) {}
 
@@ -41,7 +41,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
         for (CitizenRecord r : c.citizens()) {
             dev.eiriksb.stad.citizen.Status st = level.getEntity(r.uuid) instanceof dev.eiriksb.stad.citizen.CitizenEntity e ? e.status()
                     : new dev.eiriksb.stad.citizen.Status("Away (not near anyone)", false);
-            citizens.add(new Citizen(r.name, r.job == null ? "" : r.job, r.home != null, r.hunger, r.rest, r.happiness, st.text(), st.problem()));
+            citizens.add(new Citizen(r.uuid, r.name, r.job == null ? "" : r.job, r.home != null, r.hunger, r.rest, r.happiness, st.text(), st.problem()));
         }
         List<String> orders = new ArrayList<>();
         for (OrderRecord o : c.orders().subList(0, Math.min(5, c.orders().size()))) {
@@ -126,6 +126,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
             b.writeEnum(m.rank());
         });
         buf.writeCollection(citizens, (b, c) -> {
+            b.writeUUID(c.uuid());
             b.writeUtf(c.name());
             b.writeUtf(c.job());
             b.writeBoolean(c.home());
@@ -168,7 +169,7 @@ public record ColonyView(int id, String name, String owner, BlockPos center, int
                 buf.readEnum(Rank.class),
                 buf.readUtf(),
                 buf.readList(b -> new Member(b.readUtf(), b.readEnum(Rank.class))),
-                buf.readList(b -> new Citizen(b.readUtf(), b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt(),
+                buf.readList(b -> new Citizen(b.readUUID(), b.readUtf(), b.readUtf(), b.readBoolean(), b.readVarInt(), b.readVarInt(), b.readVarInt(),
                         b.readUtf(), b.readBoolean())),
                 buf.readList(FriendlyByteBuf::readUtf),
                 buf.readList(FriendlyByteBuf::readUtf),

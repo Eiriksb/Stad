@@ -135,6 +135,10 @@ armour in their own things and they'll eat it, use it and wear it. Their job als
 and materials from there before the town's stores. Workplaces, a warehouse, a smith and couriers take over as the
 town grows.
 
+**Handing things over.** Right-click a citizen while holding food, a tool, armour, seeds, saplings or coal to give
+it to them. Sneak and right-click for their whole gear screen. Their nameplate shows what they're doing, in red when
+something's stopping them, and clicking a name in the town hall's Citizens tab makes them glow so you can find them.
+
 **Food at home.** A house's chest is its pantry. Citizens eat there or at the town hall, whichever is nearer. Fill it
 yourself at first; once you have a courier, they keep every house stocked from the warehouse and the town hall's
 spare food.

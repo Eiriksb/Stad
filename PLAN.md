@@ -790,6 +790,15 @@ and both containers drop on death, whatever the cause (`dropCustomDeathLoot`).
 - The cook, shepherd and lumberjack take from their workplace's chests first. `CourierGoal.stock` leaves a barn's feed
   and a lumber camp's saplings there, up to `STOCK` (64).
 
+**Small conveniences.**
+- `Giving` handles right-clicking a citizen with food, a tool or weapon, armour, seeds, saplings or coal (their
+  town's members). Armour goes on an empty slot, a tool for their job into an empty hand, the rest into their own
+  things. Other items, and sneaking, fall through to the screens.
+- `SHOWN_STATUS` is synced every second: `Status` up to its first ": ", with "!" in front when it's a problem.
+  `CitizenRenderer.renderNameTag` draws it a line under the name within 12 blocks.
+- `/stad citizen find <uuid>` (members) gives the citizen Glowing for 10 s and says the distance, compass direction
+  and building. It runs from the town hall's citizen rows (`ColonyView.Citizen.uuid`; rows can be clicked).
+
 **Pantries.** A house's containers are its pantry (`Homes.pantry`; workplaces have none), for its residents (citizens
 whose bed is inside). `EatAtTownHallGoal` eats from their own things first, then from the nearer of the pantry's chests
 and the town hall, wherever there's food (`Homes.edible`: food without effects). `Requests.update` asks for food for a

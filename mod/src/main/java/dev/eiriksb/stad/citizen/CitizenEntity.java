@@ -60,6 +60,8 @@ public class CitizenEntity extends PathfinderMob {
     private static final EntityDataAccessor<Long> LOOKS_STYLE = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.LONG);
     private static final EntityDataAccessor<String> JOB = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> CHILD = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.BOOLEAN);
+    /** what they're doing, for under their name ("!" first when something's stopping them) */
+    private static final EntityDataAccessor<String> SHOWN_STATUS = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.STRING);
     public static final float MAX_NEED = 20f;
 
     /** Where they come from (server side only; They Will Talk tells it in conversation). */
@@ -110,6 +112,17 @@ public class CitizenEntity extends PathfinderMob {
         builder.define(LOOKS_STYLE, 0L);
         builder.define(JOB, "");
         builder.define(CHILD, false);
+        builder.define(SHOWN_STATUS, "");
+    }
+
+    /** What they're doing, short, as the client sees it (under their name), and whether something's stopping them. */
+    public String shownStatus() {
+        String s = entityData.get(SHOWN_STATUS);
+        return s.startsWith("!") ? s.substring(1) : s;
+    }
+
+    public boolean shownProblem() {
+        return entityData.get(SHOWN_STATUS).startsWith("!");
     }
 
     @Override
@@ -490,6 +503,13 @@ public class CitizenEntity extends PathfinderMob {
             if (!job.equals(entityData.get(JOB))) {
                 entityData.set(JOB, job);
             }
+            Status st = status();
+            String text = st.text();
+            int cut = text.indexOf(": "); // the short of it: "No seeds", not what would fix it
+            String shown = (st.problem() ? "!" : "") + (cut > 0 ? text.substring(0, cut) : text);
+            if (!shown.equals(entityData.get(SHOWN_STATUS))) {
+                entityData.set(SHOWN_STATUS, shown);
+            }
         }
         super.tick();
         dev.eiriksb.stad.perf.Perf.end("citizens", t);
@@ -589,6 +609,10 @@ public class CitizenEntity extends PathfinderMob {
             if (why != null) {
                 sp.displayClientMessage(net.minecraft.network.chat.Component.literal(why).withStyle(net.minecraft.ChatFormatting.YELLOW), true);
             }
+            return InteractionResult.SUCCESS;
+        }
+        if (player instanceof ServerPlayer sp && !sp.isShiftKeyDown() && Giving.giveable(player.getItemInHand(hand)) && Giving.allowed(sp, this)) {
+            Giving.give(sp, this, hand); // right-click with food, a tool, armour...: here you are
             return InteractionResult.SUCCESS;
         }
         if (hand == InteractionHand.MAIN_HAND && player instanceof ServerPlayer sp && sp.isShiftKeyDown() && CitizenMenu.allowed(sp, this)) {

@@ -52,7 +52,12 @@ public class TownHallScreen extends Screen {
      * A line in the list: text, its colour, how far it's indented, and an icon before it (a 16 by 16 sprite, which
      * makes the row taller, or a 9 by 9 one by name); {@code heading} draws it as a heading with a divider.
      */
-    private record Row(FormattedCharSequence text, int color, int indent, ResourceLocation icon, String small, boolean heading, int height) {}
+    private record Row(FormattedCharSequence text, int color, int indent, ResourceLocation icon, String small, boolean heading, int height,
+                       Runnable click) {
+        Row(FormattedCharSequence text, int color, int indent, ResourceLocation icon, String small, boolean heading, int height) {
+            this(text, color, indent, icon, small, heading, height, null);
+        }
+    }
 
     /** what came of something done here (laying roads), shown for a while over the bottom of the list */
     private String notice = "";
@@ -226,7 +231,50 @@ public class TownHallScreen extends Screen {
 
     /** A row with a 16 by 16 icon and a line of text beside it. */
     private void iconRow(ResourceLocation icon, Component text) {
-        rows.add(new Row(font.split(text, textWidth() - 20).getFirst(), Theme.TEXT, 20, icon, null, false, ICON_ROW));
+        iconRow(icon, text, null);
+    }
+
+    /** ...that does something when it's clicked. */
+    private void iconRow(ResourceLocation icon, Component text, Runnable click) {
+        rows.add(new Row(font.split(text, textWidth() - 20).getFirst(), Theme.TEXT, 20, icon, null, false, ICON_ROW, click));
+    }
+
+    /** Finding a citizen: the screen closes so you can see them glow. */
+    private Runnable find(ColonyView.Citizen c) {
+        return () -> {
+            onClose();
+            if (minecraft != null && minecraft.player != null) {
+                minecraft.player.connection.sendCommand("stad citizen find " + c.uuid());
+            }
+        };
+    }
+
+    /** The row under the mouse, or null. */
+    private Row rowAt(double mouseX, double mouseY) {
+        if (mouseY < listTop() || mouseY > bottom() || mouseX < left() || mouseX > left() + w() - 8) {
+            return null;
+        }
+        int y = listTop() + 2 - scroll;
+        for (Row r : rows) {
+            if (mouseY >= y && mouseY < y + r.height()) {
+                return r;
+            }
+            y += r.height();
+        }
+        return null;
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (super.mouseClicked(mouseX, mouseY, button)) {
+            return true;
+        }
+        Row r = rowAt(mouseX, mouseY);
+        if (button == 0 && r != null && r.click() != null) {
+            r.click().run();
+            return true;
+        }
+        return false;
     }
 
     private void gap() {
@@ -301,7 +349,7 @@ public class TownHallScreen extends Screen {
         if (!stuck.isEmpty()) {
             heading("Can't work");
             stuck.stream().limit(6).forEach(c -> {
-                iconRow(Theme.job(c.job()), Component.literal(c.name().split(" ")[0]).withColor(Theme.TEXT));
+                iconRow(Theme.job(c.job()), Component.literal(c.name().split(" ")[0]).withColor(Theme.TEXT), find(c));
                 text(c.status(), Theme.BAD, 20, null);
             });
             if (stuck.size() > 6) {
@@ -332,14 +380,16 @@ public class TownHallScreen extends Screen {
             text("Nobody lives here yet. Place beds on the town's land and newcomers will come.", Theme.MUTED);
             return;
         }
-        text("Right-click a citizen to talk to them and give them a job.", Theme.FAINT);
+        text("Right-click a citizen to talk to them and give them a job; right-click them holding food, a tool or armour to hand it over."
+                + " Click a name here to find them.", Theme.FAINT);
         for (ColonyView.Citizen c : view.citizens()) {
             gap();
             int happy = c.happiness() >= 60 ? Theme.GOOD : c.happiness() >= 35 ? Theme.WARN : Theme.BAD;
             iconRow(Theme.job(c.job()), Component.literal(c.name()).withColor(Theme.TEXT)
                     .append(Component.literal(c.job().isEmpty() ? "  no job" : "  " + c.job()).withColor(Theme.MUTED))
                     .append(Component.literal("   " + c.happiness() + "% happy").withColor(happy))
-                    .append(Component.literal(" · food " + c.hunger() + " · rest " + c.rest() + (c.home() ? "" : " · homeless")).withColor(Theme.FAINT)));
+                    .append(Component.literal(" · food " + c.hunger() + " · rest " + c.rest() + (c.home() ? "" : " · homeless")).withColor(Theme.FAINT)),
+                    find(c));
             text(c.status(), c.problem() ? Theme.BAD : Theme.MUTED, 20, c.problem() ? "warn" : null);
         }
     }
@@ -410,6 +460,9 @@ public class TownHallScreen extends Screen {
                     g.drawString(font, r.text(), x, ty, r.color());
                     Theme.divider(g, x + font.width(r.text()) + 6, ty + 2, Math.max(0, textWidth() - font.width(r.text()) - 6));
                 } else if (r.icon() != null) {
+                    if (r.click() != null && rowAt(mouseX, mouseY) == r) {
+                        g.fill(x - 2, y, x + textWidth() + 2, y + r.height(), 0x30FFFFFF); // clickable: lit up under the mouse
+                    }
                     Theme.icon(g, r.icon(), x, y + 1);
                     g.drawString(font, r.text(), x + r.indent(), y + 5, r.color());
                 } else {
