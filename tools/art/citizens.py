@@ -924,7 +924,12 @@ LASH = (45, 30, 24)
 # eye shapes: (width, height, lashes, almond)
 EYES = {"plain": (4, 3, "thin", False), "narrow": (4, 2, "thin", False), "almond": (5, 3, "outer", True),
         "soft": (4, 3, "none", True), "wide": (5, 2, "outer", False), "round": (3, 3, "thin", False)}
-# 2x3, the same both ways round (the right eye is the left one mirrored)
+def iris_width(eye_width):
+    """How wide the iris is drawn, so it sits in the middle of the white: 2 in an even eye, 1 or 3 in an odd one."""
+    return 2 if eye_width % 2 == 0 else (1 if eye_width <= 3 else 3)
+
+
+# 2x3, the same both ways round (the right eye is the left one mirrored); drawn 1 to 3 wide (iris_width)
 IRISES = {"plain": [[0.72, 0.72], [0.12, 0.12], [1.1, 1.1]], "dark": [[0.58, 0.58], [0.1, 0.1], [0.9, 0.9]],
           "bright": [[0.85, 0.85], [0.16, 0.16], [1.25, 1.25]], "ringed": [[0.6, 0.6], [0.14, 0.14], [1.3, 1.3]]}
 BROWS = {"thin": ["  ...", "     "], "plain": [" ....", "     "], "thick": [".....", " ... "],
@@ -1034,7 +1039,8 @@ def face_parts():
         elif lashes == "outer":
             for x in range(x0, x0 + w):
                 eyes.set(ox + x, cy, LASH + (170,))
-            eyes.set(ox + x0 - 1, cy, LASH + (140,))  # the outer corner (the viewer's left eye's left)
+            if x0 > 0:  # the outer corner (the viewer's left eye's left), when it's inside this eye's cell
+                eyes.set(ox + x0 - 1, cy, LASH + (140,))
     irises = a.layer("irises")
     cx, cy, cw, ch = CELLS["irises"]
     for i, rows in enumerate(IRISES.values()):
@@ -1180,10 +1186,11 @@ def face_sheet_front(look, shape="rest"):
     w, h = EYES[look["eyes"]][:2]
     eye = cell("eyes", ei)
     iris = tint(cell("irises", list(IRISES).index(look["iris"])), look["eye_colour"])
-    x0 = (6 - w) // 2 + (w - 2) // 2
+    iw = iris_width(w)
+    x0 = (6 - w) // 2 + (w - iw) // 2
     for y in range(3):
-        for x in range(2):
-            px = iris.getpixel((x, y))
+        for x in range(iw):
+            px = iris.getpixel((min(x, 1), y))
             if px[3] and eye.getpixel((x0 + x, 1 + y))[3] and eye.getpixel((x0 + x, 1 + y))[0] > 150:
                 eye.putpixel((x0 + x, 1 + y), px)
     f.alpha_composite(eye, (1, 7))

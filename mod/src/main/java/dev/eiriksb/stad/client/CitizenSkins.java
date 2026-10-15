@@ -322,6 +322,9 @@ public final class CitizenSkins {
         int eyeX = ec[0] + shapes.indexOf(shape) * ec[2], irisX = ic[0] + l.born(Looks.IRIS) % list(fp.get("irises")).size() * ic[2];
         int lid = tint(gray(MID * 97 / 100), skin), lash = 0xFF000000 | 24 << 16 | 30 << 8 | 45;
         int x0 = (EYE_W - ew) / 2;
+        // the iris sits in the middle of the white: 2 wide in an even eye, 1 or 3 in an odd one (else it's off to one
+        // side, the same side in both eyes as the right one is mirrored, and they look cross-eyed)
+        int iw = ew % 2 == 0 ? 2 : ew <= 3 ? 1 : 3;
         for (int f = 0; f <= EYE_SHUT; f++) {
             boolean half = f >= 6 && f < EYE_SHUT, shut = f == EYE_SHUT, down = !shut && f % 6 >= 3;
             int dx = shut ? 0 : f % 3 - 1;
@@ -331,9 +334,9 @@ public final class CitizenSkins {
                     int c = atlas.getPixelRGBA(eyeX + x, ec[1] + y);
                     boolean white = y >= 1 && a(c) == 255 && (c & 0xFF) > 150;
                     if (white) {
-                        int ix = x - (x0 + (ew - 2) / 2 + dx), iy = y - 1 - (down ? 1 : 0);
-                        if (ix >= 0 && ix < 2 && iy >= 0 && iy < 3) {
-                            int i = atlas.getPixelRGBA(irisX + ix, ic[1] + iy);
+                        int ix = x - (x0 + (ew - iw) / 2 + dx), iy = y - 1 - (down ? 1 : 0);
+                        if (ix >= 0 && ix < iw && iy >= 0 && iy < 3) {
+                            int i = atlas.getPixelRGBA(irisX + Math.min(ix, 1), ic[1] + iy); // its columns are alike
                             if (a(i) != 0) {
                                 c = tint(i, eyes);
                             }
