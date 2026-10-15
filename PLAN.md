@@ -732,6 +732,21 @@ where they go from and come out.
 **Ground.** `Construction.satisfied`: a step that wants dirt or grass is done where there's dirt, grass, coarse dirt,
 podzol, rooted dirt or mycelium already, so builders only fill holes.
 
+### 6.16 Marking out an area with the building plans
+
+Sneaking and using the plans on a block marks a corner (`BuildingPlansItem.corner`); the area is a data component on
+the plans (`stad:plan_area`, `PlanArea`: the first corner, and the second once it's marked), so it's synced to the
+client, which outlines it (`BuildingPlacer.renderArea`, following the crosshair while the second corner's chosen) and
+kept with the item. Using the plans inside a complete area opens `PlansScreen` for it (`PlansPayload.area`): every pack
+building says how it goes in (`Option.fit`: fits, only straight or turned, or too big), and `AreaFit.types()` add "to
+fit" options. Those are drawn up by `AreaFit.fit` the way the architect's table does it: a `Project` on the area (from
+two blocks under the lower corner), a `Yard` (defaults) or a `BuildSpec` through `Fit.generate`, then
+`Tables.plan(..., dry, replace = false)` checks it (a dry run for the preview, logged as an order when planned; what's
+standing there is in the way, not redesigned). The preview of a fitted building stays put (`PlacePreviewPayload.fitted`);
+R asks for it drawn up again with the door turned. A pack building previewed for an area is kept inside it
+(`BuildingPlacer.inside`). Planning in an area clears it from the plans. Right-clicking an architect's table with the
+plans makes the area its site (`AreaFit.site`, as the scan wand does).
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).

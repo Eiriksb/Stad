@@ -156,9 +156,14 @@ Data mode with `stad:storage`, `stad:work`, `stad:sit`, `stad:bed`, `stad:door` 
 as markers (with storage markers, only the chests next to them count as the town's; `stad:shaft` is the middle of a
 mine's shaft).
 
+**Marking out an area**: sneak and right-click two opposite corners with the Building Plans. Right-click inside the
+area and the plans are for it: pack buildings that fit go inside it (and stay inside when moved), and the "to fit"
+ones are generated for it, a field, pen or grove (and the other land kinds) over the whole area, or a house or
+workplace as big as it holds. Sneak and right-click the air to clear it.
+
 **The architect's table** (Building Plans on top of a cartography table) is for designing a building for exactly
-this piece of land. Mark the site's corners with the scan wand and right-click the table with it (or type the
-corners into the table's screen): at most 32 by 32 blocks and 32 high, on the town's land. The table shows the site in
+this piece of land. Mark the site's corners with the Building Plans (or the scan wand) and right-click the table with
+them (or type the corners into the table's screen): at most 32 by 32 blocks and 32 high, on the town's land. The table shows the site in
 3D with the land round it (drag to turn, scroll to zoom, middle-drag to pan, shift+scroll or Page Up/Down to cut the
 view off at a layer and look inside). The view takes up the screen: the building's name and kind (any of them: home,
 builder's hut, warehouse, barracks, watchtower, kitchen, mine, workshop and the workplaces) are top left, and the

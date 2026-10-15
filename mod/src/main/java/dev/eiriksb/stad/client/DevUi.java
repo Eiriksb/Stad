@@ -17,7 +17,7 @@ import java.util.Deque;
 /**
  * Runs dev scripts from {@link dev.eiriksb.stad.net.DevUiPayload} against the open screen, one step a tick:
  * {@code click x y [button]}, {@code drag x1 y1 x2 y2 [button]}, {@code scroll x y amount}, {@code key name},
- * {@code type text}, {@code wait ticks}, {@code shot name} (saved in screenshots/ once the frame is drawn).
+ * {@code type text}, {@code sneak on|off}, {@code wait ticks}, {@code shot name} (saved in screenshots/ once the frame is drawn).
  * Coordinates are the screen's (GUI-scaled). In the world: {@code hold item_id} (creative), {@code look yaw pitch},
  * {@code use}, {@code attack}, {@code drop}, {@code press letter} (whatever key binding is on that key).
  */
@@ -160,6 +160,7 @@ public final class DevUi {
                     mc.player.setXRot(Float.parseFloat(a[2]));
                 }
                 case "use" -> net.minecraft.client.KeyMapping.click(mc.options.keyUse.getKey());
+                case "sneak" -> mc.options.keyShift.setDown(a.length < 2 || a[1].equals("on"));
                 case "attack" -> net.minecraft.client.KeyMapping.click(mc.options.keyAttack.getKey());
                 case "drop" -> net.minecraft.client.KeyMapping.click(mc.options.keyDrop.getKey());
                 case "press" -> net.minecraft.client.KeyMapping.click(com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(a[1].toUpperCase().charAt(0)));

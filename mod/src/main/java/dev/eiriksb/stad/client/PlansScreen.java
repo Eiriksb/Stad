@@ -13,7 +13,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Rotation;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-/** The building plans: pick a building, turn it, preview it (and move it about: {@link BuildingPlacer}), plan it. */
+/**
+ * The building plans: pick a building, turn it, preview it (and move it about: {@link BuildingPlacer}), plan it. For an
+ * area marked out with the plans, it says what goes in it, and offers buildings drawn up to fill it.
+ */
 public class PlansScreen extends Screen {
     private static final int W = 340;
     private final PlansPayload plans;
@@ -22,11 +25,34 @@ public class PlansScreen extends Screen {
     private Button turn;
     /** -1: the building's own materials, else an index into the palettes */
     private int palette = -1;
+    /** what was chosen last time (the building's key, and the style's name: "" its own), to start on next time */
+    private static String lastKey = "", lastPalette = "";
 
     public PlansScreen(PlansPayload plans) {
-        super(Component.literal("Building plans"));
+        super(Component.literal(plans.area() == null ? "Building plans" : "Building plans for the marked area (" + plans.area().size() + ")"));
         this.plans = plans;
         this.rotation = plans.rotation();
+        palette = plans.palettes().indexOf(lastPalette);
+        for (int i = 0; i < plans.options().size(); i++) {
+            if (plans.options().get(i).key().equals(lastKey) && plans.options().get(i).goesIn()) {
+                selected = i;
+            }
+        }
+        if (plans.area() != null && !plans.options().isEmpty()) {
+            if (!plans.options().get(selected).key().equals(lastKey)) {
+                selected = plans.options().stream().filter(o -> o.fit().equals(PlansPayload.FILLS)).findFirst()
+                        .map(o -> plans.options().indexOf(o)).orElse(0);
+            }
+            suit();
+        }
+    }
+
+    /** Turns the chosen building so it goes in the area, when it only goes one way. */
+    private void suit() {
+        PlansPayload.Option o = plans.options().get(selected);
+        if (!o.goesIn(rotation) && o.goesIn(rotation.getRotated(Rotation.CLOCKWISE_90))) {
+            rotation = rotation.getRotated(Rotation.CLOCKWISE_90);
+        }
     }
 
     private int left() {
@@ -72,6 +98,7 @@ public class PlansScreen extends Screen {
                 scroll = 0;
                 selected = inGroup().getFirst();
                 detailScroll = 0;
+                suit();
                 rebuildWidgets();
             }).bounds(x + i * (tw + 4), 26, tw, 20).icon(groupIcon(g)).build().tab(g.equals(group)));
         }
@@ -83,9 +110,10 @@ public class PlansScreen extends Screen {
             int index = list.get(k);
             PlansPayload.Option o = plans.options().get(index);
             addRenderableWidget(StadButton.of(Component.literal(font.plainSubstrByWidth(o.name(), 104)).withStyle(o.locked().isEmpty()
-                    ? ChatFormatting.RESET : ChatFormatting.DARK_GRAY), btn -> {
+                    && o.goesIn() ? ChatFormatting.RESET : ChatFormatting.DARK_GRAY), btn -> {
                 selected = index;
                 detailScroll = 0;
+                suit();
                 rebuildWidgets();
             }).bounds(x + 3, y, 110, 20).build().chosen(index == selected));
             y += 22;
@@ -93,18 +121,21 @@ public class PlansScreen extends Screen {
         int by = height - 30;
         turn = addRenderableWidget(StadButton.of(doorLabel(), b -> {
             rotation = rotation.getRotated(Rotation.CLOCKWISE_90);
-            b.setMessage(doorLabel());
+            rebuildWidgets();
         }).bounds(x, by, 100, 20).build());
-        if (!plans.palettes().isEmpty() && !"Farms".equals(group)) {
+        boolean fills = !plans.options().isEmpty() && plans.options().get(selected).fit().equals(PlansPayload.FILLS);
+        if (!plans.palettes().isEmpty() && !"Farms".equals(group) && !fills) {
             addRenderableWidget(StadButton.of(styleLabel(), b -> {
                 palette = palette + 1 >= plans.palettes().size() ? -1 : palette + 1;
                 b.setMessage(styleLabel());
             }).bounds(x, by - 24, 110, 20).build());
         }
         boolean locked = !plans.options().isEmpty() && !plans.options().get(selected).locked().isEmpty();
+        boolean goes = plans.options().isEmpty() || plans.options().get(selected).goesIn(rotation);
         addRenderableWidget(StadButton.of(Component.literal("Preview"), b -> send(true)).bounds(x + 106, by, 70, 20)
-                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal("See the whole building where it would go, and move it"
-                        + " about before planning it"))).build());
+                .tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(fills ? "See it drawn up in the area before"
+                        + " planning it" : "See the whole building where it would go, and move it about before planning it"))).build()).active = goes;
+        locked |= !goes;
         addRenderableWidget(StadButton.of(Component.literal("Plan it").withStyle(ChatFormatting.GREEN), b -> {
             send(false);
             onClose();
@@ -158,8 +189,14 @@ public class PlansScreen extends Screen {
         if (plans.options().isEmpty()) {
             return;
         }
+        boolean fills = plans.options().get(selected).fit().equals(PlansPayload.FILLS);
+        lastKey = plans.options().get(selected).key();
+        lastPalette = palette < 0 ? "" : plans.palettes().get(palette);
+        if (preview) {
+            BuildingPlacer.area(plans.area());
+        }
         PacketDistributor.sendToServer(new PlanActionPayload(plans.colony(), plans.options().get(selected).key(), plans.at(), rotation, preview,
-                palette < 0 ? "" : plans.palettes().get(palette), false));
+                palette < 0 || fills ? "" : plans.palettes().get(palette), false, plans.area()));
     }
 
     @Override
@@ -193,8 +230,24 @@ public class PlansScreen extends Screen {
             y += 10;
         }
         y += 4;
-        g.drawString(font, o.sizeX() + " × " + o.sizeZ() + " blocks, " + o.sizeY() + " high", x, y, Theme.FAINT);
-        y += 14;
+        if (!o.fit().equals(PlansPayload.FILLS)) {
+            g.drawString(font, o.sizeX() + " × " + o.sizeZ() + " blocks, " + o.sizeY() + " high", x, y, Theme.FAINT);
+            y += 10;
+        }
+        if (!o.fit().isEmpty()) {
+            String fit = switch (o.fit()) {
+                case PlansPayload.FILLS -> "Drawn up to fill the marked area: turn it to choose which way its door faces.";
+                case PlansPayload.FITS -> "Fits in the marked area: preview it to move it about inside.";
+                case PlansPayload.STRAIGHT -> "Fits in the marked area with its door facing north or south.";
+                case PlansPayload.TURNED -> "Fits in the marked area with its door facing east or west.";
+                default -> o.fit();
+            };
+            for (var line : font.split(Component.literal(fit), tw)) {
+                g.drawString(font, line, x, y, o.goesIn(rotation) ? Theme.GOOD : Theme.BAD);
+                y += 10;
+            }
+        }
+        y += 4;
         Theme.heading(g, font, "Materials", x, y, tw);
         y += 13;
         for (var line : font.split(Component.literal(o.materials()), tw)) {
@@ -202,11 +255,13 @@ public class PlansScreen extends Screen {
             y += 10;
         }
         y += 6;
-        for (var line : font.split(Component.literal("Farms".equals(o.group()) ? "Centred on the block you clicked, level with it. Design"
-                + " fields, pens and groves of any shape at the architect's table."
-                : "Centred on the block you clicked, floor level with it. Builders take the "
-                + "materials from the town hall." + (palette < 0 ? "" : " In the " + plans.palettes().get(palette)
-                + " style, walls, roof, floor and frame are built in its materials instead.")), tw)) {
+        String where = o.fit().equals(PlansPayload.FILLS) ? "" : plans.area() != null
+                ? "In the middle of the marked area, floor level with where you clicked. " : "Centred on the block you clicked, "
+                + ("Farms".equals(o.group()) ? "level with it. " : "floor level with it. ");
+        for (var line : font.split(Component.literal("Farms".equals(o.group()) ? where + "Sneak and right-click two corners with the plans to mark"
+                + " out a field, pen or grove of any size."
+                : where + "Builders take the materials from the town hall." + (palette < 0 || o.fit().equals(PlansPayload.FILLS) ? "" : " In the "
+                + plans.palettes().get(palette) + " style, walls, roof, floor and frame are built in its materials instead.")), tw)) {
             g.drawString(font, line, x, y, Theme.FAINT);
             y += 10;
         }

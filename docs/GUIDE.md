@@ -28,6 +28,11 @@ and says who can't work and why. Your town's achievements are in the Stad tab of
    with the arrow keys (Page Up and Down for up and down) and turn it with R; right-click to pick it up so it follows
    where you look, and again to put it down; Enter plans it there, Backspace puts it away. The keys can be changed in
    the game's controls. (Or describe a house to your builder: "a small stone cottage with two bedrooms".)
+   **To build in a particular spot**, sneak and right-click two opposite corners with the plans: the area is outlined,
+   and right-clicking inside it opens the plans for it. Buildings from the packs that fit say so (and stay inside the
+   area when you move them), and the "to fit" ones are drawn up for it: a field, pen or grove over the whole area, or a
+   house or workplace as big as it holds. Right-click an architect's table with the plans to design one there yourself.
+   Sneak and right-click the air to clear the area.
 4. **Materials.** Sneak and right-click the town hall (or press Storage on its screen) and put the materials in. The
    builder makes up the ground under the house (grass that's there stays), builds what they can, and says what's still missing.
 5. **Food.** Put some food in the town hall. Make a **farmer**: they mark out a field by their farmhouse or the town

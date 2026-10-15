@@ -20,7 +20,10 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-/** In-game tests for the polish: citizens walking all the way, the ground left as it is, and the town's achievements. */
+/**
+ * In-game tests for the polish: citizens walking all the way, the ground left as it is, the town's achievements, and
+ * buildings planned in an area marked out with the plans.
+ */
 @GameTestHolder(Stad.MOD_ID)
 @PrefixGameTestTemplate(false)
 public final class PolishGameTests {
@@ -136,5 +139,60 @@ public final class PolishGameTests {
         ColonyManager.get(helper.getLevel().getServer()).dissolve(helper.getLevel().getServer(), colony);
         helper.getLevel().getServer().getPlayerList().remove(owner);
         helper.succeed();
+    }
+
+    /** A house and a field drawn up to fit a marked area stay inside it; once one's planned there, the next is in its way. */
+    @GameTest(template = "lot", batch = "polish_area", timeoutTicks = 200)
+    public static void areasAreFilled(GameTestHelper helper) {
+        ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        helper.setBlock(HALL, StadRegistries.TOWN_HALL.get());
+        Colony colony = ColonyManager.get(helper.getLevel().getServer()).found(helper.getLevel(), helper.absolutePos(HALL), owner.getUUID(),
+                owner.getGameProfile().getName(), 24).colony();
+        try {
+            areas(helper, owner, colony);
+        } finally {
+            ColonyManager.get(helper.getLevel().getServer()).dissolve(helper.getLevel().getServer(), colony);
+            helper.getLevel().getServer().getPlayerList().remove(owner);
+        }
+        helper.succeed();
+    }
+
+    private static void areas(GameTestHelper helper, ServerPlayer owner, Colony colony) {
+        colony.research.all();
+        var level = helper.getLevel();
+        var area = dev.eiriksb.stad.item.PlanArea.of(helper.absolutePos(new BlockPos(2, G - 1, 2)), helper.absolutePos(new BlockPos(13, G - 1, 11)));
+        helper.assertTrue(area.sizeX() == 12 && area.sizeZ() == 10 && area.covers(area.box().minX(), area.box().maxZ()), "12 by 10: " + area.size());
+        var box = area.box();
+        for (ResourceLocation type : java.util.List.of(dev.eiriksb.stad.building.BuildingDef.HOME, dev.eiriksb.stad.building.BuildingDef.FIELD,
+                dev.eiriksb.stad.building.BuildingDef.PEN)) {
+            for (var turn : new net.minecraft.world.level.block.Rotation[]{net.minecraft.world.level.block.Rotation.NONE,
+                    net.minecraft.world.level.block.Rotation.CLOCKWISE_90}) {
+                var r = dev.eiriksb.stad.architect.AreaFit.fit(owner, level, colony, area, type, turn, false);
+                helper.assertTrue(r.ok() && r.blueprint() != null, type + " " + turn + " fits: " + r.problem());
+                var b = Placement.of(r.blueprint(), r.origin(), net.minecraft.world.level.block.Rotation.NONE).bounds();
+                helper.assertTrue(b.minX() >= box.minX() && b.maxX() <= box.maxX() && b.minZ() >= box.minZ() && b.maxZ() <= box.maxZ(),
+                        type + " inside the area: " + b + " in " + box);
+            }
+        }
+        helper.assertTrue(colony.buildings().isEmpty(), "a preview plans nothing");
+        var house = dev.eiriksb.stad.architect.AreaFit.fit(owner, level, colony, area, dev.eiriksb.stad.building.BuildingDef.HOME,
+                net.minecraft.world.level.block.Rotation.NONE, true);
+        helper.assertTrue(house.ok() && colony.buildings().size() == 1, "the house is planned: " + house.problem());
+        var field = dev.eiriksb.stad.architect.AreaFit.fit(owner, level, colony, area, dev.eiriksb.stad.building.BuildingDef.FIELD,
+                net.minecraft.world.level.block.Rotation.NONE, true);
+        helper.assertTrue(!field.ok() && field.problem().contains("overlaps") && colony.buildings().size() == 1, "the house is in the way: "
+                + field.problem());
+        var tiny = dev.eiriksb.stad.item.PlanArea.of(helper.absolutePos(new BlockPos(20, G - 1, 2)), helper.absolutePos(new BlockPos(21, G - 1, 3)));
+        helper.assertFalse(dev.eiriksb.stad.architect.AreaFit.fit(owner, level, colony, tiny, dev.eiriksb.stad.building.BuildingDef.FIELD,
+                net.minecraft.world.level.block.Rotation.NONE, false).ok(), "2 by 2 is too small");
+        var half = new dev.eiriksb.stad.item.PlanArea(helper.absolutePos(new BlockPos(20, G - 1, 2)), java.util.Optional.empty());
+        helper.assertTrue(dev.eiriksb.stad.architect.AreaFit.problem(level, colony, half) != null, "one corner isn't an area");
+        BlockPos table = new BlockPos(20, G, 20);
+        helper.setBlock(table, StadRegistries.ARCHITECT_TABLE.get());
+        var south = dev.eiriksb.stad.item.PlanArea.of(helper.absolutePos(new BlockPos(18, G - 1, 4)), helper.absolutePos(new BlockPos(24, G - 1, 12)));
+        dev.eiriksb.stad.architect.Tables.use(owner, level, helper.absolutePos(table), false, south);
+        var site = dev.eiriksb.stad.architect.Tables.project(level, helper.absolutePos(table)).orElseThrow();
+        helper.assertTrue(site.hasSite() && site.sx == 7 && site.sz == 9 && site.min.getX() == south.box().minX(),
+                "the table's site is the area: " + site.sx + " by " + site.sz);
     }
 }

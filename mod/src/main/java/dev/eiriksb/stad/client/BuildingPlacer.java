@@ -43,7 +43,9 @@ import java.util.List;
  * whole building, see-through, where it would go. It follows where you look until you right-click to put it down;
  * then the arrow keys move it (away from you, back, left and right), Page Up and Down raise and lower it, R turns it,
  * right-click picks it up again, Enter plans it there and Backspace puts it away. The server says whether it fits
- * wherever it's moved to (red when it doesn't, and why).
+ * wherever it's moved to (red when it doesn't, and why). For an area marked out with the plans, it stays inside the
+ * area; one drawn up to fill the area stays put, and R draws it up again with its door the next way round. The area
+ * itself is drawn whenever the plans that marked it are in hand.
  */
 @EventBusSubscriber(modid = Stad.MOD_ID, value = Dist.CLIENT)
 public final class BuildingPlacer {
@@ -80,6 +82,18 @@ public final class BuildingPlacer {
     private static String problem;
     /** ticks till we ask the server whether it fits, since it last moved (-1: asked) */
     private static int ask = -1;
+    /** the area the plans were opened for (null: none) */
+    private static dev.eiriksb.stad.item.PlanArea area;
+
+    /** The area the next preview is for (from the plans screen). */
+    static void area(dev.eiriksb.stad.item.PlanArea a) {
+        area = a != null && a.complete() ? a : null;
+    }
+
+    /** Whether it's drawn up to fill the area (so it stays where it is). */
+    private static boolean fitted() {
+        return building != null && building.fitted();
+    }
 
     public static boolean active() {
         return building != null;
@@ -96,6 +110,7 @@ public final class BuildingPlacer {
             blueprint = new Blueprint(new Vec3i(p.sx(), p.sy(), p.sz()), entries, List.of());
             rotation = p.rotation();
             following = false;
+            at = null;
             move(p.at());
             problem = p.problem();
             ask = -1;
@@ -107,12 +122,14 @@ public final class BuildingPlacer {
 
     static void stop() {
         building = null;
+        area = null;
         blueprint = null;
         ghosts = List.of();
         box = null;
     }
 
     private static void move(BlockPos to) {
+        to = inside(to);
         if (to.equals(at) && !ghosts.isEmpty()) {
             return;
         }
@@ -120,8 +137,29 @@ public final class BuildingPlacer {
         rebuild();
     }
 
+    private static Placement placement(BlockPos centre) {
+        return fitted() ? Placement.of(blueprint, centre, Rotation.NONE) : Placement.of(blueprint, Placement.originFor(blueprint, centre, rotation), rotation);
+    }
+
+    /** Where it goes when it's moved to {@code to}: as near as it can be while inside the area (if there is one). */
+    private static BlockPos inside(BlockPos to) {
+        if (area == null || fitted()) {
+            return to;
+        }
+        BoundingBox b = placement(to).bounds(), a = area.box();
+        return to.offset(shift(b.minX(), b.maxX(), a.minX(), a.maxX()), 0, shift(b.minZ(), b.maxZ(), a.minZ(), a.maxZ()));
+    }
+
+    /** How far to move a span so it's inside another (or centred on it, when it's wider). */
+    static int shift(int min, int max, int lo, int hi) {
+        if (max - min > hi - lo) {
+            return (lo + hi) / 2 - (min + max) / 2;
+        }
+        return min < lo ? lo - min : max > hi ? hi - max : 0;
+    }
+
     private static void rebuild() {
-        Placement placement = Placement.of(blueprint, Placement.originFor(blueprint, at, rotation), rotation);
+        Placement placement = placement(at);
         List<GhostPreview.Ghost> g = new ArrayList<>();
         for (Placement.Step s : placement.steps()) {
             if (!s.clearing() && s.state().getRenderShape() == net.minecraft.world.level.block.RenderShape.MODEL) {
@@ -154,7 +192,7 @@ public final class BuildingPlacer {
             stop();
             return;
         }
-        if (following) {
+        if (following && !fitted()) {
             HitResult hit = mc.player.pick(REACH, 1f, false);
             if (hit instanceof BlockHitResult b && hit.getType() == HitResult.Type.BLOCK) {
                 move(b.getBlockPos());
@@ -181,7 +219,13 @@ public final class BuildingPlacer {
         }
         while (TURN.consumeClick()) {
             rotation = rotation.getRotated(Rotation.CLOCKWISE_90);
-            rebuild();
+            if (fitted()) {
+                problem = null; // it's drawn up again, and comes back as a new preview
+                PacketDistributor.sendToServer(new PlanActionPayload(building.colony(), building.key(), at, rotation, true, "", false, area));
+            } else {
+                at = inside(at);
+                rebuild();
+            }
         }
         while (PLAN.consumeClick()) {
             if (building != null) {
@@ -192,20 +236,26 @@ public final class BuildingPlacer {
         while (CANCEL.consumeClick()) {
             stop();
         }
-        if (building != null && ask > 0 && --ask == 0) {
+        if (building != null && ask > 0 && --ask == 0 && !fitted()) {
             send(true);
             ask = -1;
         }
     }
 
     private static void nudge(Direction d) {
+        if (fitted()) {
+            return;
+        }
         following = false;
         move(at.relative(d));
     }
 
     private static void send(boolean check) {
         // a check is a preview that only asks whether it fits; otherwise it's planned
-        PacketDistributor.sendToServer(new PlanActionPayload(building.colony(), building.key(), at, rotation, check, building.palette(), check));
+        if (check && fitted()) {
+            return; // it came with whether it fits
+        }
+        PacketDistributor.sendToServer(new PlanActionPayload(building.colony(), building.key(), at, rotation, check, building.palette(), check, area));
     }
 
     /** Right-click picks it up (it follows where you look) or puts it down, instead of using what's in hand. */
@@ -216,7 +266,50 @@ public final class BuildingPlacer {
         }
         event.setCanceled(true);
         event.setSwingHand(false);
-        following = !following;
+        following = !following && !fitted();
+    }
+
+    /** The area being marked out, or planned in: the one on the plans in hand, else the one being placed in. */
+    private static dev.eiriksb.stad.item.PlanArea shownArea(Minecraft mc) {
+        if (mc.player != null) {
+            for (net.minecraft.world.InteractionHand hand : net.minecraft.world.InteractionHand.values()) {
+                var a = dev.eiriksb.stad.item.BuildingPlansItem.area(mc.player.getItemInHand(hand));
+                if (a != null && mc.player.getItemInHand(hand).getItem() instanceof dev.eiriksb.stad.item.BuildingPlansItem) {
+                    return a;
+                }
+            }
+        }
+        return area;
+    }
+
+    @SubscribeEvent
+    static void renderArea(RenderLevelStageEvent event) {
+        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        dev.eiriksb.stad.item.PlanArea a = shownArea(mc);
+        if (a == null) {
+            return;
+        }
+        boolean drawing = false;
+        if (!a.complete() && building == null && mc.hitResult instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK) {
+            a = dev.eiriksb.stad.item.PlanArea.of(a.first(), hit.getBlockPos()); // where it'd be with the corner looked at
+            drawing = true;
+        }
+        BoundingBox b = a.box();
+        Vec3 cam = event.getCamera().getPosition();
+        PoseStack pose = event.getPoseStack() != null ? event.getPoseStack() : new PoseStack();
+        MultiBufferSource.BufferSource buffers = mc.renderBuffers().bufferSource();
+        var lines = buffers.getBuffer(RenderType.lines());
+        // the ground the corners are on, and a frame above it
+        LevelRenderer.renderLineBox(pose, lines, b.minX() - cam.x, b.minY() - cam.y, b.minZ() - cam.z, b.maxX() + 1 - cam.x,
+                b.maxY() + (a.complete() ? 3 : 1) - cam.y, b.maxZ() + 1 - cam.z, 0.35f, 0.8f, 1f, drawing ? 0.5f : 1f);
+        for (BlockPos c : drawing ? List.of(a.first()) : a.complete() ? List.of(a.first(), a.second().get()) : List.of(a.first())) {
+            LevelRenderer.renderLineBox(pose, lines, c.getX() - 0.02 - cam.x, c.getY() - 0.02 - cam.y, c.getZ() - 0.02 - cam.z,
+                    c.getX() + 1.02 - cam.x, c.getY() + 1.02 - cam.y, c.getZ() + 1.02 - cam.z, 1f, 1f, 1f, 1f);
+        }
+        buffers.endBatch(RenderType.lines());
     }
 
     @SubscribeEvent
@@ -243,16 +336,26 @@ public final class BuildingPlacer {
     /** What's being placed, whether it fits, and the keys, at the top of the screen. */
     static void hud(GuiGraphics g, DeltaTracker delta) {
         Minecraft mc = Minecraft.getInstance();
-        if (building == null || mc.options.hideGui || mc.screen != null) {
+        if (mc.options.hideGui || mc.screen != null) {
+            return;
+        }
+        if (building == null) {
+            areaSize(g, mc);
             return;
         }
         Font font = mc.font;
         List<String> lines = new ArrayList<>();
-        lines.add(following ? "Right-click: put it down here" : "Right-click: pick it up (it follows where you look)");
-        boolean arrows = KEYS.subList(5, 9).stream().allMatch(KeyMapping::isDefault);
-        lines.add((arrows ? "Arrow keys" : name(AWAY) + ", " + name(BACK) + ", " + name(LEFT) + ", " + name(RIGHT)) + ": move  ·  "
-                + name(UP) + ", " + name(DOWN) + ": up, down");
-        lines.add(name(TURN) + ": turn  ·  " + name(PLAN) + ": plan it here  ·  " + name(CANCEL) + ": put it away");
+        if (fitted()) {
+            lines.add("Drawn up to fill the marked area.");
+            lines.add(name(TURN) + ": turn the door  ·  " + name(PLAN) + ": plan it  ·  " + name(CANCEL) + ": put it away");
+        } else {
+            lines.add((following ? "Right-click: put it down here" : "Right-click: pick it up (it follows where you look)")
+                    + (area != null ? ", inside the area" : ""));
+            boolean arrows = KEYS.subList(5, 9).stream().allMatch(KeyMapping::isDefault);
+            lines.add((arrows ? "Arrow keys" : name(AWAY) + ", " + name(BACK) + ", " + name(LEFT) + ", " + name(RIGHT)) + ": move  ·  "
+                    + name(UP) + ", " + name(DOWN) + ": up, down");
+            lines.add(name(TURN) + ": turn  ·  " + name(PLAN) + ": plan it here  ·  " + name(CANCEL) + ": put it away");
+        }
         String fits = problem == null ? "..." : problem.isEmpty() ? "It fits here." : problem;
         int width = Math.min(260, g.guiWidth() - 20);
         List<net.minecraft.util.FormattedCharSequence> why = font.split(net.minecraft.network.chat.Component.literal(fits), width);
@@ -272,6 +375,16 @@ public final class BuildingPlacer {
             g.drawString(font, line, x, y, 0xC8C8C8);
             y += 10;
         }
+    }
+
+    /** While the second corner's being chosen: how big the area would be, under the crosshair. */
+    private static void areaSize(GuiGraphics g, Minecraft mc) {
+        dev.eiriksb.stad.item.PlanArea a = shownArea(mc);
+        if (a == null || a.complete() || !(mc.hitResult instanceof BlockHitResult hit) || hit.getType() != HitResult.Type.BLOCK) {
+            return;
+        }
+        String size = dev.eiriksb.stad.item.PlanArea.of(a.first(), hit.getBlockPos()).size();
+        g.drawCenteredString(mc.font, size, g.guiWidth() / 2, g.guiHeight() / 2 + 10, 0x8FD0FF);
     }
 
     private static String name(KeyMapping k) {

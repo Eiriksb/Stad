@@ -131,6 +131,11 @@ public final class Tables {
 
     /** A player right-clicks a table (with the scan wand: makes what they marked its site first). */
     public static void use(ServerPlayer player, ServerLevel level, BlockPos pos, boolean wand) {
+        use(player, level, pos, wand, null);
+    }
+
+    /** The same, or with the building plans' marked area ({@code area}, else null): makes that the site. */
+    public static void use(ServerPlayer player, ServerLevel level, BlockPos pos, boolean wand, dev.eiriksb.stad.item.PlanArea area) {
         Optional<Colony> colony = colonyAt(level, pos);
         Optional<ArchitectTableBlockEntity> be = table(level, pos);
         if (be.isEmpty()) {
@@ -150,23 +155,30 @@ public final class Tables {
             return;
         }
         String message = "";
-        if (wand) {
-            Optional<Scans.Selection> sel = Scans.get(player).filter(Scans.Selection::complete);
-            if (sel.isEmpty()) {
-                tell(player, "Mark the site's corners with the scan wand first: left-click one, right-click the opposite one.", ChatFormatting.YELLOW);
-                return;
+        if (wand || area != null) {
+            BlockPos[] corners;
+            if (area != null) {
+                corners = AreaFit.site(area);
+            } else {
+                Optional<Scans.Selection> sel = Scans.get(player).filter(Scans.Selection::complete);
+                if (sel.isEmpty()) {
+                    tell(player, "Mark the site's corners first: sneak and right-click them with the building plans (or left-click and right-click"
+                            + " them with the scan wand).", ChatFormatting.YELLOW);
+                    return;
+                }
+                corners = new BlockPos[]{sel.get().a(), sel.get().b()};
             }
             if (!rank.atLeast(Rank.OFFICER)) {
                 tell(player, "Only officers can choose the table's site.", ChatFormatting.RED);
                 return;
             }
-            String problem = Project.siteProblem(level, colony.get(), sel.get().a(), sel.get().b());
+            String problem = Project.siteProblem(level, colony.get(), corners[0], corners[1]);
             if (problem != null) {
                 tell(player, problem, ChatFormatting.RED);
                 return;
             }
             Project p = be.get().project();
-            p.setSite(sel.get().a(), sel.get().b());
+            p.setSite(corners[0], corners[1]);
             be.get().setChanged();
             message = "New site: " + p.sx + " by " + p.sz + " blocks, " + p.sy + " high.";
         }
@@ -762,12 +774,21 @@ public final class Tables {
         }
         s.terrain = capture(s.level, p);
         p.regenerate(s.terrain);
-        DesignCheck.Result check = DesignCheck.check(p.type, s.terrain, p.sx, p.sy, p.sz, p.design(), p.markers,
-                dev.eiriksb.stad.building.Surroundings.of(s.level, siteBox(p)));
+        return plan(player, s.level, s.terrain, p, colony, false, true);
+    }
+
+    /**
+     * Plans a generated (or drawn) site as it stands, with {@code terrain} the land as captured for it. {@code dry}: only
+     * says whether it could be (and logs nothing). {@code replace}: a finished building standing wholly on the site is
+     * redesigned (the table's way); else it's in the way like any other.
+     */
+    static Said plan(ServerPlayer player, ServerLevel level, Grid terrain, Project p, Colony colony, boolean dry, boolean replace) {
+        DesignCheck.Result check = DesignCheck.check(p.type, terrain, p.sx, p.sy, p.sz, p.design(), p.markers,
+                dev.eiriksb.stad.building.Surroundings.of(level, siteBox(p)));
         if (!check.ready()) {
             return new Said("It isn't a " + Requirements.word(p.type) + " yet: it needs " + Design.join(check.missing()) + ".", true);
         }
-        Drawn drawn = draw(p, s.level, false);
+        Drawn drawn = draw(p, level, false);
         if (drawn == null) {
             return new Said("There's nothing to build: the design is what's already there.", true);
         }
@@ -801,7 +822,8 @@ public final class Tables {
             boolean sameUse = !(Yard.is(p.type) || b.type() != null && Yard.is(b.type())) || p.type.equals(b.type());
             if (b.done() && !sameUse) {
                 problem = "The " + b.name + " is there: a " + Requirements.word(p.type) + " can't go in its place. Choose another site.";
-            } else if (b.done() && site.isInside(other.minX(), other.minY(), other.minZ()) && site.isInside(other.maxX(), other.maxY(), other.maxZ())) {
+            } else if (replace && b.done() && site.isInside(other.minX(), other.minY(), other.minZ())
+                    && site.isInside(other.maxX(), other.maxY(), other.maxZ())) {
                 replaced.add(b); // redesigning a building that stands on the site
             } else {
                 problem = "That overlaps the " + b.name + (b.done() ? "." : ", which isn't finished yet.");
@@ -813,7 +835,10 @@ public final class Tables {
         if (!Planning.canPlan(colony, player)) {
             problem = "Only officers of " + colony.name() + " can plan buildings.";
         }
-        long now = s.level.getGameTime();
+        long now = level.getGameTime();
+        if (dry) {
+            return new Said(problem != null ? problem : "", problem != null);
+        }
         if (problem != null) {
             colony.log(new OrderRecord(now, player.getUUID(), player.getGameProfile().getName(), null, p.name, OrderKind.PLAN_BUILDING,
                     Order.Outcome.INVALID, problem));

@@ -19,8 +19,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
- * The architect's table (PLAN.md §6.8): right-click it with a scan wand to make the corners you marked its site, or
- * without to open it: a 3D view of the site where you design a building for it.
+ * The architect's table (PLAN.md §6.8): right-click it with a scan wand, or the building plans with an area marked out,
+ * to make the corners you marked its site, or without to open it: a 3D view of the site where you design a building for it.
  */
 public class ArchitectTableBlock extends BaseEntityBlock {
     public static final MapCodec<ArchitectTableBlock> CODEC = simpleCodec(ArchitectTableBlock::new);
@@ -81,11 +81,13 @@ public class ArchitectTableBlock extends BaseEntityBlock {
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
                                               InteractionHand hand, BlockHitResult hit) {
-        if (!(stack.getItem() instanceof ScanWandItem)) {
+        dev.eiriksb.stad.item.PlanArea area = stack.getItem() instanceof dev.eiriksb.stad.item.BuildingPlansItem
+                ? dev.eiriksb.stad.item.BuildingPlansItem.area(stack) : null;
+        if (!(stack.getItem() instanceof ScanWandItem) && (area == null || !area.complete())) {
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
         if (player instanceof ServerPlayer sp) {
-            Tables.use(sp, (ServerLevel) level, pos, true);
+            Tables.use(sp, (ServerLevel) level, pos, area == null, area);
         }
         return ItemInteractionResult.sidedSuccess(level.isClientSide);
     }

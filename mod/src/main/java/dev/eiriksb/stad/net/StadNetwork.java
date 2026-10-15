@@ -129,6 +129,11 @@ public final class StadNetwork {
             return;
         }
         Optional<Colony> colony = ColonyManager.get(player.server).byId(p.colony());
+        ResourceLocation fitType = dev.eiriksb.stad.architect.AreaFit.type(p.key());
+        if (fitType != null) {
+            fitAction(player, colony.orElse(null), fitType, p);
+            return;
+        }
         Optional<BuildingDef> def = BuildingPacks.get(ResourceLocation.tryParse(p.key()));
         if (colony.isEmpty() || def.isEmpty() || player.distanceToSqr(p.at().getCenter()) > 64 * 64) {
             return;
@@ -154,13 +159,48 @@ public final class StadNetwork {
                 }
             }
             net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new PlacePreviewPayload(p.colony(), p.key(), p.palette(), name, blueprint.size().getX(),
-                    blueprint.size().getY(), blueprint.size().getZ(), blocks, p.at(), p.rotation(), problem == null ? "" : problem));
+                    blueprint.size().getY(), blueprint.size().getZ(), blocks, p.at(), p.rotation(), problem == null ? "" : problem, false));
             return;
         }
         Planning.Result result = styled != null ? Planning.plan(player, player.serverLevel(), colony.get(), styled, origin, p.rotation())
                 : Planning.plan(player, player.serverLevel(), colony.get(), def.get(), origin, p.rotation());
         player.sendSystemMessage(result.building() == null ? Component.literal(result.problem()).withStyle(ChatFormatting.RED)
                 : Component.literal(Planning.plannedMessage(player.serverLevel(), colony.get(), result.building())).withStyle(ChatFormatting.GREEN));
+        if (result.building() != null && p.area() != null) {
+            dev.eiriksb.stad.item.BuildingPlansItem.used(player, p.area());
+        }
+    }
+
+    /** A building drawn up to fill the area marked out with the plans: previewed (where it'll be, as it'll be) or planned. */
+    private static void fitAction(ServerPlayer player, Colony colony, ResourceLocation type, PlanActionPayload p) {
+        if (colony == null || p.area() == null || !p.area().complete() || player.level().dimension() != colony.dimension
+                || player.distanceToSqr(p.area().middle(p.area().box().minY()).getCenter()) > 96 * 96) {
+            return;
+        }
+        if (p.check()) {
+            return; // it doesn't move: whether it fits came with it
+        }
+        var r = dev.eiriksb.stad.architect.AreaFit.fit(player, player.serverLevel(), colony, p.area(), type, p.rotation(), !p.preview());
+        if (!p.preview()) {
+            player.sendSystemMessage(Component.literal(r.ok() ? r.planned() : r.problem()).withStyle(r.ok() ? ChatFormatting.GREEN : ChatFormatting.RED));
+            if (r.ok()) {
+                dev.eiriksb.stad.item.BuildingPlansItem.used(player, p.area());
+            }
+            return;
+        }
+        if (r.blueprint() == null) {
+            player.displayClientMessage(Component.literal(r.problem()).withStyle(ChatFormatting.RED), false);
+            return;
+        }
+        java.util.List<dev.eiriksb.stad.building.Blueprint.Entry> entries = r.blueprint().entries().stream().filter(e -> !e.state().isAir()).toList();
+        int[] blocks = new int[Math.max(2, entries.size() * 2)];
+        for (int i = 0; i < entries.size(); i++) {
+            blocks[2 * i] = PlacePreviewPayload.pack(entries.get(i).pos());
+            blocks[2 * i + 1] = net.minecraft.world.level.block.Block.getId(entries.get(i).state());
+        }
+        var size = r.blueprint().size();
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new PlacePreviewPayload(p.colony(), p.key(), "",
+                dev.eiriksb.stad.architect.AreaFit.name(type), size.getX(), size.getY(), size.getZ(), blocks, r.origin(), p.rotation(), r.problem(), true));
     }
 
     private static void action(ColonyActionPayload p, IPayloadContext ctx) {

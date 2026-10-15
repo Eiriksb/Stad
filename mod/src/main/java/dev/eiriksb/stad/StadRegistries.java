@@ -29,6 +29,12 @@ public final class StadRegistries {
     private static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(Stad.MOD_ID);
     private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(Stad.MOD_ID);
     private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, Stad.MOD_ID);
+    private static final DeferredRegister.DataComponents COMPONENTS = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, Stad.MOD_ID);
+
+    /** the area marked out with the building plans */
+    public static final DeferredHolder<net.minecraft.core.component.DataComponentType<?>, net.minecraft.core.component.DataComponentType<
+            dev.eiriksb.stad.item.PlanArea>> PLAN_AREA = COMPONENTS.registerComponentType("plan_area",
+            b -> b.persistent(dev.eiriksb.stad.item.PlanArea.CODEC).networkSynchronized(dev.eiriksb.stad.item.PlanArea.STREAM_CODEC));
 
     public static final DeferredHolder<EntityType<?>, EntityType<CitizenEntity>> CITIZEN = ENTITIES.register("citizen",
             () -> EntityType.Builder.of(CitizenEntity::new, MobCategory.CREATURE)
@@ -78,6 +84,7 @@ public final class StadRegistries {
         BLOCKS.register(modBus);
         ITEMS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
+        COMPONENTS.register(modBus);
         modBus.addListener(StadRegistries::attributes);
         modBus.addListener(StadRegistries::creativeTabs);
     }

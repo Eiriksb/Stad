@@ -147,6 +147,17 @@
   land at once, and the town hall says how far it reaches and how it'll grow. Towns founded before keep their land
   and grow from there.
 
+**Marking out where to build**
+- Sneak and right-click two corners with the building plans to mark out an area (outlined, with its size shown while
+  you choose the second corner). Right-click inside it and the plans are for that area: the pack buildings that fit
+  say so, turn to fit when they only go one way, and stay inside the area when you move them; the rest are greyed out
+  with their size. **To fit** options are drawn up for the area the way the architect's table generates them: fields,
+  pens, groves, apiaries, quarries, walls and the rest laid out over all of it, and houses and workplaces as big as it
+  holds (R in the preview turns the door). Sneak and right-click the air to clear it; planning in it clears it too.
+- Right-click an architect's table with the plans and the marked area becomes its site, so the scan wand isn't needed
+  for that any more.
+- The building plans remember the building and style you chose last.
+
 **Achievements and a guide**
 - **Achievements**: 21 of them, in their own Stad tab of the advancements screen (L): founding a town, the first
   citizen, job and building, a village, a town and a city (10, 25 and 50 citizens), a road, a warehouse, a child

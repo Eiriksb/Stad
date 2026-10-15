@@ -15,9 +15,11 @@ import net.minecraft.world.level.block.Rotation;
  * @param blocks  the blueprint's blocks, each its position packed ({@link #pack}) and then its block state id
  * @param at      the block it's centred on (floor level with it), and its turn, that {@code problem} is for
  * @param problem why it can't go there, or ""
+ * @param fitted  drawn up to fill the area marked out with the plans: it stays where it is, with {@code at} its lowest
+ *                corner, and {@code rotation} only says which way its door faces (it's drawn up again when that changes)
  */
 public record PlacePreviewPayload(int colony, String key, String palette, String name, int sx, int sy, int sz, int[] blocks, BlockPos at,
-                                  Rotation rotation, String problem) implements CustomPacketPayload {
+                                  Rotation rotation, String problem, boolean fitted) implements CustomPacketPayload {
     public static final Type<PlacePreviewPayload> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(Stad.MOD_ID, "place_preview"));
     public static final StreamCodec<FriendlyByteBuf, PlacePreviewPayload> CODEC = StreamCodec.of((buf, p) -> {
         buf.writeVarInt(p.colony);
@@ -31,8 +33,9 @@ public record PlacePreviewPayload(int colony, String key, String palette, String
         buf.writeBlockPos(p.at);
         buf.writeEnum(p.rotation);
         buf.writeUtf(p.problem);
+        buf.writeBoolean(p.fitted);
     }, buf -> new PlacePreviewPayload(buf.readVarInt(), buf.readUtf(), buf.readUtf(), buf.readUtf(), buf.readVarInt(), buf.readVarInt(),
-            buf.readVarInt(), buf.readVarIntArray(), buf.readBlockPos(), buf.readEnum(Rotation.class), buf.readUtf()));
+            buf.readVarInt(), buf.readVarIntArray(), buf.readBlockPos(), buf.readEnum(Rotation.class), buf.readUtf(), buf.readBoolean()));
 
     /** A position in a blueprint, packed: 10 bits each of x, y and z. */
     public static int pack(BlockPos p) {
