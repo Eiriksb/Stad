@@ -70,11 +70,24 @@ public final class StadGameTests {
     public static void citizensKeepTheirLooks(GameTestHelper helper) {
         CitizenEntity citizen = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 0, 1, 0);
         citizen.readAdditionalSaveData(looks(true, 5));
+        dev.eiriksb.stad.citizen.Looks looks = dev.eiriksb.stad.citizen.Looks.random(net.minecraft.util.RandomSource.create(3));
+        citizen.setLooks(looks);
+        citizen.setAgeYears(70);
         CompoundTag saved = new CompoundTag();
         citizen.addAdditionalSaveData(saved);
         CitizenEntity copy = helper.spawnWithNoFreeWill(StadRegistries.CITIZEN.get(), 0, 1, 0);
         copy.readAdditionalSaveData(saved);
-        helper.assertTrue(copy.isFemale() && copy.skin() == 5, "looks weren't saved: female=" + copy.isFemale() + " skin=" + copy.skin());
+        helper.assertTrue(copy.isFemale() && copy.looks().equals(looks), "looks weren't saved: female=" + copy.isFemale() + " " + copy.looks());
+        helper.assertTrue(copy.shownLooks().born(dev.eiriksb.stad.citizen.Looks.GREY) == 3 && copy.shownLooks().style() == looks.style(),
+                "the client sees them grey at 70: " + copy.shownLooks());
+        var r = net.minecraft.util.RandomSource.create(9);
+        var mum = dev.eiriksb.stad.citizen.Looks.random(r).withBorn(dev.eiriksb.stad.citizen.Looks.SKIN, 10);
+        var dad = dev.eiriksb.stad.citizen.Looks.random(r).withBorn(dev.eiriksb.stad.citizen.Looks.SKIN, 50);
+        for (int i = 0; i < 20; i++) {
+            var child = dev.eiriksb.stad.citizen.Looks.child(mum, dad, r);
+            int skin = child.born(dev.eiriksb.stad.citizen.Looks.SKIN);
+            helper.assertTrue(skin > 15 && skin < 45, "skin between the parents': " + skin);
+        }
         helper.succeed();
     }
 

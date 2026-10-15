@@ -56,6 +56,8 @@ public final class CitizenRecord {
     public long lastChildDay = -100;
     /** what they were born with (kept here so children inherit it while a parent isn't loaded) */
     public dev.eiriksb.stad.citizen.Genes genes;
+    /** what they look like (kept here for the same reason) */
+    public dev.eiriksb.stad.citizen.Looks looks;
     /** how much they've practised each job they've done ({@link dev.eiriksb.stad.citizen.Skills}) */
     public java.util.Map<String, Integer> skills = new java.util.HashMap<>();
     /** the problem stopping their work, since when, and the last one the leaders were told of, on which day (not saved) */
@@ -130,6 +132,9 @@ public final class CitizenRecord {
         if (genes != null) {
             t.put("Genes", genes.save());
         }
+        if (looks != null) {
+            t.put("Looks", looks.save());
+        }
         CompoundTag sk = new CompoundTag();
         skills.forEach(sk::putInt);
         t.put("Skills", sk);
@@ -172,6 +177,7 @@ public final class CitizenRecord {
         r.parents = java.util.List.copyOf(parents);
         r.lastChildDay = t.contains("LastChildDay") ? t.getLong("LastChildDay") : -100;
         r.genes = dev.eiriksb.stad.citizen.Genes.load(t.getCompound("Genes"));
+        r.looks = dev.eiriksb.stad.citizen.Looks.load(t.getCompound("Looks"));
         CompoundTag sk = t.getCompound("Skills");
         for (String job : sk.getAllKeys()) {
             r.skills.put(job, sk.getInt(job));

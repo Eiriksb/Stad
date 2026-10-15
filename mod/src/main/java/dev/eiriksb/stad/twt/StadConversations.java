@@ -40,6 +40,13 @@ public final class StadConversations implements ConversationHook {
             for (ServerLevel level : server.getAllLevels()) {
                 if (level.getEntity(turn.villager()) instanceof CitizenEntity c) {
                     c.hadCompany();
+                    // the players who can see their face: how they feel, and the line to mouth when there's no voice
+                    var line = new dev.eiriksb.stad.net.CitizenSpeechPayload(c.getUUID(), reply, emotion == null ? "neutral" : emotion);
+                    for (ServerPlayer p : level.players()) {
+                        if (p.distanceToSqr(c) < 32 * 32 && p.connection.hasChannel(dev.eiriksb.stad.net.CitizenSpeechPayload.TYPE)) {
+                            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, line);
+                        }
+                    }
                 }
             }
         });

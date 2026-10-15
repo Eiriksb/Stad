@@ -147,6 +147,20 @@
   land at once, and the town hall says how far it reaches and how it'll grow. Towns founded before keep their land
   and grow from there.
 
+**Citizens' own looks and faces**
+- Citizens are put together from small parts, so no two look alike: ten skin tones, hair styles and colours (greying
+  with age), beards, six eye shapes and four irises in seven colours, brows, noses, mouths, freckles, moles and the
+  like, and their own top, bottom and shoes in their own colours. Their job adds its gear over that: overalls and a
+  straw hat for a farmer, a hard hat and lamp for a miner, mail and a tabard for a guard, a veil for a beekeeper...
+- Children take after their parents: their skin tone between their parents', each feature from one or the other.
+- Their faces move. The eyes follow you when you're near and in front of them, and they blink. When they speak, their
+  mouth follows what you hear: Simple Voice Chat's audio is read 50 times a second for how loud it is and what kind of
+  sound (open vowels, bright ones, round ones, hiss, a hum), and the mouth makes that shape. Without a voice, it says
+  the written line instead. Their brows and mouth show how they feel about what they said (happy, sad, cross,
+  surprised, sleepy...).
+- All drawn by script and painted in Krita (art/krita/entity/citizen), with the citizen model in Blockbench
+  (art/blockbench/citizen.bbmodel) and a line-up of them (art/blockbench/citizens.png).
+
 **Marking out where to build**
 - Sneak and right-click two corners with the building plans to mark out an area (outlined, with its size shown while
   you choose the second corner). Right-click inside it and the plans are for that area: the pack buildings that fit

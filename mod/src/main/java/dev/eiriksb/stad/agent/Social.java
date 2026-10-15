@@ -144,6 +144,13 @@ public final class Social {
         return r.genes != null ? r.genes : dev.eiriksb.stad.citizen.Genes.random(net.minecraft.util.RandomSource.create(r.uuid.getLeastSignificantBits()));
     }
 
+    private static dev.eiriksb.stad.citizen.Looks looksOf(ServerLevel level, CitizenRecord r) {
+        if (level.getEntity(r.uuid) instanceof CitizenEntity c) {
+            return c.looks();
+        }
+        return r.looks != null ? r.looks : dev.eiriksb.stad.citizen.Looks.random(net.minecraft.util.RandomSource.create(r.uuid.getMostSignificantBits() ^ 0x5eed));
+    }
+
     /** A baby is born to {@code a} and {@code b}, by whichever of them is around. Returns the baby, or null. */
     public static CitizenEntity haveChild(ServerLevel level, Colony colony, CitizenRecord a, CitizenRecord b) {
         CitizenEntity parent = level.getEntity(a.uuid) instanceof CitizenEntity c ? c : level.getEntity(b.uuid) instanceof CitizenEntity d ? d : null;
@@ -158,6 +165,7 @@ public final class Social {
         baby.setCustomName(Component.literal(first + " " + family));
         baby.setChild(true);
         baby.setGenes(dev.eiriksb.stad.citizen.Genes.child(genesOf(level, a), genesOf(level, b), level.random)); // a family voice
+        baby.setLooks(dev.eiriksb.stad.citizen.Looks.child(looksOf(level, a), looksOf(level, b), level.random)); // and face
         baby.setBackstory("were born in " + colony.name() + " to " + a.name + " and " + b.name);
         level.addFreshEntity(baby);
         ColonyManager.get(level.getServer()).join(colony, baby);

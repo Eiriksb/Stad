@@ -747,6 +747,29 @@ R asks for it drawn up again with the door turned. A pack building previewed for
 (`BuildingPlacer.inside`). Planning in an area clears it from the plans. Right-clicking an architect's table with the
 plans makes the area its site (`AreaFit.site`, as the scan wand does).
 
+### 6.17 Citizens' looks, faces and lip sync
+
+**Parts.** `tools/art/citizens.py` draws everything (painted in Krita by `paint.sh`, listed in
+`textures/entity/citizen/parts.json`): a body, hair, beards, tops, bottoms, shoes and job gear in the player-skin
+layout, and `face_parts.png` (eye shapes, irises, brows, mouth styles each in eleven shapes, noses, marks) at twice the
+skin's resolution. Pure greys are tinted, colours kept. `Looks` is two longs of 6-bit numbers, each taken modulo its
+list in parts.json: `born` (skin tone, hair and eye colour, eye shape, iris, brow, nose, mouth, marks; grey from age)
+and `style` (hair, beard, clothes and their colours). Saved on the entity and the citizen record; children get
+`Looks.child` (skin averaged, each other feature from a parent, 8% their own). Synced as two entity data longs plus the
+job (a string, for the gear; parts.json says which of their own pieces a job's gear covers).
+
+**Client.** `CitizenSkins` puts each different citizen together once: a 64x64 skin (slim arms narrowed from wide) and
+a 128x16 face sheet: base (nose, marks), 13 eye frames (open/half × level/down × left/ahead/right, shut), 4 brow frames
+(neutral, raised, cross, sad) and the 11 mouths, all in their own colours. `CitizenFace` (a render layer) draws pieces of
+it in front of the head: the camera's position in the head's space picks the gaze; blinks every 2 to 6 seconds.
+
+**Lip sync.** `StadVoicechatPlugin` (SVC's `ClientReceiveSoundEvent.EntitySound`) hands each 20 ms of a voice to
+`LipSync.heard`, timed one after another 60 ms ahead (the playback buffer). `LipSync.shapeOf`: rest under -38 dB; an FFT
+gives hiss (>3.5 kHz: teeth), hum (<350 Hz and quiet: pressed), the first formant peak (600 Hz up: open) and the second
+formant's share (bright: wide; hardly any: round or oo); shapes are held two frames. `StadConversations.afterReply` sends
+`CitizenSpeechPayload` (line and emotion) to players within 32 blocks: the emotion sets brows and resting mouth for a
+while, and the line is mouthed letter by letter when no voice is heard within 1.5 s (straight away without SVC).
+
 ## 7. Conversation and voice (provided by TWT)
 - TWT already handles all of this:
   - Typed chat with targeting (look at someone, say their name, or keep talking to whoever you were talking to).

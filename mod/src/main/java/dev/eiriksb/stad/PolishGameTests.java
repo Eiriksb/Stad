@@ -195,4 +195,41 @@ public final class PolishGameTests {
         helper.assertTrue(site.hasSite() && site.sx == 7 && site.sz == 9 && site.min.getX() == south.box().minX(),
                 "the table's site is the area: " + site.sx + " by " + site.sz);
     }
+
+    /** Mouths follow the sound: silence closes them, hiss shows the teeth, a loud low vowel opens them, a hum presses them. */
+    @GameTest(template = "lot", batch = "polish_mouths")
+    public static void mouthsFollowTheSound(GameTestHelper helper) {
+        java.util.function.BiFunction<Double, double[], short[]> tone = (loud, hz) -> {
+            short[] s = new short[960];
+            java.util.Random r = new java.util.Random(1);
+            for (int i = 0; i < s.length; i++) {
+                double v = 0;
+                for (double f : hz) {
+                    v += f < 0 ? r.nextGaussian() * 0.3 : Math.sin(2 * Math.PI * Math.abs(f) * i / 48000.0);
+                }
+                s[i] = (short) Math.max(-32767, Math.min(32767, v / hz.length * loud * 32767));
+            }
+            return s;
+        };
+        short[] hiss = new short[960];
+        java.util.Random r = new java.util.Random(2);
+        double last = 0;
+        for (int i = 0; i < hiss.length; i++) { // white noise, high-passed
+            double v = r.nextGaussian() * 0.06;
+            hiss[i] = (short) ((v - last) * 32767);
+            last = v;
+        }
+        helper.assertTrue(dev.eiriksb.stad.client.LipSync.shapeOf(new short[960]) == dev.eiriksb.stad.client.LipSync.REST, "silence");
+        helper.assertTrue(dev.eiriksb.stad.client.LipSync.shapeOf(hiss) == dev.eiriksb.stad.client.LipSync.TEETH, "hiss: "
+                + dev.eiriksb.stad.client.LipSync.shapeOf(hiss));
+        int ah = dev.eiriksb.stad.client.LipSync.shapeOf(tone.apply(0.25, new double[]{150, 750, 1200}));
+        helper.assertTrue(ah == dev.eiriksb.stad.client.LipSync.OPEN, "ah: " + ah);
+        int ee = dev.eiriksb.stad.client.LipSync.shapeOf(tone.apply(0.25, new double[]{150, 320, 2300, 2400}));
+        helper.assertTrue(ee == dev.eiriksb.stad.client.LipSync.WIDE, "ee: " + ee);
+        int oo = dev.eiriksb.stad.client.LipSync.shapeOf(tone.apply(0.25, new double[]{150, 400}));
+        helper.assertTrue(oo == dev.eiriksb.stad.client.LipSync.ROUND, "oh: " + oo);
+        int hum = dev.eiriksb.stad.client.LipSync.shapeOf(tone.apply(0.025, new double[]{120, 240}));
+        helper.assertTrue(hum == dev.eiriksb.stad.client.LipSync.PRESSED, "hum: " + hum);
+        helper.succeed();
+    }
 }

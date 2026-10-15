@@ -394,7 +394,9 @@ be redone by script or opened and changed by hand: `art/krita/` has a layered `.
 `art/blockbench/` a `.bbmodel` and a preview for every model.
 
 ```bash
-tools/art/paint.sh [name...]                    # paint the textures (tools/art/textures.py) in Krita: .kra + PNG
+tools/art/paint.sh [name...]                    # paint the textures (tools/art/textures.py, citizens.py) in Krita: .kra + PNG
+python3 tools/art/citizens.py preview.png       # a crowd of random citizens, put together as the game does
+python3 tools/art/citizen_model.py [count]      # the citizen model in Blockbench, and a line-up of citizens rendered in it
 blockbench --remote-debugging-port=9333 &       # then build the models (tools/art/models.py) in Blockbench:
 python3 tools/art/models.py [name...]           #   .bbmodel, the Java block model, and a preview render
 python3 tools/art/textures.py sheet.png         # every texture on one sheet, to look at

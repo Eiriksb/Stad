@@ -17,6 +17,7 @@ def twtDir = rootProject.file(findProperty('twtDir') ?: '../they-will-talk')
 def runtimeDir = new File(twtDir, 'runtime').absolutePath
 
 repositories {
+    maven { url = 'https://maven.maxhenkel.de/repository/public' }
     exclusiveContent {
         forRepository { maven { url = 'https://api.modrinth.com/maven' } }
         filter { includeGroup 'maven.modrinth' }
@@ -93,7 +94,8 @@ dependencies {
     // Not transitive: TWT bundles its own libraries inside its jar (jar-in-jar), and a second copy clashes.
     implementation("dev.eiriksb.theywilltalk:theywilltalk:${twt_version}") { transitive = false }
 
-    // Simple Voice Chat in the dev runs, so citizens can be heard.
+    // Simple Voice Chat: in the dev runs, so citizens can be heard; its API to move their mouths to what's heard.
+    compileOnly "de.maxhenkel.voicechat:voicechat-api:${voicechat_api_version}"
     if (withVoicechat) localRuntime "maven.modrinth:simple-voice-chat:${voicechat_mod_version}"
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'

@@ -1,0 +1,309 @@
+{
+ "face_parts": {
+  "cells": {
+   "eyes": [
+    0,
+    0,
+    6,
+    4
+   ],
+   "irises": [
+    0,
+    4,
+    3,
+    3
+   ],
+   "brows": [
+    0,
+    8,
+    6,
+    2
+   ],
+   "mouths": [
+    0,
+    12,
+    8,
+    4
+   ],
+   "noses": [
+    0,
+    32,
+    16,
+    16
+   ],
+   "marks": [
+    0,
+    48,
+    16,
+    16
+   ]
+  },
+  "eyes": [
+   "plain",
+   "narrow",
+   "almond",
+   "soft",
+   "wide",
+   "round"
+  ],
+  "eye_sizes": {
+   "plain": [
+    4,
+    3
+   ],
+   "narrow": [
+    4,
+    2
+   ],
+   "almond": [
+    5,
+    3
+   ],
+   "soft": [
+    4,
+    3
+   ],
+   "wide": [
+    5,
+    2
+   ],
+   "round": [
+    3,
+    3
+   ]
+  },
+  "irises": [
+   "plain",
+   "dark",
+   "bright",
+   "ringed"
+  ],
+  "brows": [
+   "thin",
+   "plain",
+   "thick",
+   "arched",
+   "straight",
+   "bushy"
+  ],
+  "mouth_styles": [
+   "small",
+   "plain",
+   "wide",
+   "full"
+  ],
+  "mouth_shapes": [
+   "rest",
+   "smile",
+   "frown",
+   "small",
+   "open",
+   "wide",
+   "round",
+   "pressed",
+   "teeth",
+   "grin",
+   "o_small"
+  ],
+  "noses": [
+   "button",
+   "long",
+   "wide",
+   "pointed",
+   "small",
+   "snub"
+  ],
+  "marks": [
+   "freckles",
+   "blush",
+   "mole",
+   "wrinkles",
+   "scar",
+   "dimples"
+  ]
+ },
+ "marks": [
+  "",
+  "",
+  "",
+  "",
+  "freckles",
+  "freckles",
+  "blush",
+  "mole",
+  "dimples",
+  "scar"
+ ],
+ "hair": {
+  "men": [
+   "short",
+   "crop",
+   "swept",
+   "messy",
+   "receding",
+   "tied"
+  ],
+  "women": [
+   "long",
+   "bob",
+   "bun",
+   "braid",
+   "ponytail",
+   "pixie"
+  ]
+ },
+ "beards": [
+  "",
+  "",
+  "",
+  "",
+  "stubble",
+  "stubble",
+  "full",
+  "goatee",
+  "moustache"
+ ],
+ "tops": {
+  "men": [
+   "tunic",
+   "shirt",
+   "rolled",
+   "vest",
+   "sweater"
+  ],
+  "women": [
+   "tunic",
+   "shirt",
+   "rolled",
+   "vest",
+   "sweater",
+   "blouse",
+   "bodice"
+  ]
+ },
+ "bottoms": {
+  "men": [
+   "trousers",
+   "breeches"
+  ],
+  "women": [
+   "trousers",
+   "skirt",
+   "long_skirt",
+   "trousers"
+  ]
+ },
+ "shoes": [
+  "shoes",
+  "boots",
+  "tall_boots",
+  "tan_boots",
+  "clogs"
+ ],
+ "jobs": {
+  "farmer": [
+   "bottom"
+  ],
+  "builder": [],
+  "lumberjack": [
+   "top"
+  ],
+  "miner": [
+   "shoes"
+  ],
+  "fisher": [
+   "top",
+   "shoes"
+  ],
+  "shepherd": [],
+  "guard": [
+   "top",
+   "shoes"
+  ],
+  "cook": [],
+  "courier": [],
+  "smith": [],
+  "healer": [
+   "top",
+   "bottom"
+  ],
+  "merchant": [],
+  "teacher": [],
+  "carpenter": [],
+  "mason": [],
+  "weaver": [],
+  "beekeeper": [
+   "top",
+   "bottom"
+  ],
+  "gatherer": [],
+  "researcher": [
+   "top",
+   "bottom"
+  ]
+ },
+ "colours": {
+  "skin": [
+   "#f6d9c6",
+   "#efc6a8",
+   "#e2b08c",
+   "#d39c74",
+   "#bf8660",
+   "#a66d48",
+   "#8b5737",
+   "#71442a",
+   "#5a3420",
+   "#432617"
+  ],
+  "hair": [
+   "#1e1814",
+   "#3b2619",
+   "#5c3b22",
+   "#82603a",
+   "#a8844f",
+   "#d0b276",
+   "#e4d8b8",
+   "#7b3a1d",
+   "#a64a20",
+   "#2a201b"
+  ],
+  "grey_hair": "#a19c95",
+  "eyes": [
+   "#5b3a1e",
+   "#3a2414",
+   "#7a6a30",
+   "#4f7a3a",
+   "#3f6fa8",
+   "#6f7f88",
+   "#5d4a2a"
+  ],
+  "tops": [
+   "#9c4a3a",
+   "#b68a3a",
+   "#4f6e3c",
+   "#3c4f78",
+   "#6e5038",
+   "#3e7a78",
+   "#6e4466",
+   "#7a7a76",
+   "#8a6a4a",
+   "#4a4a58",
+   "#a0603a",
+   "#5a6a3a",
+   "#c8b48a",
+   "#3a5a4a",
+   "#7a3a3a",
+   "#4a5a7a"
+  ],
+  "bottoms": [
+   "#4f4436",
+   "#3d3a35",
+   "#5a4b3a",
+   "#3b4250",
+   "#5d5141",
+   "#4a3e30",
+   "#6a5a44",
+   "#3a3a3e"
+  ]
+ }
+}

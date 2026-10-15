@@ -10,6 +10,7 @@ import os
 
 from krita import InfoObject, Krita
 
+import citizens
 import textures
 
 
@@ -61,7 +62,8 @@ def __main__(args):
     repo = args[0]
     only = set(args[1:])
     k = Krita.instance()
-    for fn in textures.ALL:
+    for fn in textures.ALL + citizens.ALL:
         art = fn()
         if not only or art.name in only:
             paint(k, art, repo)
+    citizens.write_parts(repo)

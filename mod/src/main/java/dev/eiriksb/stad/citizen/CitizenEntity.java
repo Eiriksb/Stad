@@ -53,12 +53,16 @@ import java.util.Optional;
  */
 public class CitizenEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> FEMALE = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Integer> SKIN = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.INT);
+    /** their looks ({@link Looks}: what they were born with, aged, and what they chose), and their job for their clothes */
+    private static final EntityDataAccessor<Long> LOOKS_BORN = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Long> LOOKS_STYLE = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<String> JOB = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Boolean> CHILD = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.BOOLEAN);
     public static final float MAX_NEED = 20f;
 
     /** Where they come from (server side only; They Will Talk tells it in conversation). */
     private Genes genes;
+    private Looks looks;
     private int ageYears;
     private String backstory = "";
     /** Their colony's id, 0 for none (the colony's citizen list is the truth; this is a quick lookup). */
@@ -91,7 +95,9 @@ public class CitizenEntity extends PathfinderMob {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(FEMALE, false);
-        builder.define(SKIN, 0);
+        builder.define(LOOKS_BORN, 0L);
+        builder.define(LOOKS_STYLE, 0L);
+        builder.define(JOB, "");
         builder.define(CHILD, false);
     }
 
@@ -137,7 +143,6 @@ public class CitizenEntity extends PathfinderMob {
                                         SpawnGroupData data) {
         boolean female = random.nextBoolean();
         entityData.set(FEMALE, female);
-        entityData.set(SKIN, random.nextInt(CitizenLooks.SKIN_COUNT));
         if (!hasCustomName()) {
             setCustomName(Component.literal(CitizenNames.random(female, random)));
         }
@@ -145,6 +150,7 @@ public class CitizenEntity extends PathfinderMob {
         genes = Genes.random(random);
         // most newcomers are working age; a few young ones and a few old hands
         ageYears = 18 + (int) Math.round(Math.abs(random.nextGaussian()) * 18 + random.nextInt(8));
+        setLooks(Looks.random(random));
         return super.finalizeSpawn(level, difficulty, reason, data);
     }
 
@@ -170,14 +176,42 @@ public class CitizenEntity extends PathfinderMob {
 
     public void setAgeYears(int years) {
         ageYears = years;
+        syncLooks();
+    }
+
+    /** What they look like; made up from their id for citizens from before looks. */
+    public Looks looks() {
+        if (looks == null) {
+            looks = Looks.random(RandomSource.create(getUUID().getMostSignificantBits() ^ 0x5eed));
+        }
+        return looks;
+    }
+
+    public void setLooks(Looks l) {
+        looks = l;
+        syncLooks();
+    }
+
+    private void syncLooks() {
+        if (!level().isClientSide) {
+            Looks l = looks().aged(isBaby() ? 0 : ageYears());
+            entityData.set(LOOKS_BORN, l.born());
+            entityData.set(LOOKS_STYLE, l.style());
+        }
+    }
+
+    /** Their looks as the client knows them (aged). */
+    public Looks shownLooks() {
+        return new Looks(entityData.get(LOOKS_BORN), entityData.get(LOOKS_STYLE));
+    }
+
+    /** Their job as the client knows it ("" for none), for their clothes. */
+    public String shownJob() {
+        return entityData.get(JOB);
     }
 
     public boolean isFemale() {
         return entityData.get(FEMALE);
-    }
-
-    public int skin() {
-        return entityData.get(SKIN);
     }
 
     public String backstory() {
@@ -203,6 +237,7 @@ public class CitizenEntity extends PathfinderMob {
             ageYears = 18; // just grown up
         }
         refreshDimensions();
+        syncLooks();
     }
 
     public long born() {
@@ -409,6 +444,12 @@ public class CitizenEntity extends PathfinderMob {
             return;
         }
         long t = dev.eiriksb.stad.perf.Perf.start();
+        if (tickCount % 20 == 0) {
+            String job = isBaby() ? "" : job().orElse("");
+            if (!job.equals(entityData.get(JOB))) {
+                entityData.set(JOB, job);
+            }
+        }
         super.tick();
         dev.eiriksb.stad.perf.Perf.end("citizens", t);
     }
@@ -521,7 +562,7 @@ public class CitizenEntity extends PathfinderMob {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putBoolean("Female", isFemale());
-        tag.putInt("Skin", skin());
+        tag.put("Looks", looks().save());
         tag.putString("Backstory", backstory);
         tag.putInt("Colony", colonyId);
         tag.putFloat("Hunger", hunger);
@@ -537,7 +578,6 @@ public class CitizenEntity extends PathfinderMob {
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         entityData.set(FEMALE, tag.getBoolean("Female"));
-        entityData.set(SKIN, Math.floorMod(tag.getInt("Skin"), CitizenLooks.SKIN_COUNT));
         backstory = tag.getString("Backstory");
         colonyId = tag.getInt("Colony");
         hunger = tag.contains("Hunger") ? tag.getFloat("Hunger") : MAX_NEED;
@@ -547,6 +587,8 @@ public class CitizenEntity extends PathfinderMob {
         born = tag.getLong("Born");
         genes = Genes.load(tag.getCompound("Genes"));
         ageYears = tag.getInt("Age");
+        looks = Looks.load(tag.getCompound("Looks"));
+        syncLooks();
     }
 
     @Override

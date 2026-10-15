@@ -3,8 +3,8 @@ package dev.eiriksb.stad.citizen;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * What citizens look like. For now the game's own default player skins (slim arms for women, wide for men); layered,
- * inherited looks come later (PLAN.md §5, "MCA-style life").
+ * The game's own default player skins, which raiders wear. Citizens are put together from their own parts instead
+ * ({@link Looks}, dev.eiriksb.stad.client.CitizenSkins).
  */
 public final class CitizenLooks {
     private static final String[] SKINS = {"steve", "alex", "ari", "efe", "kai", "makena", "noor", "sunny", "zuri"};

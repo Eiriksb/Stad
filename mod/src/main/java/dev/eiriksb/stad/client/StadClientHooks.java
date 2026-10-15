@@ -66,4 +66,12 @@ public final class StadClientHooks {
     public static void draftPreview(dev.eiriksb.stad.net.DraftPreviewPayload preview) {
         GhostPreview.set(preview);
     }
+
+    /** A citizen said something: how they feel shows on their face, and their mouth says it if no voice does. */
+    public static void speech(dev.eiriksb.stad.net.CitizenSpeechPayload p) {
+        boolean voices = net.neoforged.fml.ModList.get().isLoaded("voicechat");
+        long speaking = Math.max(2500, p.text().length() * LipSync.LETTER_MS);
+        LipSync.said(p.citizen(), p.text(), voices);
+        LipSync.feel(p.citizen(), p.emotion(), speaking + 5000);
+    }
 }

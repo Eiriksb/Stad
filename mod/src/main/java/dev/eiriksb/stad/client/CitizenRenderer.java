@@ -2,7 +2,6 @@ package dev.eiriksb.stad.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.eiriksb.stad.citizen.CitizenEntity;
-import dev.eiriksb.stad.citizen.CitizenLooks;
 import net.minecraft.client.model.HumanoidArmorModel;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -12,7 +11,10 @@ import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.resources.ResourceLocation;
 
-/** Draws citizens with the player model: slim arms for women, wide for men. */
+/**
+ * Draws citizens with the player model (slim arms for women, wide for men) in a skin put together from their looks
+ * ({@link CitizenSkins}), and their face over it ({@link CitizenFace}).
+ */
 public final class CitizenRenderer extends HumanoidMobRenderer<CitizenEntity, PlayerModel<CitizenEntity>> {
     private final PlayerModel<CitizenEntity> wide;
     private final PlayerModel<CitizenEntity> slim;
@@ -23,6 +25,7 @@ public final class CitizenRenderer extends HumanoidMobRenderer<CitizenEntity, Pl
         slim = new PlayerModel<>(ctx.bakeLayer(ModelLayers.PLAYER_SLIM), true);
         addLayer(new HumanoidArmorLayer<>(this, new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_INNER_ARMOR)),
                 new HumanoidArmorModel<>(ctx.bakeLayer(ModelLayers.PLAYER_OUTER_ARMOR)), ctx.getModelManager()));
+        addLayer(new CitizenFace(this));
     }
 
     @Override
@@ -33,6 +36,6 @@ public final class CitizenRenderer extends HumanoidMobRenderer<CitizenEntity, Pl
 
     @Override
     public ResourceLocation getTextureLocation(CitizenEntity citizen) {
-        return CitizenLooks.texture(citizen.skin(), citizen.isFemale());
+        return CitizenSkins.get(citizen.shownLooks(), citizen.isFemale(), citizen.shownJob(), citizen.isBaby()).skin();
     }
 }

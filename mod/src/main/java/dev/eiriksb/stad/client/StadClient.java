@@ -27,6 +27,18 @@ public final class StadClient {
                 dev.eiriksb.stad.client.architect.DraftingHud::hud);
     }
 
+    /** Citizens are put together from the resources: again when they change. */
+    @SubscribeEvent
+    static void reloads(net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) {
+        event.registerReloadListener((net.minecraft.server.packs.resources.ResourceManagerReloadListener) rm -> CitizenSkins.clear());
+    }
+
+    @SubscribeEvent
+    static void loggedOut(net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) {
+        CitizenSkins.clear();
+        LipSync.clear();
+    }
+
     @SubscribeEvent
     static void keys(net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) {
         event.register(dev.eiriksb.stad.client.architect.DraftingHud.FINISH);
